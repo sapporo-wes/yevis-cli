@@ -1,0 +1,10 @@
+[package]
+name = "yevis"
+version = "0.1.0"
+authors = ["DBCLS (Database Center for Life Science)"]
+edition = "2021"
+readme = "https://github.com/ddbj/yevis-cli/README.md"
+repository = "https://github.com/ddbj/yevis-cli"
+license = "Apache-2.0"
+
+[dependencies]
