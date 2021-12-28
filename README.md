@@ -18,3 +18,9 @@ yevis --make-template https://github.com/path/to/workflow-file
 ```
 
 ## Development
+
+Run test.
+
+```bash
+cargo test
+```

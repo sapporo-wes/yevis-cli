@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use structopt::{clap, StructOpt};
 
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt, Debug, PartialEq)]
 #[structopt(
     name = env!("CARGO_PKG_NAME"),
     version = env!("CARGO_PKG_VERSION"),
@@ -65,4 +65,64 @@ pub enum Args {
         #[structopt(short, long, default_value = "unix:///var/run/docker.sock")]
         docker_host: String,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_make_template() {
+        let args = Args::from_iter(&[
+            "yevis",
+            "make-template",
+            "https://example.com/path/to/workflow.yml",
+        ]);
+        assert_eq!(
+            args,
+            Args::MakeTemplate {
+                workflow_location: "https://example.com/path/to/workflow.yml".to_string(),
+                output: PathBuf::from("yevis.yml"),
+                format: "yaml".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_validate() {
+        let args = Args::from_iter(&["yevis", "validate", "yevis.yml"]);
+        assert_eq!(
+            args,
+            Args::Validate {
+                config_file: PathBuf::from("yevis.yml"),
+            }
+        );
+    }
+
+    #[test]
+    fn test_test() {
+        let args = Args::from_iter(&["yevis", "test", "yevis.yml"]);
+        assert_eq!(
+            args,
+            Args::Test {
+                config_file: PathBuf::from("yevis.yml"),
+                wes_location: None,
+                docker_host: "unix:///var/run/docker.sock".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_pull_request() {
+        let args = Args::from_iter(&["yevis", "pull-request", "yevis.yml"]);
+        assert_eq!(
+            args,
+            Args::PullRequest {
+                config_file: PathBuf::from("yevis.yml"),
+                repository: "ddbj/yevis-workflows".to_string(),
+                wes_location: None,
+                docker_host: "unix:///var/run/docker.sock".to_string(),
+            }
+        );
+    }
 }
