@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::path::Path;
 
 pub fn pull_request(
@@ -5,6 +6,7 @@ pub fn pull_request(
     repository: impl AsRef<str>,
     wes_location: &Option<impl AsRef<str>>,
     docker_host: impl AsRef<str>,
-) {
+) -> Result<()> {
     println!("pull-request");
+    Ok(())
 }
