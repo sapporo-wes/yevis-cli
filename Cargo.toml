@@ -1,13 +1,17 @@
 [package]
-name = "yevis"
-version = "0.1.0"
 authors = ["DBCLS (Database Center for Life Science)"]
 edition = "2021"
+license = "Apache-2.0"
+name = "yevis"
 readme = "https://github.com/ddbj/yevis-cli/README.md"
 repository = "https://github.com/ddbj/yevis-cli"
-license = "Apache-2.0"
+version = "0.1.0"
 
 [dependencies]
-structopt = "0.3.25"
-url = "2.2.2"
 anyhow = "1.0.52"
+regex = "1.5.4"
+reqwest = {version = "0.11.8", features = ["blocking", "json"]}
+serde = {version = "1.0.132", features = ["derive"]}
+serde_yaml = "0.8.23"
+structopt = "0.3.25"
+url = {version = "2.2.2", features = ["serde"]}

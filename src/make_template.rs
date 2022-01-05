@@ -1,5 +1,7 @@
-use anyhow::{anyhow, ensure, Result};
-use std::fmt;
+// use crate::github_api;
+use crate::github_api;
+use anyhow::{anyhow, bail, ensure, Result};
+use regex::Regex;
 use std::path::Path;
 use url::Url;
 
@@ -8,11 +10,39 @@ pub fn make_template(
     output: impl AsRef<Path>,
     format: impl AsRef<str>,
 ) -> Result<()> {
-    parse_wf_loc(&workflow_location);
-    println!("make-template");
+    let parse_result = parse_wf_loc(&workflow_location)?;
+    let repos_response = github_api::get_repos(&parse_result.owner, &parse_result.name)?;
+    ensure!(
+        repos_response.private == false,
+        format!(
+            "Repo {}/{} is private",
+            parse_result.owner, parse_result.name
+        )
+    );
+    let license = match &repos_response.license {
+        Some(license) => license.spdx_id.clone(),
+        None => {
+            bail!(
+                "No license found for repo {}/{}",
+                parse_result.owner,
+                parse_result.name
+            );
+        }
+    };
+    let branch = match &parse_result.branch {
+        Some(branch) => branch.to_string(),
+        None => repos_response.default_branch.clone(),
+    };
+    let commit_hash = match &parse_result.commit_hash {
+        Some(commit_hash) => commit_hash.to_string(),
+        None => {
+            github_api::get_latest_commit_hash(&parse_result.owner, &parse_result.name, &branch)?
+        }
+    };
     Ok(())
 }
 
+#[derive(Debug, PartialEq)]
 struct ParseResult {
     owner: String,
     name: String,
@@ -24,11 +54,14 @@ struct ParseResult {
 /// Parse the workflow location.
 /// The workflow location should be in the format of:
 ///
-/// - https://github.com/owner/repo/tree/branch/path/to/file
-/// - https://github.com/owner/repo/blob/branch/path/to/file
-/// - https://github.com/owner/repo/raw/branch/path/to/file
-/// - https://github.com/owner/repo/blob/commit_hash/path/to/file
-/// - https://raw.githubusercontent.com/owner/repo/branch/path/to/file
+/// - https://github.com/<owner>/<name>/blob/<branch>/<path_to_file>
+/// - https://github.com/<owner>/<name>/blob/<commit_hash>/<path_to_file>
+/// - https://github.com/<owner>/<name>/tree/<branch>/<path_to_file>
+/// - https://github.com/<owner>/<name>/tree/<commit_hash>/<path_to_file>
+/// - https://github.com/<owner>/<name>/raw/<branch>/<path_to_file>
+/// - https://github.com/<owner>/<name>/raw/<commit_hash>/<path_to_file>
+/// - https://raw.githubusercontent.com/<owner>/<name>/<branch>/<path_to_file>
+/// - https://raw.githubusercontent.com/<owner>/<name>/<commit_hash>/<path_to_file>
 fn parse_wf_loc(wf_loc: impl AsRef<str>) -> Result<ParseResult> {
     let wf_loc_url = Url::parse(wf_loc.as_ref())?;
     let host = wf_loc_url
@@ -38,11 +71,56 @@ fn parse_wf_loc(wf_loc: impl AsRef<str>) -> Result<ParseResult> {
         host == "github.com" || host == "raw.githubusercontent.com",
         "yevis is only supported on github.com and raw.githubusercontent.com"
     );
+    let path_segments = wf_loc_url
+        .path_segments()
+        .ok_or(anyhow!("Could not parse path segments"))?
+        .collect::<Vec<_>>();
+    let branch_or_commit_hash = if host == "github.com" {
+        path_segments
+            .get(3)
+            .ok_or(anyhow!("Could not parse branch or commit hash"))?
+            .to_string()
+    } else {
+        path_segments
+            .get(2)
+            .ok_or(anyhow!("Could not parse branch or commit hash"))?
+            .to_string()
+    };
+    let is_commit_hash = is_commit_hash(&branch_or_commit_hash);
+    let file_path = if host == "github.com" {
+        path_segments[4..].join("/")
+    } else {
+        path_segments[3..].join("/")
+    };
+    Ok(ParseResult {
+        owner: path_segments
+            .get(0)
+            .ok_or(anyhow!("Could not parse owner from the workflow location"))?
+            .to_string(),
+        name: path_segments
+            .get(1)
+            .ok_or(anyhow!("Could not parse name"))?
+            .to_string(),
+        branch: match &is_commit_hash {
+            Ok(_) => None,
+            Err(_) => Some(branch_or_commit_hash.clone()),
+        },
+        commit_hash: match &is_commit_hash {
+            Ok(_) => Some(branch_or_commit_hash.clone()),
+            Err(_) => None,
+        },
+        file_path: file_path,
+    })
+}
+
+// Check if a str is in a 40 character git commit hash.
+pub fn is_commit_hash(hash: impl AsRef<str>) -> Result<()> {
+    let re = Regex::new(r"^[0-9a-f]{40}$")?;
+    ensure!(re.is_match(hash.as_ref()), "Not a valid commit hash");
     Ok(())
 }
 
-// fn check_host_url(wf_loc: impl AsRef<str>) {}
-
+#[derive(Debug, PartialEq)]
 struct Config {
     id: String,
     workflow_name: String,
@@ -53,6 +131,7 @@ struct Config {
     testing: Vec<Testing>,
 }
 
+#[derive(Debug, PartialEq)]
 struct Author {
     github_account: String,
     name: String,
@@ -60,36 +139,77 @@ struct Author {
     ORCID: String,
 }
 
-enum WorkflowLanguageType {
-    CWL,
-    WDL,
-    NFL,
-    SMK,
-}
-
-impl fmt::Display for WorkflowLanguageType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            WorkflowLanguageType::CWL => write!(f, "CWL"),
-            WorkflowLanguageType::WDL => write!(f, "WDL"),
-            WorkflowLanguageType::NFL => write!(f, "NFL"),
-            WorkflowLanguageType::SMK => write!(f, "SMK"),
-        }
-    }
-}
-
+#[derive(Debug, PartialEq)]
 struct WorkflowLanguage {
     r#type: String,
     version: String,
 }
 
+#[derive(Debug, PartialEq)]
 struct File {
     url: String,
     target: String,
     r#type: String,
 }
 
+#[derive(Debug, PartialEq)]
 struct Testing {
     id: String,
     files: Vec<File>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_wf_loc() {
+        let parse_result_1 =
+            parse_wf_loc("https://github.com/ddbj/yevis-cli/blob/main/path/to/workflow").unwrap();
+        assert_eq!(
+            parse_result_1,
+            ParseResult {
+                owner: "ddbj".to_string(),
+                name: "yevis-cli".to_string(),
+                branch: Some("main".to_string()),
+                commit_hash: None,
+                file_path: "path/to/workflow".to_string(),
+            },
+        );
+        let parse_result_2 = parse_wf_loc("https://github.com/ddbj/yevis-cli/blob/752eab2a3b34f0c2fe4489a591303ded6906169d/path/to/workflow").unwrap();
+        assert_eq!(
+            parse_result_2,
+            ParseResult {
+                owner: "ddbj".to_string(),
+                name: "yevis-cli".to_string(),
+                branch: None,
+                commit_hash: Some("752eab2a3b34f0c2fe4489a591303ded6906169d".to_string()),
+                file_path: "path/to/workflow".to_string(),
+            },
+        );
+        let parse_result_3 =
+            parse_wf_loc("https://raw.githubusercontent.com/ddbj/yevis-cli/main/path/to/workflow")
+                .unwrap();
+        assert_eq!(
+            parse_result_3,
+            ParseResult {
+                owner: "ddbj".to_string(),
+                name: "yevis-cli".to_string(),
+                branch: Some("main".to_string()),
+                commit_hash: None,
+                file_path: "path/to/workflow".to_string(),
+            },
+        );
+        let parse_result_4 = parse_wf_loc("https://raw.githubusercontent.com/ddbj/yevis-cli/752eab2a3b34f0c2fe4489a591303ded6906169d/path/to/workflow").unwrap();
+        assert_eq!(
+            parse_result_4,
+            ParseResult {
+                owner: "ddbj".to_string(),
+                name: "yevis-cli".to_string(),
+                branch: None,
+                commit_hash: Some("752eab2a3b34f0c2fe4489a591303ded6906169d".to_string()),
+                file_path: "path/to/workflow".to_string(),
+            },
+        );
+    }
 }
