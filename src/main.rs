@@ -4,6 +4,7 @@ mod lib_test;
 mod make_template;
 mod pull_request;
 mod remote;
+mod type_config;
 mod validate;
 mod workflow_type_version;
 use anyhow::Result;

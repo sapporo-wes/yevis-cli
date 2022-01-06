@@ -1,7 +1,6 @@
 use anyhow::{anyhow, ensure, Result};
 use dotenv::dotenv;
 use reqwest;
-use serde::Deserialize;
 use serde_json::Value;
 use std::env;
 
@@ -61,7 +60,7 @@ pub fn get_repos(
     }
 }
 
-#[derive(Debug, PartialEq, Deserialize)]
+#[derive(Debug, PartialEq)]
 pub struct GetReposResponse {
     pub private: bool,
     pub default_branch: String,
@@ -110,6 +109,50 @@ pub fn get_latest_commit_hash(
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub struct GetUserResponse {
+    pub login: String,
+    pub name: String,
+    pub company: String,
+}
+
+pub fn get_user(github_token: impl AsRef<str>) -> Result<GetUserResponse> {
+    let url = format!("https://api.github.com/user",);
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(&url)
+        .header(reqwest::header::USER_AGENT, "yevis")
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("token {}", github_token.as_ref()),
+        )
+        .send()?;
+    ensure!(
+        response.status().is_success(),
+        "Failed to get latest commit hash"
+    );
+    let body = response.json::<Value>()?;
+
+    match &body.is_object() {
+        true => Ok(GetUserResponse {
+            login: body["login"]
+                .as_str()
+                .ok_or(anyhow!("Failed to parse response"))?
+                .to_string(),
+            name: body["name"]
+                .as_str()
+                .ok_or(anyhow!("Failed to parse response"))?
+                .to_string(),
+            company: body["company"]
+                .as_str()
+                .ok_or(anyhow!("Failed to parse response"))?
+                .to_string(),
+        }),
+        false => Err(anyhow!("Failed to parse response")),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -149,5 +192,12 @@ mod tests {
         let token = read_github_token(&arg_token).unwrap();
         let response = get_latest_commit_hash(&token, "ddbj", "yevis-cli", "main").unwrap();
         is_commit_hash(&response).unwrap();
+    }
+
+    #[test]
+    fn test_get_user() {
+        let arg_token: Option<&str> = None;
+        let token = read_github_token(&arg_token).unwrap();
+        get_user(&token).unwrap();
     }
 }

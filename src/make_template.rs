@@ -1,6 +1,6 @@
 // use crate::github_api;
 use crate::github_api;
-use crate::remote;
+use crate::type_config;
 use crate::workflow_type_version;
 use anyhow::{anyhow, bail, ensure, Result};
 use regex::Regex;
@@ -10,10 +10,72 @@ use url::Url;
 pub fn make_template(
     workflow_location: impl AsRef<str>,
     arg_github_token: &Option<impl AsRef<str>>,
-    output: impl AsRef<Path>,
-    format: impl AsRef<str>,
+    _output: impl AsRef<Path>,
+    _format: impl AsRef<str>,
 ) -> Result<()> {
     let github_token = github_api::read_github_token(&arg_github_token)?;
+    let wf_repo_info = obtain_wf_repo_info(&workflow_location, &github_token)?;
+    let github_user_info = github_api::get_user(&github_token)?;
+    let main_wf_loc = Url::parse(&format!(
+        "https://raw.githubusercontent.com/{}/{}/{}/{}",
+        &wf_repo_info.owner, &wf_repo_info.name, &wf_repo_info.commit_hash, &wf_repo_info.file_path
+    ))?;
+    let main_wf_type_version = workflow_type_version::inspect_wf_type_version(&main_wf_loc)?;
+
+    let _template_config = type_config::Config {
+        id: format!(
+            "{}/{}/{}/{}",
+            &wf_repo_info.owner,
+            &wf_repo_info.name,
+            &wf_repo_info.commit_hash,
+            &wf_repo_info.file_path
+        ),
+        authors: vec![type_config::Author {
+            github_account: github_user_info.login,
+            name: github_user_info.name,
+            affiliation: github_user_info.company,
+            orcid: "".to_string(),
+        }],
+        license: wf_repo_info.license,
+        workflow_name: Path::new(&wf_repo_info.file_path)
+            .file_stem()
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_string(),
+        workflow_language: main_wf_type_version,
+        files: vec![type_config::File {
+            url: "".to_string(),
+            target: "".to_string(),
+            r#type: "".to_string(),
+        }],
+        testing: vec![type_config::Testing {
+            id: "".to_string(),
+            files: vec![type_config::File {
+                url: "".to_string(),
+                target: "".to_string(),
+                r#type: "".to_string(),
+            }],
+        }],
+    };
+
+    Ok(())
+}
+
+#[derive(Debug, PartialEq)]
+struct WfRepoInfo {
+    owner: String,
+    name: String,
+    license: String,
+    commit_hash: String,
+    file_path: String,
+}
+
+/// Obtain and organize information about the GitHub repository, where the main workflow is located.
+fn obtain_wf_repo_info(
+    workflow_location: impl AsRef<str>,
+    github_token: impl AsRef<str>,
+) -> Result<WfRepoInfo> {
     let parse_result = parse_wf_loc(&workflow_location)?;
     let get_repos_response =
         github_api::get_repos(&github_token, &parse_result.owner, &parse_result.name)?;
@@ -25,7 +87,7 @@ pub fn make_template(
         )
     );
     let license = match &get_repos_response.license {
-        Some(license) => license.clone(),
+        Some(license) => license.to_string(),
         None => {
             bail!(
                 "No license found for repo {}/{}",
@@ -36,7 +98,7 @@ pub fn make_template(
     };
     let branch = match &parse_result.branch {
         Some(branch) => branch.to_string(),
-        None => get_repos_response.default_branch.clone(),
+        None => get_repos_response.default_branch,
     };
     let commit_hash = match &parse_result.commit_hash {
         Some(commit_hash) => commit_hash.to_string(),
@@ -47,51 +109,13 @@ pub fn make_template(
             &branch,
         )?,
     };
-    let main_wf_loc = Url::parse(&format!(
-        "https://raw.githubusercontent.com/{}/{}/{}/{}",
-        &parse_result.owner, &parse_result.name, &commit_hash, &parse_result.file_path
-    ))?;
-    let main_wf_content = remote::fetch_raw_content(&main_wf_loc)?;
-    let main_wf_type = match &workflow_type_version::inspect_wf_type(&main_wf_content) {
-        Ok(wf_type) => wf_type.to_string(),
-        Err(_) => "CWL".to_string(),
-    };
-    let main_wf_version =
-        match &workflow_type_version::inspect_wf_version(&main_wf_content, &main_wf_type) {
-            Ok(wf_version) => wf_version.to_string(),
-            Err(_) => "1.0".to_string(),
-        };
-
-    let template_config = Config {
-        id: "".to_string(),
-        workflow_name: "".to_string(),
-        authors: vec![Author {
-            github_account: "".to_string(),
-            name: "".to_string(),
-            affiliation: "".to_string(),
-            orcid: "".to_string(),
-        }],
-        license: license,
-        workflow_language: WorkflowLanguage {
-            r#type: main_wf_type,
-            version: main_wf_version,
-        },
-        files: vec![File {
-            url: "".to_string(),
-            target: "".to_string(),
-            r#type: "".to_string(),
-        }],
-        testing: vec![Testing {
-            id: "".to_string(),
-            files: vec![File {
-                url: "".to_string(),
-                target: "".to_string(),
-                r#type: "".to_string(),
-            }],
-        }],
-    };
-
-    Ok(())
+    Ok(WfRepoInfo {
+        owner: parse_result.owner,
+        name: parse_result.name,
+        license,
+        commit_hash,
+        file_path: parse_result.file_path,
+    })
 }
 
 #[derive(Debug, PartialEq)]
@@ -172,47 +196,25 @@ pub fn is_commit_hash(hash: impl AsRef<str>) -> Result<()> {
     Ok(())
 }
 
-#[derive(Debug, PartialEq)]
-struct Config {
-    id: String,
-    workflow_name: String,
-    authors: Vec<Author>,
-    license: String,
-    workflow_language: WorkflowLanguage,
-    files: Vec<File>,
-    testing: Vec<Testing>,
-}
-
-#[derive(Debug, PartialEq)]
-struct Author {
-    github_account: String,
-    name: String,
-    affiliation: String,
-    orcid: String,
-}
-
-#[derive(Debug, PartialEq)]
-struct WorkflowLanguage {
-    r#type: String,
-    version: String,
-}
-
-#[derive(Debug, PartialEq)]
-struct File {
-    url: String,
-    target: String,
-    r#type: String,
-}
-
-#[derive(Debug, PartialEq)]
-struct Testing {
-    id: String,
-    files: Vec<File>,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_obtain_wf_repo_info() {
+        let arg_github_token: Option<&str> = None;
+        let github_token = github_api::read_github_token(&arg_github_token).unwrap();
+        let wf_loc = "https://raw.githubusercontent.com/sapporo-wes/sapporo-service/main/tests/resources/cwltool/trimming_and_qc.cwl";
+        let wf_repo_info = obtain_wf_repo_info(&wf_loc, &github_token).unwrap();
+        assert_eq!(wf_repo_info.owner, "sapporo-wes");
+        assert_eq!(wf_repo_info.name, "sapporo-service");
+        assert_eq!(wf_repo_info.license, "Apache-2.0");
+        is_commit_hash(&wf_repo_info.commit_hash).unwrap();
+        assert_eq!(
+            wf_repo_info.file_path,
+            "tests/resources/cwltool/trimming_and_qc.cwl"
+        );
+    }
 
     #[test]
     fn test_parse_wf_loc() {
@@ -263,5 +265,10 @@ mod tests {
                 file_path: "path/to/workflow".to_string(),
             },
         );
+    }
+
+    #[test]
+    fn test_is_commit_hash() {
+        is_commit_hash("752eab2a3b34f0c2fe4489a591303ded6906169d").unwrap();
     }
 }
