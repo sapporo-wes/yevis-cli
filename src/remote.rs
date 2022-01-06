@@ -1,7 +1,7 @@
 use anyhow::{ensure, Result};
 use reqwest;
 
-fn fetch_raw_content(remote_location: impl AsRef<str>) -> Result<String> {
+pub fn fetch_raw_content(remote_location: impl AsRef<str>) -> Result<String> {
     let client = reqwest::blocking::Client::new();
     let response = client
         .get(remote_location.as_ref())

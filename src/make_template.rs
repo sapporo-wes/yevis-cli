@@ -1,5 +1,7 @@
 // use crate::github_api;
 use crate::github_api;
+use crate::remote;
+use crate::workflow_type_version;
 use anyhow::{anyhow, bail, ensure, Result};
 use regex::Regex;
 use std::path::Path;
@@ -11,15 +13,15 @@ pub fn make_template(
     format: impl AsRef<str>,
 ) -> Result<()> {
     let parse_result = parse_wf_loc(&workflow_location)?;
-    let repos_response = github_api::get_repos(&parse_result.owner, &parse_result.name)?;
+    let get_repos_response = github_api::get_repos(&parse_result.owner, &parse_result.name)?;
     ensure!(
-        repos_response.private == false,
+        get_repos_response.private == false,
         format!(
             "Repo {}/{} is private",
             parse_result.owner, parse_result.name
         )
     );
-    let license = match &repos_response.license {
+    let license = match &get_repos_response.license {
         Some(license) => license.spdx_id.clone(),
         None => {
             bail!(
@@ -31,7 +33,7 @@ pub fn make_template(
     };
     let branch = match &parse_result.branch {
         Some(branch) => branch.to_string(),
-        None => repos_response.default_branch.clone(),
+        None => get_repos_response.default_branch.clone(),
     };
     let commit_hash = match &parse_result.commit_hash {
         Some(commit_hash) => commit_hash.to_string(),
@@ -39,6 +41,50 @@ pub fn make_template(
             github_api::get_latest_commit_hash(&parse_result.owner, &parse_result.name, &branch)?
         }
     };
+    let main_wf_loc = Url::parse(&format!(
+        "https://raw.githubusercontent.com/{}/{}/{}/{}",
+        &parse_result.owner, &parse_result.name, &commit_hash, &parse_result.file_path
+    ))?;
+    let main_wf_content = remote::fetch_raw_content(&main_wf_loc)?;
+    let main_wf_type = match workflow_type_version::inspect_wf_type(&main_wf_content) {
+        Ok(wf_type) => wf_type,
+        Err(_) => "CWL".to_string(),
+    };
+    let main_wf_version =
+        match workflow_type_version::inspect_wf_version(&main_wf_content, &main_wf_type) {
+            Ok(wf_version) => wf_version,
+            Err(_) => "1.0".to_string(),
+        };
+
+    let template_config = Config {
+        id: "".to_string(),
+        workflow_name: "".to_string(),
+        authors: vec![Author {
+            github_account: "".to_string(),
+            name: "".to_string(),
+            affiliation: "".to_string(),
+            orcid: "".to_string(),
+        }],
+        license: license,
+        workflow_language: WorkflowLanguage {
+            r#type: main_wf_type,
+            version: main_wf_version,
+        },
+        files: vec![File {
+            url: "".to_string(),
+            target: "".to_string(),
+            r#type: "".to_string(),
+        }],
+        testing: vec![Testing {
+            id: "".to_string(),
+            files: vec![File {
+                url: "".to_string(),
+                target: "".to_string(),
+                r#type: "".to_string(),
+            }],
+        }],
+    };
+
     Ok(())
 }
 
@@ -136,7 +182,7 @@ struct Author {
     github_account: String,
     name: String,
     affiliation: String,
-    ORCID: String,
+    orcid: String,
 }
 
 #[derive(Debug, PartialEq)]

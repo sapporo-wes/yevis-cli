@@ -3,7 +3,7 @@ use regex::Regex;
 use serde_yaml;
 use std::collections::BTreeMap;
 
-fn inspect_wf_type(wf_content: impl AsRef<str>) -> Result<String> {
+pub fn inspect_wf_type(wf_content: impl AsRef<str>) -> Result<String> {
     match check_by_shebang(&wf_content) {
         Ok(wf_type) => return Ok(wf_type),
         Err(_) => {}
@@ -47,7 +47,7 @@ fn check_by_regexp(wf_content: impl AsRef<str>) -> Result<String> {
     Err(anyhow!("Unknown workflow type"))
 }
 
-fn inspect_wf_version(wf_content: impl AsRef<str>, wf_type: impl AsRef<str>) -> Result<String> {
+pub fn inspect_wf_version(wf_content: impl AsRef<str>, wf_type: impl AsRef<str>) -> Result<String> {
     match wf_type.as_ref() {
         "CWL" => inspect_cwl_version(&wf_content),
         "WDL" => inspect_wdl_version(&wf_content),
@@ -89,7 +89,7 @@ fn inspect_nfl_version(wf_content: impl AsRef<str>) -> Result<String> {
     Ok("1.0".to_string())
 }
 
-fn inspect_smk_version(wf_content: impl AsRef<str>) -> Result<String> {
+fn inspect_smk_version(_wf_content: impl AsRef<str>) -> Result<String> {
     Ok("1.0".to_string())
 }
 
