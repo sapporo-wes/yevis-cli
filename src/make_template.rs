@@ -9,11 +9,14 @@ use url::Url;
 
 pub fn make_template(
     workflow_location: impl AsRef<str>,
+    arg_github_token: &Option<impl AsRef<str>>,
     output: impl AsRef<Path>,
     format: impl AsRef<str>,
 ) -> Result<()> {
+    let github_token = github_api::read_github_token(&arg_github_token)?;
     let parse_result = parse_wf_loc(&workflow_location)?;
-    let get_repos_response = github_api::get_repos(&parse_result.owner, &parse_result.name)?;
+    let get_repos_response =
+        github_api::get_repos(&github_token, &parse_result.owner, &parse_result.name)?;
     ensure!(
         get_repos_response.private == false,
         format!(
@@ -22,7 +25,7 @@ pub fn make_template(
         )
     );
     let license = match &get_repos_response.license {
-        Some(license) => license.spdx_id.clone(),
+        Some(license) => license.clone(),
         None => {
             bail!(
                 "No license found for repo {}/{}",
@@ -37,22 +40,25 @@ pub fn make_template(
     };
     let commit_hash = match &parse_result.commit_hash {
         Some(commit_hash) => commit_hash.to_string(),
-        None => {
-            github_api::get_latest_commit_hash(&parse_result.owner, &parse_result.name, &branch)?
-        }
+        None => github_api::get_latest_commit_hash(
+            &github_token,
+            &parse_result.owner,
+            &parse_result.name,
+            &branch,
+        )?,
     };
     let main_wf_loc = Url::parse(&format!(
         "https://raw.githubusercontent.com/{}/{}/{}/{}",
         &parse_result.owner, &parse_result.name, &commit_hash, &parse_result.file_path
     ))?;
     let main_wf_content = remote::fetch_raw_content(&main_wf_loc)?;
-    let main_wf_type = match workflow_type_version::inspect_wf_type(&main_wf_content) {
-        Ok(wf_type) => wf_type,
+    let main_wf_type = match &workflow_type_version::inspect_wf_type(&main_wf_content) {
+        Ok(wf_type) => wf_type.to_string(),
         Err(_) => "CWL".to_string(),
     };
     let main_wf_version =
-        match workflow_type_version::inspect_wf_version(&main_wf_content, &main_wf_type) {
-            Ok(wf_version) => wf_version,
+        match &workflow_type_version::inspect_wf_version(&main_wf_content, &main_wf_type) {
+            Ok(wf_version) => wf_version.to_string(),
             Err(_) => "1.0".to_string(),
         };
 

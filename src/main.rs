@@ -19,30 +19,42 @@ fn main() -> Result<()> {
     match &args {
         Args::MakeTemplate {
             workflow_location,
+            github_token,
             output,
             format,
         } => {
-            make_template(&workflow_location, &output, &format)?;
+            make_template(&workflow_location, &github_token, &output, &format)?;
         }
-        Args::Validate { config_file } => {
-            validate(&config_file)?;
+        Args::Validate {
+            config_file,
+            github_token,
+        } => {
+            validate(&config_file, &github_token)?;
         }
         Args::Test {
             config_file,
+            github_token,
             wes_location,
             docker_host,
         } => {
-            test(&config_file, &wes_location, &docker_host)?;
+            test(&config_file, &github_token, &wes_location, &docker_host)?;
         }
         Args::PullRequest {
             config_file,
+            github_token,
             repository,
             wes_location,
             docker_host,
         } => {
-            validate(&config_file)?;
-            test(&config_file, &wes_location, &docker_host)?;
-            pull_request(&config_file, &repository, &wes_location, &docker_host)?;
+            validate(&config_file, &github_token)?;
+            test(&config_file, &github_token, &wes_location, &docker_host)?;
+            pull_request(
+                &config_file,
+                &github_token,
+                &repository,
+                &wes_location,
+                &docker_host,
+            )?;
         }
     }
     Ok(())
