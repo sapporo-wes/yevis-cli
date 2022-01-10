@@ -7,18 +7,15 @@ use std::collections::BTreeMap;
 
 pub fn inspect_wf_type_version(wf_loc: impl AsRef<str>) -> Result<type_config::WorkflowLanguage> {
     let wf_content = remote::fetch_raw_content(&wf_loc)?;
-    let wf_type = match &inspect_wf_type(&wf_content) {
+    let r#type = match &inspect_wf_type(&wf_content) {
         Ok(wf_type) => wf_type.to_string(),
         Err(_) => "CWL".to_string(),
     };
-    let wf_version = match &inspect_wf_version(&wf_content, &wf_type) {
+    let version = match &inspect_wf_version(&wf_content, &r#type) {
         Ok(wf_version) => wf_version.to_string(),
         Err(_) => "1.0".to_string(),
     };
-    Ok(type_config::WorkflowLanguage {
-        r#type: wf_type,
-        version: wf_version,
-    })
+    Ok(type_config::WorkflowLanguage { r#type, version })
 }
 
 pub fn inspect_wf_type(wf_content: impl AsRef<str>) -> Result<String> {
@@ -119,8 +116,13 @@ mod tests {
     fn test_inspect_wf_type_version() {
         let wf_loc = "https://raw.githubusercontent.com/sapporo-wes/sapporo-service/main/tests/resources/cwltool/trimming_and_qc.cwl";
         let wf_type_version = inspect_wf_type_version(wf_loc).unwrap();
-        assert_eq!(wf_type_version.r#type, "CWL");
-        assert_eq!(wf_type_version.version, "v1.0");
+        assert_eq!(
+            wf_type_version,
+            type_config::WorkflowLanguage {
+                r#type: "CWL".to_string(),
+                version: "v1.0".to_string()
+            }
+        );
     }
 
     #[test]

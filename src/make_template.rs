@@ -1,63 +1,92 @@
-// use crate::github_api;
 use crate::github_api;
 use crate::type_config;
 use crate::workflow_type_version;
 use anyhow::{anyhow, bail, ensure, Result};
 use regex::Regex;
+use serde_json;
+use serde_yaml;
+use std::fs;
 use std::path::Path;
 use url::Url;
 
 pub fn make_template(
     workflow_location: impl AsRef<str>,
     arg_github_token: &Option<impl AsRef<str>>,
-    _output: impl AsRef<Path>,
-    _format: impl AsRef<str>,
+    output: impl AsRef<Path>,
+    format: impl AsRef<str>,
 ) -> Result<()> {
     let github_token = github_api::read_github_token(&arg_github_token)?;
+
     let wf_repo_info = obtain_wf_repo_info(&workflow_location, &github_token)?;
     let github_user_info = github_api::get_user(&github_token)?;
-    let main_wf_loc = Url::parse(&format!(
-        "https://raw.githubusercontent.com/{}/{}/{}/{}",
-        &wf_repo_info.owner, &wf_repo_info.name, &wf_repo_info.commit_hash, &wf_repo_info.file_path
-    ))?;
-    let main_wf_type_version = workflow_type_version::inspect_wf_type_version(&main_wf_loc)?;
 
-    let _template_config = type_config::Config {
-        id: format!(
-            "{}/{}/{}/{}",
-            &wf_repo_info.owner,
-            &wf_repo_info.name,
-            &wf_repo_info.commit_hash,
-            &wf_repo_info.file_path
-        ),
-        authors: vec![type_config::Author {
-            github_account: github_user_info.login,
-            name: github_user_info.name,
-            affiliation: github_user_info.company,
-            orcid: "".to_string(),
-        }],
+    let wf_loc = github_api::to_raw_url(
+        &wf_repo_info.owner,
+        &wf_repo_info.name,
+        &wf_repo_info.commit_hash,
+        &wf_repo_info.file_path,
+    )?;
+    let wf_type_version = workflow_type_version::inspect_wf_type_version(&wf_loc)?;
+    let wf_name = Path::new(&wf_repo_info.file_path)
+        .file_stem()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let wf_id = format!(
+        "{}_{}_{}",
+        &wf_repo_info.owner, &wf_repo_info.name, &wf_name
+    );
+    let wf_version = "1.0.0".to_string(); // TODO update
+    let readme_url = github_api::to_raw_url(
+        &wf_repo_info.owner,
+        &wf_repo_info.name,
+        &wf_repo_info.commit_hash,
+        "README.md",
+    )?;
+    let license_url = github_api::to_raw_url(
+        &wf_repo_info.owner,
+        &wf_repo_info.name,
+        &wf_repo_info.commit_hash,
+        github_api::get_license_path(&github_token, &wf_repo_info.owner, &wf_repo_info.name)?,
+    )?;
+    let files = obtain_wf_files(&github_token, &wf_repo_info)?;
+
+    let template_config = type_config::Config {
+        id: wf_id,
+        version: wf_version,
+        authors: vec![
+            type_config::Author::new_from_github_user_info(&github_user_info),
+            type_config::Author::new_ddbj(),
+        ],
+        readme_url,
         license: wf_repo_info.license,
-        workflow_name: Path::new(&wf_repo_info.file_path)
-            .file_stem()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string(),
-        workflow_language: main_wf_type_version,
-        files: vec![type_config::File {
-            url: "".to_string(),
-            target: "".to_string(),
-            r#type: "".to_string(),
-        }],
+        license_url,
+        workflow_name: wf_name,
+        workflow_language: wf_type_version,
+        files,
         testing: vec![type_config::Testing {
-            id: "".to_string(),
-            files: vec![type_config::File {
-                url: "".to_string(),
-                target: "".to_string(),
-                r#type: "".to_string(),
-            }],
+            id: "test_1".to_string(),
+            files: vec![type_config::File::new_template()],
         }],
     };
+
+    let template_config_str = match format.as_ref() {
+        "json" => serde_json::to_string_pretty(&template_config)?,
+        "yaml" => serde_yaml::to_string(&template_config)?,
+        _ => bail!("unknown format: {}", format.as_ref()),
+    };
+    let mut output_path_buf = output.as_ref().to_path_buf();
+    match format.as_ref() {
+        "json" => {
+            output_path_buf.set_extension("json");
+        }
+        "yaml" => {
+            output_path_buf.set_extension("yml");
+        }
+        _ => bail!("unknown format: {}", format.as_ref()),
+    };
+    fs::write(output_path_buf, template_config_str)?;
 
     Ok(())
 }
@@ -196,6 +225,46 @@ pub fn is_commit_hash(hash: impl AsRef<str>) -> Result<()> {
     Ok(())
 }
 
+fn obtain_wf_files(
+    github_token: impl AsRef<str>,
+    wf_repo_info: &WfRepoInfo,
+) -> Result<Vec<type_config::File>> {
+    let dir_path = Path::new(&wf_repo_info.file_path)
+        .parent()
+        .ok_or(anyhow!(
+            "Could not parse dir path from the workflow location"
+        ))?
+        .to_str()
+        .ok_or(anyhow!(
+            "Could not parse dir path from the workflow location"
+        ))?;
+    let files = github_api::get_file_list_recursive(
+        &github_token,
+        &wf_repo_info.owner,
+        &wf_repo_info.name,
+        &wf_repo_info.commit_hash,
+        &dir_path,
+    )?;
+    Ok(files
+        .into_iter()
+        .map(|file| -> Result<type_config::File> {
+            Ok(type_config::File::new_from_raw_url(
+                &github_api::to_raw_url(
+                    &wf_repo_info.owner,
+                    &wf_repo_info.name,
+                    &wf_repo_info.commit_hash,
+                    &file,
+                )?,
+                if file == wf_repo_info.file_path {
+                    "PRIMARY"
+                } else {
+                    "SECONDARY"
+                },
+            ))
+        })
+        .collect::<Result<Vec<type_config::File>>>()?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -270,5 +339,18 @@ mod tests {
     #[test]
     fn test_is_commit_hash() {
         is_commit_hash("752eab2a3b34f0c2fe4489a591303ded6906169d").unwrap();
+    }
+
+    #[test]
+    fn test_obtain_wf_files() {
+        let arg_github_token: Option<&str> = None;
+        let github_token = github_api::read_github_token(&arg_github_token).unwrap();
+        let wf_loc = "https://raw.githubusercontent.com/ddbj/yevis-cli/main/README.md";
+        let wf_repo_info = obtain_wf_repo_info(&wf_loc, &github_token).unwrap();
+        let result = obtain_wf_files(&github_token, &wf_repo_info).unwrap();
+        let readme = result.iter().find(|f| f.target == "README.md").unwrap();
+        assert_eq!(readme.r#type, "PRIMARY");
+        let license = result.iter().find(|f| f.target == "LICENSE").unwrap();
+        assert_eq!(license.r#type, "SECONDARY");
     }
 }
