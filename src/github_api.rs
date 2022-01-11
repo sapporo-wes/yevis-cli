@@ -1,33 +1,89 @@
-use anyhow::{anyhow, ensure, Result};
+use crate::make_template;
+use anyhow::{anyhow, bail, ensure, Result};
 use dotenv::dotenv;
 use reqwest;
 use serde_json::Value;
 use std::env;
+use std::path::{Path, PathBuf};
 use url::Url;
 
-pub fn to_raw_url(
-    owner: impl AsRef<str>,
-    name: impl AsRef<str>,
-    commit_hash: impl AsRef<str>,
-    file_path: impl AsRef<str>,
-) -> Result<String> {
-    Ok(Url::parse(&format!(
-        "https://raw.githubusercontent.com/{}/{}/{}/{}",
-        owner.as_ref(),
-        name.as_ref(),
-        commit_hash.as_ref(),
-        file_path.as_ref()
-    ))?
-    .to_string())
+#[derive(Debug, PartialEq)]
+pub struct WfRepoInfo {
+    pub owner: String,
+    pub name: String,
+    pub license: String,
+    pub commit_hash: String,
+    pub file_path: PathBuf,
 }
 
-pub fn to_file_path(raw_url: impl AsRef<str>) -> Result<String> {
-    let raw_url = Url::parse(raw_url.as_ref())?;
+impl WfRepoInfo {
+    /// Obtain and organize information about the GitHub repository, where the main workflow is located.
+    pub fn new(github_token: impl AsRef<str>, wf_loc: &Url) -> Result<Self> {
+        let parse_result = make_template::parse_wf_loc(&wf_loc)?;
+        let get_repos_res = get_repos(&github_token, &parse_result.owner, &parse_result.name)?;
+        ensure!(
+            get_repos_res.private == false,
+            format!(
+                "Repository {}/{} is private",
+                parse_result.owner, parse_result.name
+            )
+        );
+        let license = match &get_repos_res.license {
+            Some(license) => license.to_string(),
+            None => {
+                bail!(
+                    "No license found for repository {}/{}",
+                    parse_result.owner,
+                    parse_result.name
+                );
+            }
+        };
+        let branch = match &parse_result.branch {
+            Some(branch) => branch.to_string(),
+            None => get_repos_res.default_branch,
+        };
+        let commit_hash = match &parse_result.commit_hash {
+            Some(commit_hash) => commit_hash.to_string(),
+            None => get_latest_commit_hash(
+                &github_token,
+                &parse_result.owner,
+                &parse_result.name,
+                &branch,
+            )?,
+        };
+        Ok(WfRepoInfo {
+            owner: parse_result.owner,
+            name: parse_result.name,
+            license,
+            commit_hash,
+            file_path: parse_result.file_path,
+        })
+    }
+}
+
+pub fn to_raw_url(wf_repo_info: &WfRepoInfo, file_path: impl AsRef<Path>) -> Result<Url> {
+    Ok(Url::parse(&format!(
+        "https://raw.githubusercontent.com/{}/{}/{}/{}",
+        &wf_repo_info.owner,
+        &wf_repo_info.name,
+        &wf_repo_info.commit_hash,
+        file_path
+            .as_ref()
+            .display()
+            .to_string()
+            .trim_start_matches("/")
+    ))?)
+}
+
+pub fn to_file_path(raw_url: &Url) -> Result<PathBuf> {
     let path_segments = raw_url
         .path_segments()
-        .ok_or(anyhow!("Could not parse path segments"))?
+        .ok_or(anyhow!(
+            "Failed to get path segments from url: {}",
+            raw_url.as_str()
+        ))?
         .collect::<Vec<_>>();
-    Ok(path_segments[3..].join("/"))
+    Ok(path_segments[3..].iter().collect())
 }
 
 pub fn read_github_token(arg_token: &Option<impl AsRef<str>>) -> Result<String> {
@@ -45,14 +101,14 @@ pub fn get_repos(
     owner: impl AsRef<str>,
     name: impl AsRef<str>,
 ) -> Result<GetReposResponse> {
-    let url = format!(
+    let url = Url::parse(&format!(
         "https://api.github.com/repos/{}/{}",
         owner.as_ref(),
         name.as_ref()
-    );
+    ))?;
     let client = reqwest::blocking::Client::new();
     let response = client
-        .get(&url)
+        .get(url.as_str())
         .header(reqwest::header::USER_AGENT, "yevis")
         .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
         .header(
@@ -99,15 +155,15 @@ pub fn get_latest_commit_hash(
     name: impl AsRef<str>,
     branch: impl AsRef<str>,
 ) -> Result<String> {
-    let url = format!(
+    let url = Url::parse(&format!(
         "https://api.github.com/repos/{}/{}/branches/{}",
         owner.as_ref(),
         name.as_ref(),
         branch.as_ref()
-    );
+    ))?;
     let client = reqwest::blocking::Client::new();
     let response = client
-        .get(&url)
+        .get(url.as_str())
         .header(reqwest::header::USER_AGENT, "yevis")
         .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
         .header(
@@ -143,10 +199,9 @@ pub struct GetUserResponse {
 }
 
 pub fn get_user(github_token: impl AsRef<str>) -> Result<GetUserResponse> {
-    let url = format!("https://api.github.com/user",);
     let client = reqwest::blocking::Client::new();
     let response = client
-        .get(&url)
+        .get("https://api.github.com/user")
         .header(reqwest::header::USER_AGENT, "yevis")
         .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
         .header(
@@ -189,13 +244,17 @@ pub fn get_file_list_recursive(
     owner: impl AsRef<str>,
     name: impl AsRef<str>,
     commit_hash: impl AsRef<str>,
-    dir_path: impl AsRef<str>,
-) -> Result<Vec<String>> {
+    dir_path: impl AsRef<Path>,
+) -> Result<Vec<PathBuf>> {
     let url = format!(
         "https://api.github.com/repos/{}/{}/contents/{}",
         owner.as_ref(),
         name.as_ref(),
-        dir_path.as_ref(),
+        dir_path
+            .as_ref()
+            .display()
+            .to_string()
+            .trim_start_matches("/")
     );
     let client = reqwest::blocking::Client::new();
     let response = client
@@ -213,7 +272,7 @@ pub fn get_file_list_recursive(
 
     match &body.is_array() {
         true => {
-            let mut file_list = Vec::new();
+            let mut file_list: Vec<PathBuf> = Vec::new();
             for obj in body.as_array().ok_or(anyhow!("Failed to parse response"))? {
                 let obj_type = obj["type"]
                     .as_str()
@@ -223,7 +282,7 @@ pub fn get_file_list_recursive(
                         let path = obj["path"]
                             .as_str()
                             .ok_or(anyhow!("Failed to parse response"))?;
-                        file_list.push(path.to_string());
+                        file_list.push(PathBuf::from(path));
                     }
                     "dir" => {
                         let path = obj["path"]
@@ -251,11 +310,11 @@ pub fn get_license_path(
     github_token: impl AsRef<str>,
     owner: impl AsRef<str>,
     name: impl AsRef<str>,
-) -> Result<String> {
+) -> Result<PathBuf> {
     let url = format!(
         "https://api.github.com/repos/{}/{}/license",
         owner.as_ref(),
-        name.as_ref(),
+        name.as_ref()
     );
     let client = reqwest::blocking::Client::new();
     let response = client
@@ -275,7 +334,7 @@ pub fn get_license_path(
             let path = body["path"]
                 .as_str()
                 .ok_or(anyhow!("Failed to parse response"))?;
-            Ok(path.to_string())
+            Ok(PathBuf::from(path))
         }
         false => Err(anyhow!("Failed to parse response")),
     }
@@ -285,6 +344,22 @@ pub fn get_license_path(
 mod tests {
     use super::*;
     use crate::make_template::is_commit_hash;
+
+    #[test]
+    fn test_wf_repo_info_new() {
+        let arg_github_token: Option<&str> = None;
+        let github_token = read_github_token(&arg_github_token).unwrap();
+        let wf_loc = Url::parse("https://raw.githubusercontent.com/sapporo-wes/sapporo-service/main/tests/resources/cwltool/trimming_and_qc.cwl").unwrap();
+        let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc).unwrap();
+        assert_eq!(wf_repo_info.owner, "sapporo-wes");
+        assert_eq!(wf_repo_info.name, "sapporo-service");
+        assert_eq!(wf_repo_info.license, "Apache-2.0");
+        is_commit_hash(&wf_repo_info.commit_hash).unwrap();
+        assert_eq!(
+            wf_repo_info.file_path,
+            PathBuf::from("tests/resources/cwltool/trimming_and_qc.cwl")
+        );
+    }
 
     #[test]
     fn test_read_github_token_args() {
@@ -336,9 +411,9 @@ mod tests {
         let commit_hash = get_latest_commit_hash(&token, "ddbj", "yevis-cli", "main").unwrap();
         let response =
             get_file_list_recursive(&token, "ddbj", "yevis-cli", &commit_hash, ".").unwrap();
-        assert!(response.contains(&"README.md".to_string()));
-        assert!(response.contains(&"LICENSE".to_string()));
-        assert!(response.contains(&"src/main.rs".to_string()));
+        assert!(response.contains(&PathBuf::from("README.md")));
+        assert!(response.contains(&PathBuf::from("LICENSE")));
+        assert!(response.contains(&PathBuf::from("src/main.rs")));
     }
 
     #[test]
@@ -346,6 +421,6 @@ mod tests {
         let arg_token: Option<&str> = None;
         let token = read_github_token(&arg_token).unwrap();
         let response = get_license_path(&token, "ddbj", "yevis-cli").unwrap();
-        assert_eq!(response, "LICENSE");
+        assert_eq!(response, PathBuf::from("LICENSE"));
     }
 }

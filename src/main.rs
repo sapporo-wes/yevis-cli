@@ -2,6 +2,7 @@ mod args;
 mod github_api;
 mod lib_test;
 mod make_template;
+mod path_utils;
 mod pull_request;
 mod remote;
 mod type_config;

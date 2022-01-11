@@ -1,5 +1,26 @@
+use anyhow::{bail, Error, Result};
 use std::path::PathBuf;
+use std::str::FromStr;
 use structopt::{clap, StructOpt};
+use url::Url;
+
+#[derive(Debug, PartialEq)]
+pub enum FileFormat {
+    Yaml,
+    Json,
+}
+
+impl FromStr for FileFormat {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "yaml" => Ok(FileFormat::Yaml),
+            "json" => Ok(FileFormat::Json),
+            _ => bail!("Invalid file format: {}", s),
+        }
+    }
+}
 
 #[derive(StructOpt, Debug, PartialEq)]
 #[structopt(
@@ -12,7 +33,7 @@ pub enum Args {
     /// Generates a configuration file template for yevis from a workflow document.
     MakeTemplate {
         // Remote location of the workflow's main document file (only hosted on GitHub).
-        workflow_location: String,
+        workflow_location: Url,
 
         /// GitHub Personal Access Token.
         #[structopt(short, long)]
@@ -24,7 +45,7 @@ pub enum Args {
 
         /// Format of the output file (`yaml` or `json`).
         #[structopt(short, long, default_value = "yaml")]
-        format: String,
+        format: FileFormat,
     },
 
     /// Validate the schema and contents of the configuration file.
@@ -51,11 +72,11 @@ pub enum Args {
         /// Location of WES in which to run the test.
         /// If not specified, `sapporo-service` will be started.
         #[structopt(short, long)]
-        wes_location: Option<String>,
+        wes_location: Option<Url>,
 
         /// Location of the docker host.
         #[structopt(short, long, default_value = "unix:///var/run/docker.sock")]
-        docker_host: String,
+        docker_host: Url,
     },
 
     /// After validating and testing, create a pull request to `ddbj/yevis-workflows`.
@@ -75,11 +96,11 @@ pub enum Args {
         /// Location of WES in which to run the test.
         /// If not specified, `sapporo-service` will be started.
         #[structopt(short, long)]
-        wes_location: Option<String>,
+        wes_location: Option<Url>,
 
         /// Location of the docker host.
         #[structopt(short, long, default_value = "unix:///var/run/docker.sock")]
-        docker_host: String,
+        docker_host: Url,
     },
 }
 
@@ -97,12 +118,46 @@ mod tests {
         assert_eq!(
             args,
             Args::MakeTemplate {
-                workflow_location: "https://example.com/path/to/workflow.yml".to_string(),
+                workflow_location: Url::from_str("https://example.com/path/to/workflow.yml")
+                    .unwrap(),
                 github_token: None,
                 output: PathBuf::from("yevis.yml"),
-                format: "yaml".to_string(),
+                format: FileFormat::Yaml,
             }
         );
+    }
+
+    #[test]
+    fn test_json_format() {
+        let args = Args::from_iter(&[
+            "yevis",
+            "make-template",
+            "--format",
+            "json",
+            "https://example.com/path/to/workflow.yml",
+        ]);
+        assert_eq!(
+            args,
+            Args::MakeTemplate {
+                workflow_location: Url::from_str("https://example.com/path/to/workflow.yml")
+                    .unwrap(),
+                github_token: None,
+                output: PathBuf::from("yevis.yml"),
+                format: FileFormat::Json,
+            }
+        );
+    }
+
+    #[test]
+    fn test_invalid_format() {
+        let result = Args::from_iter_safe(&[
+            "yevis",
+            "make-template",
+            "--format",
+            "toml",
+            "https://example.com/path/to/workflow.yml",
+        ]);
+        assert!(result.is_err());
     }
 
     #[test]
@@ -126,7 +181,7 @@ mod tests {
                 config_file: PathBuf::from("yevis.yml"),
                 github_token: None,
                 wes_location: None,
-                docker_host: "unix:///var/run/docker.sock".to_string(),
+                docker_host: Url::from_str("unix:///var/run/docker.sock").unwrap(),
             }
         );
     }
@@ -141,7 +196,7 @@ mod tests {
                 github_token: None,
                 repository: "ddbj/yevis-workflows".to_string(),
                 wes_location: None,
-                docker_host: "unix:///var/run/docker.sock".to_string(),
+                docker_host: Url::from_str("unix:///var/run/docker.sock").unwrap(),
             }
         );
     }

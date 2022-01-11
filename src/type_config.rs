@@ -1,14 +1,17 @@
 use crate::github_api;
+use anyhow::Result;
 use serde::Serialize;
+use std::path::PathBuf;
+use url::Url;
 
 #[derive(Debug, PartialEq, Serialize)]
 pub struct Config {
     pub id: String,
     pub version: String,
     pub authors: Vec<Author>,
-    pub readme_url: String,
+    pub readme_url: Url,
     pub license: String,
-    pub license_url: String,
+    pub license_url: Url,
     pub workflow_name: String,
     pub workflow_language: WorkflowLanguage,
     pub files: Vec<File>,
@@ -44,33 +47,48 @@ impl Author {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
+pub enum WorkflowLanguageType {
+    Cwl,
+    Wdl,
+    Nfl,
+    Smk,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
 pub struct WorkflowLanguage {
-    pub r#type: String,
+    pub r#type: WorkflowLanguageType,
     pub version: String,
 }
 
 #[derive(Debug, PartialEq, Serialize)]
+pub enum FileType {
+    Primary,
+    Secondary,
+    Test,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
 pub struct File {
-    pub url: String,
-    pub target: String,
-    pub r#type: String,
+    pub url: Url,
+    pub target: PathBuf,
+    pub r#type: FileType,
 }
 
 impl File {
-    pub fn new_template() -> Self {
+    pub fn new_test_file_template() -> Self {
         Self {
-            url: "".to_string(),
-            target: "".to_string(),
-            r#type: "".to_string(),
+            url: Url::parse("https://example.com/path/to/test_file").unwrap(),
+            target: PathBuf::from("path/to/test_file"),
+            r#type: FileType::Test,
         }
     }
 
-    pub fn new_from_raw_url(raw_url: impl AsRef<str>, r#type: impl AsRef<str>) -> Self {
-        Self {
-            url: raw_url.as_ref().to_string(),
-            target: github_api::to_file_path(&raw_url).unwrap().to_string(),
-            r#type: r#type.as_ref().to_string(),
-        }
+    pub fn new_from_raw_url(raw_url: &Url, r#type: FileType) -> Result<Self> {
+        Ok(Self {
+            url: raw_url.clone(),
+            target: github_api::to_file_path(&raw_url)?,
+            r#type,
+        })
     }
 }
 
