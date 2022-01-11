@@ -113,13 +113,15 @@ mod tests {
         let args = Args::from_iter(&[
             "yevis",
             "make-template",
-            "https://example.com/path/to/workflow.yml",
+            "https://github.com/ddbj/yevis-cli/path/to/workflow.yml",
         ]);
         assert_eq!(
             args,
             Args::MakeTemplate {
-                workflow_location: Url::from_str("https://example.com/path/to/workflow.yml")
-                    .unwrap(),
+                workflow_location: Url::from_str(
+                    "https://github.com/ddbj/yevis-cli/path/to/workflow.yml"
+                )
+                .unwrap(),
                 github_token: None,
                 output: PathBuf::from("yevis.yml"),
                 format: FileFormat::Yaml,
@@ -134,13 +136,15 @@ mod tests {
             "make-template",
             "--format",
             "json",
-            "https://example.com/path/to/workflow.yml",
+            "https://github.com/ddbj/yevis-cli/path/to/workflow.yml",
         ]);
         assert_eq!(
             args,
             Args::MakeTemplate {
-                workflow_location: Url::from_str("https://example.com/path/to/workflow.yml")
-                    .unwrap(),
+                workflow_location: Url::from_str(
+                    "https://github.com/ddbj/yevis-cli/path/to/workflow.yml"
+                )
+                .unwrap(),
                 github_token: None,
                 output: PathBuf::from("yevis.yml"),
                 format: FileFormat::Json,
@@ -155,7 +159,7 @@ mod tests {
             "make-template",
             "--format",
             "toml",
-            "https://example.com/path/to/workflow.yml",
+            "https://github.com/ddbj/yevis-cli/path/to/workflow.yml",
         ]);
         assert!(result.is_err());
     }

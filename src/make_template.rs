@@ -166,18 +166,20 @@ fn obtain_wf_files(
     github_token: impl AsRef<str>,
     wf_repo_info: &github_api::WfRepoInfo,
 ) -> Result<Vec<type_config::File>> {
+    let base_dir = path_utils::dir_path(&wf_repo_info.file_path)?;
     let files = github_api::get_file_list_recursive(
         &github_token,
         &wf_repo_info.owner,
         &wf_repo_info.name,
         &wf_repo_info.commit_hash,
-        &path_utils::dir_path(&wf_repo_info.file_path)?,
+        &base_dir,
     )?;
     Ok(files
         .into_iter()
         .map(|file| -> Result<type_config::File> {
             Ok(type_config::File::new_from_raw_url(
                 &github_api::to_raw_url(&wf_repo_info, &file)?,
+                &base_dir,
                 if file == wf_repo_info.file_path {
                     type_config::FileType::Primary
                 } else {

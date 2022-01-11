@@ -1,7 +1,7 @@
 use crate::github_api;
 use anyhow::Result;
 use serde::Serialize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use url::Url;
 
 #[derive(Debug, PartialEq, Serialize)]
@@ -47,6 +47,7 @@ impl Author {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum WorkflowLanguageType {
     Cwl,
     Wdl,
@@ -61,6 +62,7 @@ pub struct WorkflowLanguage {
 }
 
 #[derive(Debug, PartialEq, Serialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum FileType {
     Primary,
     Secondary,
@@ -77,16 +79,22 @@ pub struct File {
 impl File {
     pub fn new_test_file_template() -> Self {
         Self {
-            url: Url::parse("https://example.com/path/to/test_file").unwrap(),
+            url: Url::parse("https://github.com/ddbj/yevis-cli/path/to/test_file").unwrap(),
             target: PathBuf::from("path/to/test_file"),
             r#type: FileType::Test,
         }
     }
 
-    pub fn new_from_raw_url(raw_url: &Url, r#type: FileType) -> Result<Self> {
+    pub fn new_from_raw_url(
+        raw_url: &Url,
+        base_dir: impl AsRef<Path>,
+        r#type: FileType,
+    ) -> Result<Self> {
         Ok(Self {
             url: raw_url.clone(),
-            target: github_api::to_file_path(&raw_url)?,
+            target: github_api::to_file_path(&raw_url)?
+                .strip_prefix(base_dir.as_ref())?
+                .to_path_buf(),
             r#type,
         })
     }
