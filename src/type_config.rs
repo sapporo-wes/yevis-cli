@@ -12,10 +12,19 @@ pub struct Config {
     pub readme_url: Url,
     pub license: String,
     pub license_url: Url,
+    pub repo_info: RepoInfo,
     pub workflow_name: String,
     pub workflow_language: WorkflowLanguage,
     pub files: Vec<File>,
     pub testing: Vec<Testing>,
+}
+
+#[derive(Debug, PartialEq, Serialize)]
+pub struct RepoInfo {
+    pub owner: String,
+    pub name: String,
+    pub commit_hash: String,
+    pub wf_path: PathBuf,
 }
 
 #[derive(Debug, PartialEq, Serialize)]

@@ -46,6 +46,12 @@ pub fn make_template(
         readme_url,
         license: wf_repo_info.license,
         license_url,
+        repo_info: type_config::RepoInfo {
+            owner: wf_repo_info.owner.clone(),
+            name: wf_repo_info.name.clone(),
+            commit_hash: wf_repo_info.commit_hash.clone(),
+            wf_path: wf_repo_info.file_path.clone(),
+        },
         workflow_name: wf_name,
         workflow_language: wf_type_version,
         files,
