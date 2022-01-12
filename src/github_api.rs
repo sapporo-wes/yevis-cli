@@ -306,40 +306,6 @@ pub fn get_file_list_recursive(
     }
 }
 
-pub fn get_license_path(
-    github_token: impl AsRef<str>,
-    owner: impl AsRef<str>,
-    name: impl AsRef<str>,
-) -> Result<PathBuf> {
-    let url = format!(
-        "https://api.github.com/repos/{}/{}/license",
-        owner.as_ref(),
-        name.as_ref()
-    );
-    let client = reqwest::blocking::Client::new();
-    let response = client
-        .get(&url)
-        .header(reqwest::header::USER_AGENT, "yevis")
-        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
-        .header(
-            reqwest::header::AUTHORIZATION,
-            format!("token {}", github_token.as_ref()),
-        )
-        .send()?;
-    ensure!(response.status().is_success(), "Failed to get license");
-    let body = response.json::<Value>()?;
-
-    match &body.is_object() {
-        true => {
-            let path = body["path"]
-                .as_str()
-                .ok_or(anyhow!("Failed to parse response"))?;
-            Ok(PathBuf::from(path))
-        }
-        false => Err(anyhow!("Failed to parse response")),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -414,13 +380,5 @@ mod tests {
         assert!(response.contains(&PathBuf::from("README.md")));
         assert!(response.contains(&PathBuf::from("LICENSE")));
         assert!(response.contains(&PathBuf::from("src/main.rs")));
-    }
-
-    #[test]
-    fn test_get_license_path() {
-        let arg_token: Option<&str> = None;
-        let token = read_github_token(&arg_token).unwrap();
-        let response = get_license_path(&token, "ddbj", "yevis-cli").unwrap();
-        assert_eq!(response, PathBuf::from("LICENSE"));
     }
 }

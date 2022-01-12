@@ -1,25 +1,25 @@
 use crate::remote;
 use crate::type_config;
-use crate::type_config::WorkflowLanguageType as WfType;
+use crate::type_config::LanguageType;
 use anyhow::{anyhow, Result};
 use regex::Regex;
 use serde_yaml;
 use std::collections::BTreeMap;
 
-pub fn inspect_wf_type_version(wf_loc: impl AsRef<str>) -> Result<type_config::WorkflowLanguage> {
+pub fn inspect_wf_type_version(wf_loc: impl AsRef<str>) -> Result<type_config::Language> {
     let wf_content = remote::fetch_raw_content(&wf_loc)?;
     let r#type = match inspect_wf_type(&wf_content) {
         Ok(wf_type) => wf_type,
-        Err(_) => WfType::Cwl,
+        Err(_) => LanguageType::Cwl,
     };
     let version = match &inspect_wf_version(&wf_content, &r#type) {
         Ok(wf_version) => wf_version.to_string(),
         Err(_) => "1.0".to_string(),
     };
-    Ok(type_config::WorkflowLanguage { r#type, version })
+    Ok(type_config::Language { r#type, version })
 }
 
-pub fn inspect_wf_type(wf_content: impl AsRef<str>) -> Result<WfType> {
+pub fn inspect_wf_type(wf_content: impl AsRef<str>) -> Result<LanguageType> {
     match check_by_shebang(&wf_content) {
         Ok(wf_type) => return Ok(wf_type),
         Err(_) => {}
@@ -31,44 +31,44 @@ pub fn inspect_wf_type(wf_content: impl AsRef<str>) -> Result<WfType> {
     Err(anyhow!("Failed to parse workflow type"))
 }
 
-fn check_by_shebang(wf_content: impl AsRef<str>) -> Result<WfType> {
+fn check_by_shebang(wf_content: impl AsRef<str>) -> Result<LanguageType> {
     let first_line = wf_content.as_ref().lines().next().unwrap_or("");
     if first_line.starts_with("#!") {
         if first_line.contains("cwl") {
-            return Ok(WfType::Cwl);
+            return Ok(LanguageType::Cwl);
         } else if first_line.contains("cromwell") {
-            return Ok(WfType::Wdl);
+            return Ok(LanguageType::Wdl);
         } else if first_line.contains("nextflow") {
-            return Ok(WfType::Nfl);
+            return Ok(LanguageType::Nfl);
         } else if first_line.contains("snakemake") {
-            return Ok(WfType::Smk);
+            return Ok(LanguageType::Smk);
         }
     }
     Err(anyhow!("Unknown workflow type"))
 }
 
-fn check_by_regexp(wf_content: impl AsRef<str>) -> Result<WfType> {
+fn check_by_regexp(wf_content: impl AsRef<str>) -> Result<LanguageType> {
     let pattern_wdl = Regex::new(r"^(workflow|task) \w* \{$")?;
     let pattern_nfl = Regex::new(r"^process \w* \{$")?;
     let pattern_smk = Regex::new(r"^rule \w*:$")?;
     for line in wf_content.as_ref().lines() {
         if pattern_wdl.is_match(line) {
-            return Ok(WfType::Wdl);
+            return Ok(LanguageType::Wdl);
         } else if pattern_nfl.is_match(line) {
-            return Ok(WfType::Nfl);
+            return Ok(LanguageType::Nfl);
         } else if pattern_smk.is_match(line) {
-            return Ok(WfType::Smk);
+            return Ok(LanguageType::Smk);
         }
     }
     Err(anyhow!("Unknown workflow type"))
 }
 
-pub fn inspect_wf_version(wf_content: impl AsRef<str>, wf_type: &WfType) -> Result<String> {
+pub fn inspect_wf_version(wf_content: impl AsRef<str>, wf_type: &LanguageType) -> Result<String> {
     match &wf_type {
-        WfType::Cwl => inspect_cwl_version(&wf_content),
-        WfType::Wdl => inspect_wdl_version(&wf_content),
-        WfType::Nfl => inspect_nfl_version(&wf_content),
-        WfType::Smk => inspect_smk_version(&wf_content),
+        LanguageType::Cwl => inspect_cwl_version(&wf_content),
+        LanguageType::Wdl => inspect_wdl_version(&wf_content),
+        LanguageType::Nfl => inspect_nfl_version(&wf_content),
+        LanguageType::Smk => inspect_smk_version(&wf_content),
     }
 }
 
@@ -118,8 +118,8 @@ mod tests {
         let wf_type_version = inspect_wf_type_version(wf_loc).unwrap();
         assert_eq!(
             wf_type_version,
-            type_config::WorkflowLanguage {
-                r#type: WfType::Cwl,
+            type_config::Language {
+                r#type: LanguageType::Cwl,
                 version: "v1.0".to_string()
             }
         );
@@ -138,7 +138,7 @@ inputs:
     inputBinding:
       position: 1
 outputs: []";
-        assert_eq!(inspect_wf_type(wf_content).unwrap(), WfType::Cwl);
+        assert_eq!(inspect_wf_type(wf_content).unwrap(), LanguageType::Cwl);
     }
 
     #[test]
@@ -155,7 +155,7 @@ inputs:
       position: 1
 outputs: []";
         assert_eq!(
-            inspect_wf_version(wf_content, &WfType::Cwl).unwrap(),
+            inspect_wf_version(wf_content, &LanguageType::Cwl).unwrap(),
             "v1.2".to_string()
         );
     }

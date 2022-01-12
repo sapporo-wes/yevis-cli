@@ -17,3 +17,4 @@ serde_json = "1.0.74"
 serde_yaml = "0.8.23"
 structopt = "0.3.25"
 url = {version = "2.2.2", features = ["serde"]}
+uuid = {version = "0.8.2", features = ["v4"]}

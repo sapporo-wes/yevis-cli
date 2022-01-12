@@ -8,8 +8,10 @@ use regex::Regex;
 use serde_json;
 use serde_yaml;
 use std::fs;
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use url::Url;
+use uuid::Uuid;
 
 pub fn make_template(
     workflow_location: &Url,
@@ -25,40 +27,33 @@ pub fn make_template(
     let wf_loc = github_api::to_raw_url(&wf_repo_info, &wf_repo_info.file_path)?;
     let wf_type_version = workflow_type_version::inspect_wf_type_version(&wf_loc)?;
     let wf_name = path_utils::file_stem(&wf_repo_info.file_path)?;
-    let wf_id = format!(
-        "{}_{}_{}",
-        &wf_repo_info.owner, &wf_repo_info.name, &wf_name
-    );
     let wf_version = "1.0.0".to_string(); // TODO update
     let readme_url = github_api::to_raw_url(&wf_repo_info, "README.md")?;
-    let license_path =
-        github_api::get_license_path(&github_token, &wf_repo_info.owner, &wf_repo_info.name)?;
-    let license_url = github_api::to_raw_url(&wf_repo_info, &license_path)?;
     let files = obtain_wf_files(&github_token, &wf_repo_info)?;
 
     let template_config = type_config::Config {
-        id: wf_id,
+        id: Uuid::new_v4().to_string(),
         version: wf_version,
+        license: "CC0-1.0".to_string(),
         authors: vec![
             type_config::Author::new_from_github_user_info(&github_user_info),
             type_config::Author::new_ddbj(),
         ],
-        readme_url,
-        license: wf_repo_info.license,
-        license_url,
-        repo_info: type_config::RepoInfo {
-            owner: wf_repo_info.owner.clone(),
-            name: wf_repo_info.name.clone(),
-            commit_hash: wf_repo_info.commit_hash.clone(),
-            wf_path: wf_repo_info.file_path.clone(),
+        workflow: type_config::Workflow {
+            name: wf_name,
+            repo: type_config::Repo {
+                owner: wf_repo_info.owner.clone(),
+                name: wf_repo_info.name.clone(),
+                commit: wf_repo_info.commit_hash.clone(),
+            },
+            readme: readme_url,
+            language: wf_type_version,
+            files,
+            testing: vec![type_config::Testing {
+                id: "test_1".to_string(),
+                files: vec![type_config::File::new_test_file_template()],
+            }],
         },
-        workflow_name: wf_name,
-        workflow_language: wf_type_version,
-        files,
-        testing: vec![type_config::Testing {
-            id: "test_1".to_string(),
-            files: vec![type_config::File::new_test_file_template()],
-        }],
     };
 
     let mut output_path_buf = output.as_ref().to_path_buf();
@@ -72,7 +67,8 @@ pub fn make_template(
             serde_yaml::to_string(&template_config)?
         }
     };
-    fs::write(output_path_buf, template_config_str)?;
+    let mut buffer = BufWriter::new(fs::File::create(&output_path_buf)?);
+    buffer.write(template_config_str.as_bytes())?;
 
     Ok(())
 }

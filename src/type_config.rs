@@ -1,33 +1,19 @@
 use crate::github_api;
 use anyhow::Result;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use url::Url;
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
     pub id: String,
     pub version: String,
-    pub authors: Vec<Author>,
-    pub readme_url: Url,
     pub license: String,
-    pub license_url: Url,
-    pub repo_info: RepoInfo,
-    pub workflow_name: String,
-    pub workflow_language: WorkflowLanguage,
-    pub files: Vec<File>,
-    pub testing: Vec<Testing>,
+    pub authors: Vec<Author>,
+    pub workflow: Workflow,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
-pub struct RepoInfo {
-    pub owner: String,
-    pub name: String,
-    pub commit_hash: String,
-    pub wf_path: PathBuf,
-}
-
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Author {
     github_account: String,
     name: String,
@@ -48,29 +34,52 @@ impl Author {
     pub fn new_ddbj() -> Self {
         Self {
             github_account: "ddbj".to_string(),
-            name: "DBCLS".to_string(),
-            affiliation: "DBCLS (Database Center for Life Science)".to_string(),
+            name: "ddbj-workflow".to_string(),
+            affiliation: "DNA Data Bank of Japan".to_string(),
             orcid: "".to_string(),
         }
     }
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct Workflow {
+    pub name: String,
+    pub repo: Repo,
+    pub readme: Url,
+    pub language: Language,
+    pub files: Vec<File>,
+    pub testing: Vec<Testing>,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct Repo {
+    pub owner: String,
+    pub name: String,
+    pub commit: String,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct License {
+    pub label: String,
+    pub file: Url,
+}
+
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
-pub enum WorkflowLanguageType {
+pub enum LanguageType {
     Cwl,
     Wdl,
     Nfl,
     Smk,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
-pub struct WorkflowLanguage {
-    pub r#type: WorkflowLanguageType,
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct Language {
+    pub r#type: LanguageType,
     pub version: String,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum FileType {
     Primary,
@@ -78,7 +87,7 @@ pub enum FileType {
     Test,
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct File {
     pub url: Url,
     pub target: PathBuf,
@@ -109,7 +118,7 @@ impl File {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Testing {
     pub id: String,
     pub files: Vec<File>,
