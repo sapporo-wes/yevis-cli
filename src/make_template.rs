@@ -26,6 +26,10 @@ pub fn make_template(
     format: &FileFormat,
 ) -> Result<()> {
     let github_token = read_github_token(&arg_github_token)?;
+    ensure!(
+        !github_token.is_empty(),
+        "GitHub token is empty. Please set it with --github-token option or set GITHUB_TOKEN environment variable."
+    );
 
     let wf_repo_info = WfRepoInfo::new(&github_token, &workflow_location)?;
     let github_user = get_user(&github_token)?;
@@ -105,7 +109,7 @@ pub fn parse_wf_loc(wf_loc: &Url) -> Result<ParseResult> {
     ))?;
     ensure!(
         host == "github.com" || host == "raw.githubusercontent.com",
-        "yevis is only supported on github.com and raw.githubusercontent.com"
+        format!("yevis-cli is only supported on `github.com` and `raw.githubusercontent.com` as the workflow location. Your inputted workflow location is: {}", wf_loc),
     );
     let path_segments = wf_loc
         .path_segments()
@@ -262,6 +266,58 @@ mod tests {
             &FileFormat::Yaml,
         );
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_make_template_with_not_github() {
+        let wf_loc = Url::parse("https://example.com").unwrap();
+        let arg_github_token: Option<&str> = None;
+        let result = make_template(
+            &wf_loc,
+            &arg_github_token,
+            &PathBuf::from("yevis.yml"),
+            &FileFormat::Yaml,
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("yevis-cli is only supported on `github.com` and `raw.githubusercontent.com` as the workflow location."));
+    }
+
+    #[test]
+    fn test_make_template_with_invalid_github_token() {
+        let wf_loc = Url::parse(
+            "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
+        )
+        .unwrap();
+        let arg_github_token: Option<&str> = Some("invalid_token");
+        let result = make_template(
+            &wf_loc,
+            &arg_github_token,
+            &PathBuf::from("yevis.yml"),
+            &FileFormat::Yaml,
+        );
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Failed to authenticate with GitHub."));
+    }
+
+    #[test]
+    fn test_make_template_with_invalid_wf_loc() {
+        let wf_loc =
+            Url::parse("https://github.com/ddbj/yevis-cli/blob/main/invalid_wf_loc").unwrap();
+        let arg_github_token: Option<&str> = None;
+        let result = make_template(
+            &wf_loc,
+            &arg_github_token,
+            &PathBuf::from("yevis.yml"),
+            &FileFormat::Yaml,
+        );
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Failed to fetch contents from your inputted workflow location"));
     }
 
     #[test]

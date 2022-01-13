@@ -116,7 +116,17 @@ pub fn get_repos(
             format!("token {}", github_token.as_ref()),
         )
         .send()?;
-    ensure!(response.status().is_success(), "Failed to get repos");
+    ensure!(
+        response.status() != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
+        response.status().is_success(),
+        format!(
+            "Failed to get repos from GitHub with status: {:?}",
+            response.status()
+        )
+    );
     let body = response.json::<Value>()?;
 
     match &body.is_object() {
@@ -172,8 +182,15 @@ pub fn get_latest_commit_hash(
         )
         .send()?;
     ensure!(
+        response.status() != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
         response.status().is_success(),
-        "Failed to get latest commit hash"
+        format!(
+            "Failed to get latest commit hash from GitHub with status: {:?}",
+            response.status()
+        )
     );
     let body = response.json::<Value>()?;
 
@@ -210,8 +227,15 @@ pub fn get_user(github_token: impl AsRef<str>) -> Result<GithubUser> {
         )
         .send()?;
     ensure!(
+        response.status() != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
         response.status().is_success(),
-        "Failed to get latest commit hash"
+        format!(
+            "Failed to get user from GitHub with status: {:?}",
+            response.status()
+        )
     );
     let body = response.json::<Value>()?;
 
@@ -267,7 +291,17 @@ pub fn get_file_list_recursive(
         )
         .query(&[("ref", commit_hash.as_ref())])
         .send()?;
-    ensure!(response.status().is_success(), "Failed to get file list");
+    ensure!(
+        response.status() != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
+        response.status().is_success(),
+        format!(
+            "Failed to get file list from GitHub with status: {:?}",
+            response.status()
+        )
+    );
     let body = response.json::<Value>()?;
 
     match &body.is_array() {
@@ -309,7 +343,14 @@ pub fn get_file_list_recursive(
 pub fn head_request(url: &Url) -> Result<()> {
     let client = reqwest::blocking::Client::new();
     let response = client.head(url.as_str()).send()?;
-    ensure!(response.status().is_success(), "Failed to head request");
+    ensure!(
+        response.status().is_success(),
+        format!(
+            "Failed to head request to {} with status: {:?}",
+            url.as_str(),
+            response.status()
+        )
+    );
     Ok(())
 }
 

@@ -12,7 +12,7 @@ use anyhow::Result;
 use args::Args;
 use env_logger;
 use lib_test::test;
-use log::{debug, info};
+use log::{debug, error, info};
 use make_template::make_template;
 use pull_request::pull_request;
 use structopt::StructOpt;
@@ -31,7 +31,7 @@ fn main() -> Result<()> {
         if verbose { "debug" } else { "info" },
     ));
 
-    info!("yevis {}", env!("CARGO_PKG_VERSION"));
+    info!("Start yevis {}", env!("CARGO_PKG_VERSION"));
     debug!("args: {:?}", args);
 
     match &args {
@@ -42,7 +42,11 @@ fn main() -> Result<()> {
             format,
             ..
         } => {
-            make_template(&workflow_location, &github_token, &output, &format)?;
+            info!("Running make-template");
+            match make_template(&workflow_location, &github_token, &output, &format) {
+                Ok(()) => info!("Successfully make-template"),
+                Err(e) => error!("{}", e),
+            };
         }
         Args::Validate {
             config_file,

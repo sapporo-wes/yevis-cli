@@ -2,14 +2,17 @@ use crate::{
     remote::fetch_raw_content,
     type_config::{Language, LanguageType},
 };
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use log::info;
 use regex::Regex;
 use serde_yaml;
 use std::collections::BTreeMap;
 
 pub fn inspect_wf_type_version(wf_loc: impl AsRef<str>) -> Result<Language> {
-    let wf_content = fetch_raw_content(&wf_loc)?;
+    let wf_content = fetch_raw_content(&wf_loc).context(format!(
+        "Failed to fetch contents from your inputted workflow location: {}. Please check your inputted workflow location.",
+        wf_loc.as_ref()
+    ))?;
     let r#type = match inspect_wf_type(&wf_content) {
         Ok(wf_type) => wf_type,
         Err(_) => {

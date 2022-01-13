@@ -7,7 +7,14 @@ pub fn fetch_raw_content(remote_location: impl AsRef<str>) -> Result<String> {
         .get(remote_location.as_ref())
         .header(reqwest::header::USER_AGENT, "yevis")
         .send()?;
-    ensure!(response.status().is_success(), "Failed to get raw content");
+    ensure!(
+        response.status().is_success(),
+        format!(
+            "Failed to fetch contents from {} with status {}",
+            remote_location.as_ref(),
+            response.status()
+        )
+    );
     Ok(response.text()?)
 }
 
