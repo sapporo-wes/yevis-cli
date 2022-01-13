@@ -49,3 +49,47 @@ pub fn file_format(path: impl AsRef<Path>) -> Result<args::FileFormat> {
         _ => Err(anyhow!("Invalid file format: {}", path.as_ref().display())),
     }
 }
+
+mod tests {
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn test_file_stem() {
+        assert_eq!(file_stem("/path/to/file.yml").unwrap(), "file");
+        assert_eq!(file_stem("path/to/file.yaml").unwrap(), "file");
+        assert_eq!(file_stem("file.json").unwrap(), "file");
+        assert_eq!(file_stem("/path/to/file").unwrap(), "file");
+    }
+
+    #[test]
+    fn test_dir_path() {
+        assert_eq!(
+            dir_path("/path/to/file.yml").unwrap(),
+            PathBuf::from("/path/to")
+        );
+        assert_eq!(
+            dir_path("path/to/file.yaml").unwrap(),
+            PathBuf::from("path/to")
+        );
+        assert_eq!(dir_path("file.json").unwrap(), PathBuf::from(""));
+        assert_eq!(
+            dir_path("/path/to/file").unwrap(),
+            PathBuf::from("/path/to")
+        );
+    }
+
+    #[test]
+    fn test_file_format() {
+        assert_eq!(
+            file_format("/path/to/file.yml").unwrap(),
+            args::FileFormat::Yaml
+        );
+        assert_eq!(
+            file_format("path/to/file.yaml").unwrap(),
+            args::FileFormat::Yaml
+        );
+        assert_eq!(file_format("file.json").unwrap(), args::FileFormat::Json);
+        assert!(file_format("/path/to/file").is_err(),);
+    }
+}

@@ -9,7 +9,10 @@ version = "0.1.0"
 
 [dependencies]
 anyhow = "1.0.52"
+colored = "2.0.0"
 dotenv = "0.15.0"
+env_logger = "0.9.0"
+log = "0.4.14"
 regex = "1.5.4"
 reqwest = {version = "0.11.8", features = ["blocking", "json"]}
 serde = {version = "1.0.132", features = ["derive"]}

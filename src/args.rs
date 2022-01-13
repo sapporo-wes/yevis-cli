@@ -17,7 +17,7 @@ impl FromStr for FileFormat {
         match s {
             "yaml" => Ok(FileFormat::Yaml),
             "json" => Ok(FileFormat::Json),
-            _ => bail!("Invalid file format: {}", s),
+            _ => bail!("Invalid file format `{}`", s),
         }
     }
 }
@@ -46,6 +46,10 @@ pub enum Args {
         /// Format of the output file (`yaml` or `json`).
         #[structopt(short, long, default_value = "yaml")]
         format: FileFormat,
+
+        /// Verbose mode.
+        #[structopt(short, long)]
+        verbose: bool,
     },
 
     /// Validate the schema and contents of the configuration file.
@@ -57,6 +61,10 @@ pub enum Args {
         /// GitHub Personal Access Token.
         #[structopt(short, long)]
         github_token: Option<String>,
+
+        /// Verbose mode.
+        #[structopt(short, long)]
+        verbose: bool,
     },
 
     /// Actually, test the workflow based on the configuration file.
@@ -77,6 +85,10 @@ pub enum Args {
         /// Location of the docker host.
         #[structopt(short, long, default_value = "unix:///var/run/docker.sock")]
         docker_host: Url,
+
+        /// Verbose mode.
+        #[structopt(short, long)]
+        verbose: bool,
     },
 
     /// After validating and testing, create a pull request to `ddbj/yevis-workflows`.
@@ -101,6 +113,10 @@ pub enum Args {
         /// Location of the docker host.
         #[structopt(short, long, default_value = "unix:///var/run/docker.sock")]
         docker_host: Url,
+
+        /// Verbose mode.
+        #[structopt(short, long)]
+        verbose: bool,
     },
 }
 
@@ -125,6 +141,7 @@ mod tests {
                 github_token: None,
                 output: PathBuf::from("yevis.yml"),
                 format: FileFormat::Yaml,
+                verbose: false,
             }
         );
     }
@@ -148,6 +165,7 @@ mod tests {
                 github_token: None,
                 output: PathBuf::from("yevis.yml"),
                 format: FileFormat::Json,
+                verbose: false,
             }
         );
     }
@@ -172,6 +190,7 @@ mod tests {
             Args::Validate {
                 config_file: PathBuf::from("yevis.yml"),
                 github_token: None,
+                verbose: false,
             }
         );
     }
@@ -186,6 +205,7 @@ mod tests {
                 github_token: None,
                 wes_location: None,
                 docker_host: Url::from_str("unix:///var/run/docker.sock").unwrap(),
+                verbose: false,
             }
         );
     }
@@ -201,6 +221,7 @@ mod tests {
                 repository: "ddbj/yevis-workflows".to_string(),
                 wes_location: None,
                 docker_host: Url::from_str("unix:///var/run/docker.sock").unwrap(),
+                verbose: false,
             }
         );
     }

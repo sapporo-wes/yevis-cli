@@ -67,10 +67,30 @@ fn validate_authors(authors: &Vec<type_config::Author>) -> Result<()> {
                 );
                 ddbj_found = true;
             }
-            _ => author.validate()?,
+            _ => validate_author(&author)?,
         }
     }
     ensure!(ddbj_found, "Please add ddbj as an author.");
+
+    Ok(())
+}
+
+fn validate_author(author: &type_config::Author) -> Result<()> {
+    let re = Regex::new(r"^\d{4}-\d{4}-\d{4}-(\d{3}X|\d{4})$")?;
+    ensure!(
+        author.github_account != "",
+        "`github_account` field in the authors is required."
+    );
+    ensure!(
+        author.name != "",
+        "`name` field in the authors is required."
+    );
+    if author.orcid != "" {
+        ensure!(
+            re.is_match(&author.orcid),
+            "`orcid` field in the authors is invalid."
+        );
+    };
 
     Ok(())
 }

@@ -11,7 +11,6 @@ use url::Url;
 pub struct WfRepoInfo {
     pub owner: String,
     pub name: String,
-    pub license: String,
     pub commit_hash: String,
     pub file_path: PathBuf,
 }
@@ -28,16 +27,6 @@ impl WfRepoInfo {
                 parse_result.owner, parse_result.name
             )
         );
-        let license = match &get_repos_res.license {
-            Some(license) => license.to_string(),
-            None => {
-                bail!(
-                    "No license found for repository {}/{}",
-                    parse_result.owner,
-                    parse_result.name
-                );
-            }
-        };
         let branch = match &parse_result.branch {
             Some(branch) => branch.to_string(),
             None => get_repos_res.default_branch,
@@ -54,7 +43,6 @@ impl WfRepoInfo {
         Ok(WfRepoInfo {
             owner: parse_result.owner,
             name: parse_result.name,
-            license,
             commit_hash,
             file_path: parse_result.file_path,
         })
@@ -334,16 +322,50 @@ mod tests {
     fn test_wf_repo_info_new() {
         let arg_github_token: Option<&str> = None;
         let github_token = read_github_token(&arg_github_token).unwrap();
-        let wf_loc = Url::parse("https://raw.githubusercontent.com/sapporo-wes/sapporo-service/main/tests/resources/cwltool/trimming_and_qc.cwl").unwrap();
+        let wf_loc = Url::parse(
+            "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
+        )
+        .unwrap();
         let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc).unwrap();
-        assert_eq!(wf_repo_info.owner, "sapporo-wes");
-        assert_eq!(wf_repo_info.name, "sapporo-service");
-        assert_eq!(wf_repo_info.license, "Apache-2.0");
+        assert_eq!(wf_repo_info.owner, "ddbj");
+        assert_eq!(wf_repo_info.name, "yevis-cli");
         is_commit_hash(&wf_repo_info.commit_hash).unwrap();
         assert_eq!(
             wf_repo_info.file_path,
-            PathBuf::from("tests/resources/cwltool/trimming_and_qc.cwl")
+            PathBuf::from("tests/CWL/wf/trimming_and_qc.cwl")
         );
+    }
+
+    #[test]
+    fn test_to_raw_url_from_path() {
+        let arg_github_token: Option<&str> = None;
+        let github_token = read_github_token(&arg_github_token).unwrap();
+        let wf_loc = Url::parse(
+            "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
+        )
+        .unwrap();
+        let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc).unwrap();
+        let raw_url = to_raw_url_from_path(&wf_repo_info, &Path::new("path/to/file")).unwrap();
+        assert_eq!(raw_url.host_str(), Some("raw.githubusercontent.com"));
+    }
+
+    #[test]
+    fn test_to_raw_url_from_url() {
+        let arg_github_token: Option<&str> = None;
+        let github_token = read_github_token(&arg_github_token).unwrap();
+        let wf_loc = Url::parse(
+            "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
+        )
+        .unwrap();
+        let raw_url = to_raw_url_from_url(&github_token, &wf_loc).unwrap();
+        assert_eq!(raw_url.host_str(), Some("raw.githubusercontent.com"));
+    }
+
+    #[test]
+    fn test_to_file_path() {
+        let raw_url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/CWL/wf/trimming_and_qc.cwl").unwrap();
+        let file_path = to_file_path(&raw_url).unwrap();
+        assert_eq!(file_path, PathBuf::from("tests/CWL/wf/trimming_and_qc.cwl"));
     }
 
     #[test]
@@ -399,5 +421,17 @@ mod tests {
         assert!(response.contains(&PathBuf::from("README.md")));
         assert!(response.contains(&PathBuf::from("LICENSE")));
         assert!(response.contains(&PathBuf::from("src/main.rs")));
+    }
+
+    #[test]
+    fn test_head_request_ok() {
+        let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/CWL/wf/trimming_and_qc.cwl").unwrap();
+        assert!(head_request(&url).is_ok());
+    }
+
+    #[test]
+    fn test_head_request_error() {
+        let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/nothing").unwrap();
+        assert!(head_request(&url).is_err());
     }
 }

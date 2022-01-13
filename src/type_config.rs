@@ -1,6 +1,5 @@
 use crate::github_api;
-use anyhow::{ensure, Result};
-use regex::Regex;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use url::Url;
@@ -40,23 +39,6 @@ impl Author {
             affiliation: "DNA Data Bank of Japan".to_string(),
             orcid: "DO NOT ENTER".to_string(),
         }
-    }
-
-    pub fn validate(&self) -> Result<()> {
-        let re = Regex::new(r"^\d{4}-\d{4}-\d{4}-(\d{3}X|\d{4})$")?;
-        ensure!(
-            self.github_account != "",
-            "`github_account` field in the authors is required."
-        );
-        ensure!(self.name != "", "`name` field in the authors is required.");
-        if self.orcid != "" {
-            ensure!(
-                re.is_match(&self.orcid),
-                "`orcid` field in the authors is invalid."
-            );
-        };
-
-        Ok(())
     }
 }
 
