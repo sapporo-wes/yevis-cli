@@ -1,4 +1,4 @@
-use crate::make_template;
+use crate::make_template::parse_wf_loc;
 use anyhow::{anyhow, bail, ensure, Result};
 use dotenv::dotenv;
 use reqwest;
@@ -7,7 +7,7 @@ use std::env;
 use std::path::{Path, PathBuf};
 use url::Url;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct WfRepoInfo {
     pub owner: String,
     pub name: String,
@@ -18,7 +18,7 @@ pub struct WfRepoInfo {
 impl WfRepoInfo {
     /// Obtain and organize information about the GitHub repository, where the main workflow is located.
     pub fn new(github_token: impl AsRef<str>, wf_loc: &Url) -> Result<Self> {
-        let parse_result = make_template::parse_wf_loc(&wf_loc)?;
+        let parse_result = parse_wf_loc(&wf_loc)?;
         let get_repos_res = get_repos(&github_token, &parse_result.owner, &parse_result.name)?;
         ensure!(
             get_repos_res.private == false,
@@ -49,7 +49,7 @@ impl WfRepoInfo {
     }
 }
 
-pub fn to_raw_url_from_path(wf_repo_info: &WfRepoInfo, file_path: impl AsRef<Path>) -> Result<Url> {
+pub fn raw_url_from_path(wf_repo_info: &WfRepoInfo, file_path: impl AsRef<Path>) -> Result<Url> {
     Ok(Url::parse(&format!(
         "https://raw.githubusercontent.com/{}/{}/{}/{}",
         &wf_repo_info.owner,
@@ -67,7 +67,7 @@ pub fn to_raw_url_from_url(github_token: impl AsRef<str>, url: &Url) -> Result<U
     match url.host_str() {
         Some("github.com") | Some("raw.githubusercontent.com") => {
             let wf_repo_info = WfRepoInfo::new(&github_token, &url)?;
-            let wf_loc = to_raw_url_from_path(&wf_repo_info, &wf_repo_info.file_path)?;
+            let wf_loc = raw_url_from_path(&wf_repo_info, &wf_repo_info.file_path)?;
             Ok(wf_loc)
         }
         Some(_) => Ok(url.clone()),
@@ -142,7 +142,7 @@ pub fn get_repos(
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct GetReposResponse {
     pub private: bool,
     pub default_branch: String,
@@ -191,14 +191,14 @@ pub fn get_latest_commit_hash(
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub struct GetUserResponse {
+#[derive(Debug, PartialEq, Clone)]
+pub struct GithubUser {
     pub login: String,
     pub name: String,
     pub company: String,
 }
 
-pub fn get_user(github_token: impl AsRef<str>) -> Result<GetUserResponse> {
+pub fn get_user(github_token: impl AsRef<str>) -> Result<GithubUser> {
     let client = reqwest::blocking::Client::new();
     let response = client
         .get("https://api.github.com/user")
@@ -216,7 +216,7 @@ pub fn get_user(github_token: impl AsRef<str>) -> Result<GetUserResponse> {
     let body = response.json::<Value>()?;
 
     match &body.is_object() {
-        true => Ok(GetUserResponse {
+        true => Ok(GithubUser {
             login: body["login"]
                 .as_str()
                 .ok_or(anyhow!("Failed to parse response"))?
@@ -337,7 +337,7 @@ mod tests {
     }
 
     #[test]
-    fn test_to_raw_url_from_path() {
+    fn test_raw_url_from_path() {
         let arg_github_token: Option<&str> = None;
         let github_token = read_github_token(&arg_github_token).unwrap();
         let wf_loc = Url::parse(
@@ -345,7 +345,7 @@ mod tests {
         )
         .unwrap();
         let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc).unwrap();
-        let raw_url = to_raw_url_from_path(&wf_repo_info, &Path::new("path/to/file")).unwrap();
+        let raw_url = raw_url_from_path(&wf_repo_info, &Path::new("path/to/file")).unwrap();
         assert_eq!(raw_url.host_str(), Some("raw.githubusercontent.com"));
     }
 

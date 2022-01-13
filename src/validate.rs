@@ -1,7 +1,9 @@
-use crate::args;
-use crate::github_api;
-use crate::path_utils;
-use crate::type_config;
+use crate::{
+    args::FileFormat,
+    github_api::{head_request, read_github_token, to_raw_url_from_url, WfRepoInfo},
+    path_utils::file_format,
+    type_config::{Author, Config, FileType, Repo, Workflow},
+};
 use anyhow::{bail, ensure, Result};
 use regex::Regex;
 use serde_json;
@@ -14,14 +16,14 @@ use std::path::Path;
 pub fn validate(
     config_file: impl AsRef<Path>,
     arg_github_token: &Option<impl AsRef<str>>,
-) -> Result<type_config::Config> {
-    let github_token = github_api::read_github_token(&arg_github_token)?;
+) -> Result<Config> {
+    let github_token = read_github_token(&arg_github_token)?;
 
-    let file_format = path_utils::file_format(&config_file)?;
+    let file_format = file_format(&config_file)?;
     let reader = BufReader::new(File::open(&config_file)?);
-    let mut config: type_config::Config = match file_format {
-        args::FileFormat::Yaml => serde_yaml::from_reader(reader)?,
-        args::FileFormat::Json => serde_json::from_reader(reader)?,
+    let mut config: Config = match file_format {
+        FileFormat::Yaml => serde_yaml::from_reader(reader)?,
+        FileFormat::Json => serde_json::from_reader(reader)?,
     };
 
     validate_version(&config.version)?;
@@ -52,7 +54,7 @@ fn validate_license(license: impl AsRef<str>) -> Result<()> {
     Ok(())
 }
 
-fn validate_authors(authors: &Vec<type_config::Author>) -> Result<()> {
+fn validate_authors(authors: &Vec<Author>) -> Result<()> {
     ensure!(
         authors.len() < 3,
         "Please add at least one person and ddbj as authors.",
@@ -62,7 +64,7 @@ fn validate_authors(authors: &Vec<type_config::Author>) -> Result<()> {
         match author.github_account.as_str() {
             "ddbj" => {
                 ensure!(
-                    author == &type_config::Author::new_ddbj(),
+                    author == &Author::new_ddbj(),
                     "The value of author: ddbj has been changed."
                 );
                 ddbj_found = true;
@@ -75,7 +77,7 @@ fn validate_authors(authors: &Vec<type_config::Author>) -> Result<()> {
     Ok(())
 }
 
-fn validate_author(author: &type_config::Author) -> Result<()> {
+fn validate_author(author: &Author) -> Result<()> {
     let re = Regex::new(r"^\d{4}-\d{4}-\d{4}-(\d{3}X|\d{4})$")?;
     ensure!(
         author.github_account != "",
@@ -95,28 +97,25 @@ fn validate_author(author: &type_config::Author) -> Result<()> {
     Ok(())
 }
 
-fn validate_workflow(
-    github_token: impl AsRef<str>,
-    workflow: &type_config::Workflow,
-) -> Result<type_config::Workflow> {
+fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Result<Workflow> {
     let mut cloned_wf = workflow.clone();
 
     let primary_wf = match workflow
         .files
         .iter()
-        .find(|f| f.r#type == type_config::FileType::Primary)
+        .find(|f| f.r#type == FileType::Primary)
     {
         Some(f) => f,
         None => bail!("No primary workflow file found."),
     };
-    let primary_wf_repo_info = github_api::WfRepoInfo::new(&github_token, &primary_wf.url)?;
+    let primary_wf_repo_info = WfRepoInfo::new(&github_token, &primary_wf.url)?;
     ensure!(
-        workflow.repo == type_config::Repo::new(&primary_wf_repo_info),
+        workflow.repo == Repo::new(&primary_wf_repo_info),
         "The information for the primary workflow and values of `repo` field in the workflow are different."
     );
 
-    let raw_readme_url = github_api::to_raw_url_from_url(&github_token, &primary_wf.url)?;
-    match github_api::head_request(&raw_readme_url) {
+    let raw_readme_url = to_raw_url_from_url(&github_token, &primary_wf.url)?;
+    match head_request(&raw_readme_url) {
         Ok(_) => {
             cloned_wf.readme = raw_readme_url;
         }
@@ -125,8 +124,8 @@ fn validate_workflow(
 
     for i in 0..workflow.files.len() {
         let file = &workflow.files[i];
-        let raw_file_url = github_api::to_raw_url_from_url(&github_token, &file.url)?;
-        match github_api::head_request(&raw_file_url) {
+        let raw_file_url = to_raw_url_from_url(&github_token, &file.url)?;
+        match head_request(&raw_file_url) {
             Ok(_) => {
                 cloned_wf.files[i].url = raw_file_url;
             }
@@ -139,8 +138,8 @@ fn validate_workflow(
         let testing = &workflow.testing[i];
         for j in 0..testing.files.len() {
             let file = &testing.files[j];
-            let raw_file_url = github_api::to_raw_url_from_url(&github_token, &file.url)?;
-            match github_api::head_request(&raw_file_url) {
+            let raw_file_url = to_raw_url_from_url(&github_token, &file.url)?;
+            match head_request(&raw_file_url) {
                 Ok(_) => {
                     cloned_wf.testing[i].files[j].url = raw_file_url;
                 }

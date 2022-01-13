@@ -4,7 +4,7 @@ use std::str::FromStr;
 use structopt::{clap, StructOpt};
 use url::Url;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum FileFormat {
     Yaml,
     Json,
@@ -22,7 +22,7 @@ impl FromStr for FileFormat {
     }
 }
 
-#[derive(StructOpt, Debug, PartialEq)]
+#[derive(StructOpt, Debug, PartialEq, Clone)]
 #[structopt(
     name = env!("CARGO_PKG_NAME"),
     version = env!("CARGO_PKG_VERSION"),

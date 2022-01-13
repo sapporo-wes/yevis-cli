@@ -1,8 +1,14 @@
-use crate::args;
-use crate::github_api;
-use crate::path_utils;
-use crate::type_config;
-use crate::workflow_type_version;
+use crate::{
+    args::FileFormat,
+    github_api::{
+        get_file_list_recursive, get_user, raw_url_from_path, read_github_token, WfRepoInfo,
+    },
+    path_utils::{dir_path, file_stem},
+    type_config::{
+        Author, Config, File, FileType, Repo, TestFile, TestFileType, Testing, Workflow,
+    },
+    workflow_type_version::inspect_wf_type_version,
+};
 use anyhow::{anyhow, ensure, Result};
 use regex::Regex;
 use serde_json;
@@ -17,48 +23,52 @@ pub fn make_template(
     workflow_location: &Url,
     arg_github_token: &Option<impl AsRef<str>>,
     output: impl AsRef<Path>,
-    format: &args::FileFormat,
+    format: &FileFormat,
 ) -> Result<()> {
-    let github_token = github_api::read_github_token(&arg_github_token)?;
+    let github_token = read_github_token(&arg_github_token)?;
 
-    let wf_repo_info = github_api::WfRepoInfo::new(&github_token, &workflow_location)?;
-    let github_user_info = github_api::get_user(&github_token)?;
+    let wf_repo_info = WfRepoInfo::new(&github_token, &workflow_location)?;
+    let github_user = get_user(&github_token)?;
 
-    let wf_loc = github_api::to_raw_url_from_path(&wf_repo_info, &wf_repo_info.file_path)?;
-    let wf_type_version = workflow_type_version::inspect_wf_type_version(&wf_loc)?;
-    let wf_name = path_utils::file_stem(&wf_repo_info.file_path)?;
+    let wf_loc = raw_url_from_path(&wf_repo_info, &wf_repo_info.file_path)?;
+    let wf_type_version = inspect_wf_type_version(&wf_loc)?;
+    let wf_name = file_stem(&wf_repo_info.file_path)?;
     let wf_version = "1.0.0".to_string(); // TODO update
-    let readme_url = github_api::to_raw_url_from_path(&wf_repo_info, "README.md")?;
+    let readme_url = raw_url_from_path(&wf_repo_info, "README.md")?;
     let files = obtain_wf_files(&github_token, &wf_repo_info)?;
 
-    let template_config = type_config::Config {
+    let template_config = Config {
         id: Uuid::new_v4(),
         version: wf_version,
         license: "CC0-1.0".to_string(),
         authors: vec![
-            type_config::Author::new_from_github_user_info(&github_user_info),
-            type_config::Author::new_ddbj(),
+            Author::new_from_github_user(&github_user),
+            Author::new_ddbj(),
         ],
-        workflow: type_config::Workflow {
+        workflow: Workflow {
             name: wf_name,
-            repo: type_config::Repo::new(&wf_repo_info),
+            repo: Repo::new(&wf_repo_info),
             readme: readme_url,
             language: wf_type_version,
             files,
-            testing: vec![type_config::Testing {
+            testing: vec![Testing {
                 id: "test_1".to_string(),
-                files: vec![type_config::File::new_test_file_template()],
+                files: vec![
+                    TestFile::new_file_template(TestFileType::WfParams),
+                    TestFile::new_file_template(TestFileType::WfEngineParams),
+                    TestFile::new_file_template(TestFileType::Other),
+                ],
             }],
         },
     };
 
     let mut output_path_buf = output.as_ref().to_path_buf();
     let template_config_str = match &format {
-        args::FileFormat::Json => {
+        FileFormat::Json => {
             output_path_buf.set_extension("yml");
             serde_json::to_string_pretty(&template_config)?
         }
-        args::FileFormat::Yaml => {
+        FileFormat::Yaml => {
             output_path_buf.set_extension("yml");
             serde_yaml::to_string(&template_config)?
         }
@@ -69,7 +79,7 @@ pub fn make_template(
     Ok(())
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ParseResult {
     pub owner: String,
     pub name: String,
@@ -160,12 +170,9 @@ pub fn is_commit_hash(hash: impl AsRef<str>) -> Result<()> {
     Ok(())
 }
 
-fn obtain_wf_files(
-    github_token: impl AsRef<str>,
-    wf_repo_info: &github_api::WfRepoInfo,
-) -> Result<Vec<type_config::File>> {
-    let base_dir = path_utils::dir_path(&wf_repo_info.file_path)?;
-    let files = github_api::get_file_list_recursive(
+fn obtain_wf_files(github_token: impl AsRef<str>, wf_repo_info: &WfRepoInfo) -> Result<Vec<File>> {
+    let base_dir = dir_path(&wf_repo_info.file_path)?;
+    let files = get_file_list_recursive(
         &github_token,
         &wf_repo_info.owner,
         &wf_repo_info.name,
@@ -174,23 +181,88 @@ fn obtain_wf_files(
     )?;
     Ok(files
         .into_iter()
-        .map(|file| -> Result<type_config::File> {
-            Ok(type_config::File::new_from_raw_url(
-                &github_api::to_raw_url_from_path(&wf_repo_info, &file)?,
+        .map(|file| -> Result<File> {
+            Ok(File::new_from_raw_url(
+                &raw_url_from_path(&wf_repo_info, &file)?,
                 &base_dir,
                 if file == wf_repo_info.file_path {
-                    type_config::FileType::Primary
+                    FileType::Primary
                 } else {
-                    type_config::FileType::Secondary
+                    FileType::Secondary
                 },
             )?)
         })
-        .collect::<Result<Vec<type_config::File>>>()?)
+        .collect::<Result<Vec<File>>>()?)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env::temp_dir;
+
+    #[test]
+    fn test_make_template_cwl() {
+        let temp_dir = temp_dir();
+        let temp_file = temp_dir.join("yevis_test_template_cwl.yml");
+        let arg_github_token: Option<&str> = None;
+        let result = make_template(
+            &Url::parse(
+                "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
+            )
+            .unwrap(),
+            &arg_github_token,
+            &temp_file,
+            &FileFormat::Yaml,
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_make_template_wdl() {
+        let temp_dir = temp_dir();
+        let temp_file = temp_dir.join("yevis_test_template_wdl.yml");
+        let arg_github_token: Option<&str> = None;
+        let result = make_template(
+            &Url::parse(
+                "https://github.com/ddbj/yevis-cli/blob/main/tests/WDL/wf/dockstore-tool-bamstats.wdl",
+            )
+            .unwrap(),
+            &arg_github_token,
+            &temp_file,
+            &FileFormat::Yaml,
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_make_template_nfl() {
+        let temp_dir = temp_dir();
+        let temp_file = temp_dir.join("yevis_test_template_nfl.yml");
+        let arg_github_token: Option<&str> = None;
+        let result = make_template(
+            &Url::parse("https://github.com/ddbj/yevis-cli/blob/main/tests/NFL/wf/file_input.nf")
+                .unwrap(),
+            &arg_github_token,
+            &temp_file,
+            &FileFormat::Yaml,
+        );
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_make_template_smk() {
+        let temp_dir = temp_dir();
+        let temp_file = temp_dir.join("yevis_test_template_smk.yml");
+        let arg_github_token: Option<&str> = None;
+        let result = make_template(
+            &Url::parse("https://github.com/ddbj/yevis-cli/blob/main/tests/SMK/wf/Snakefile")
+                .unwrap(),
+            &arg_github_token,
+            &temp_file,
+            &FileFormat::Yaml,
+        );
+        assert!(result.is_ok());
+    }
 
     #[test]
     fn test_parse_wf_loc() {
@@ -255,20 +327,20 @@ mod tests {
     #[test]
     fn test_obtain_wf_files() {
         let arg_github_token: Option<&str> = None;
-        let github_token = github_api::read_github_token(&arg_github_token).unwrap();
+        let github_token = read_github_token(&arg_github_token).unwrap();
         let wf_loc =
             Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/main/README.md").unwrap();
-        let wf_repo_info = github_api::WfRepoInfo::new(&github_token, &wf_loc).unwrap();
+        let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc).unwrap();
         let result = obtain_wf_files(&github_token, &wf_repo_info).unwrap();
         let readme = result
             .iter()
             .find(|f| f.target == PathBuf::from("README.md"))
             .unwrap();
-        assert_eq!(readme.r#type, type_config::FileType::Primary);
+        assert_eq!(readme.r#type, FileType::Primary);
         let license = result
             .iter()
             .find(|f| f.target == PathBuf::from("LICENSE"))
             .unwrap();
-        assert_eq!(license.r#type, type_config::FileType::Secondary);
+        assert_eq!(license.r#type, FileType::Secondary);
     }
 }

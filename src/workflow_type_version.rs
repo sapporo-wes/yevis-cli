@@ -1,14 +1,15 @@
-use crate::remote;
-use crate::type_config;
-use crate::type_config::LanguageType;
+use crate::{
+    remote::fetch_raw_content,
+    type_config::{Language, LanguageType},
+};
 use anyhow::{anyhow, Result};
 use log::info;
 use regex::Regex;
 use serde_yaml;
 use std::collections::BTreeMap;
 
-pub fn inspect_wf_type_version(wf_loc: impl AsRef<str>) -> Result<type_config::Language> {
-    let wf_content = remote::fetch_raw_content(&wf_loc)?;
+pub fn inspect_wf_type_version(wf_loc: impl AsRef<str>) -> Result<Language> {
+    let wf_content = fetch_raw_content(&wf_loc)?;
     let r#type = match inspect_wf_type(&wf_content) {
         Ok(wf_type) => wf_type,
         Err(_) => {
@@ -25,7 +26,7 @@ pub fn inspect_wf_type_version(wf_loc: impl AsRef<str>) -> Result<type_config::L
             "1.0".to_string()
         }
     };
-    Ok(type_config::Language { r#type, version })
+    Ok(Language { r#type, version })
 }
 
 pub fn inspect_wf_type(wf_content: impl AsRef<str>) -> Result<LanguageType> {
@@ -129,7 +130,7 @@ mod tests {
         let wf_type_version = inspect_wf_type_version(wf_loc).unwrap();
         assert_eq!(
             wf_type_version,
-            type_config::Language {
+            Language {
                 r#type: LanguageType::Cwl,
                 version: "v1.0".to_string()
             }
@@ -143,7 +144,7 @@ mod tests {
         let wf_type_version = inspect_wf_type_version(wf_loc).unwrap();
         assert_eq!(
             wf_type_version,
-            type_config::Language {
+            Language {
                 r#type: LanguageType::Wdl,
                 version: "1.0".to_string()
             }
@@ -156,7 +157,7 @@ mod tests {
         let wf_type_version = inspect_wf_type_version(wf_loc).unwrap();
         assert_eq!(
             wf_type_version,
-            type_config::Language {
+            Language {
                 r#type: LanguageType::Nfl,
                 version: "1.0".to_string()
             }
@@ -169,7 +170,7 @@ mod tests {
         let wf_type_version = inspect_wf_type_version(wf_loc).unwrap();
         assert_eq!(
             wf_type_version,
-            type_config::Language {
+            Language {
                 r#type: LanguageType::Smk,
                 version: "1.0".to_string()
             }

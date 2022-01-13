@@ -1,4 +1,4 @@
-use crate::args;
+use crate::args::FileFormat;
 use anyhow::{anyhow, Result};
 use std::path::{Path, PathBuf};
 
@@ -29,7 +29,7 @@ pub fn dir_path(path: impl AsRef<Path>) -> Result<PathBuf> {
         .to_path_buf())
 }
 
-pub fn file_format(path: impl AsRef<Path>) -> Result<args::FileFormat> {
+pub fn file_format(path: impl AsRef<Path>) -> Result<FileFormat> {
     let ext = path
         .as_ref()
         .extension()
@@ -43,9 +43,9 @@ pub fn file_format(path: impl AsRef<Path>) -> Result<args::FileFormat> {
             path.as_ref().display()
         ))?;
     match ext {
-        "yml" => Ok(args::FileFormat::Yaml),
-        "yaml" => Ok(args::FileFormat::Yaml),
-        "json" => Ok(args::FileFormat::Json),
+        "yml" => Ok(FileFormat::Yaml),
+        "yaml" => Ok(FileFormat::Yaml),
+        "json" => Ok(FileFormat::Json),
         _ => Err(anyhow!("Invalid file format: {}", path.as_ref().display())),
     }
 }
@@ -81,15 +81,9 @@ mod tests {
 
     #[test]
     fn test_file_format() {
-        assert_eq!(
-            file_format("/path/to/file.yml").unwrap(),
-            args::FileFormat::Yaml
-        );
-        assert_eq!(
-            file_format("path/to/file.yaml").unwrap(),
-            args::FileFormat::Yaml
-        );
-        assert_eq!(file_format("file.json").unwrap(), args::FileFormat::Json);
+        assert_eq!(file_format("/path/to/file.yml").unwrap(), FileFormat::Yaml);
+        assert_eq!(file_format("path/to/file.yaml").unwrap(), FileFormat::Yaml);
+        assert_eq!(file_format("file.json").unwrap(), FileFormat::Json);
         assert!(file_format("/path/to/file").is_err(),);
     }
 }

@@ -1,11 +1,11 @@
-use crate::github_api;
+use crate::github_api::{to_file_path, GithubUser, WfRepoInfo};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use url::Url;
 use uuid::Uuid;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub id: Uuid,
     pub version: String,
@@ -23,11 +23,11 @@ pub struct Author {
 }
 
 impl Author {
-    pub fn new_from_github_user_info(github_user_info: &github_api::GetUserResponse) -> Self {
+    pub fn new_from_github_user(github_user: &GithubUser) -> Self {
         Self {
-            github_account: github_user_info.login.clone(),
-            name: github_user_info.name.clone(),
-            affiliation: github_user_info.company.clone(),
+            github_account: github_user.login.clone(),
+            name: github_user.name.clone(),
+            affiliation: github_user.company.clone(),
             orcid: "".to_string(),
         }
     }
@@ -60,7 +60,7 @@ pub struct Repo {
 }
 
 impl Repo {
-    pub fn new(repo_info: &github_api::WfRepoInfo) -> Self {
+    pub fn new(repo_info: &WfRepoInfo) -> Self {
         Self {
             owner: repo_info.owner.clone(),
             name: repo_info.name.clone(),
@@ -91,11 +91,10 @@ pub struct Language {
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "UPPERCASE")]
+#[serde(rename_all = "lowercase")]
 pub enum FileType {
     Primary,
     Secondary,
-    Test,
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -106,14 +105,6 @@ pub struct File {
 }
 
 impl File {
-    pub fn new_test_file_template() -> Self {
-        Self {
-            url: Url::parse("https://github.com/ddbj/yevis-cli/path/to/test_file").unwrap(),
-            target: PathBuf::from("path/to/test_file"),
-            r#type: FileType::Test,
-        }
-    }
-
     pub fn new_from_raw_url(
         raw_url: &Url,
         base_dir: impl AsRef<Path>,
@@ -121,7 +112,7 @@ impl File {
     ) -> Result<Self> {
         Ok(Self {
             url: raw_url.clone(),
-            target: github_api::to_file_path(&raw_url)?
+            target: to_file_path(&raw_url)?
                 .strip_prefix(base_dir.as_ref())?
                 .to_path_buf(),
             r#type,
@@ -130,7 +121,42 @@ impl File {
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TestFileType {
+    WfParams,
+    WfEngineParams,
+    Other,
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct TestFile {
+    pub url: Url,
+    pub target: PathBuf,
+    pub r#type: TestFileType,
+}
+
+impl TestFile {
+    pub fn new_file_template(r#type: TestFileType) -> Self {
+        let url = match &r#type {
+            TestFileType::WfParams => {
+                Url::parse("https://example.com/path/to/wf_params.json").unwrap()
+            }
+            TestFileType::WfEngineParams => {
+                Url::parse("https://example.com/path/to/wf_engine_params.json").unwrap()
+            }
+            TestFileType::Other => Url::parse("https://example.com/path/to/data.fq").unwrap(),
+        };
+        let target = PathBuf::from(url.path().trim_start_matches("/"));
+        Self {
+            url,
+            target,
+            r#type,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Testing {
     pub id: String,
-    pub files: Vec<File>,
+    pub files: Vec<TestFile>,
 }
