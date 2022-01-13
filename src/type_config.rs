@@ -1,24 +1,26 @@
 use crate::github_api;
-use anyhow::Result;
+use anyhow::{ensure, Result};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use url::Url;
+use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct Config {
-    pub id: String,
+    pub id: Uuid,
     pub version: String,
     pub license: String,
     pub authors: Vec<Author>,
     pub workflow: Workflow,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Author {
-    github_account: String,
-    name: String,
-    affiliation: String,
-    orcid: String,
+    pub github_account: String,
+    pub name: String,
+    pub affiliation: String,
+    pub orcid: String,
 }
 
 impl Author {
@@ -36,12 +38,29 @@ impl Author {
             github_account: "ddbj".to_string(),
             name: "ddbj-workflow".to_string(),
             affiliation: "DNA Data Bank of Japan".to_string(),
-            orcid: "".to_string(),
+            orcid: "DO NOT ENTER".to_string(),
         }
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        let re = Regex::new(r"^\d{4}-\d{4}-\d{4}-(\d{3}X|\d{4})$")?;
+        ensure!(
+            self.github_account != "",
+            "`github_account` field in the authors is required."
+        );
+        ensure!(self.name != "", "`name` field in the authors is required.");
+        if self.orcid != "" {
+            ensure!(
+                re.is_match(&self.orcid),
+                "`orcid` field in the authors is invalid."
+            );
+        };
+
+        Ok(())
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Workflow {
     pub name: String,
     pub repo: Repo,
@@ -51,20 +70,30 @@ pub struct Workflow {
     pub testing: Vec<Testing>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Repo {
     pub owner: String,
     pub name: String,
     pub commit: String,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+impl Repo {
+    pub fn new(repo_info: &github_api::WfRepoInfo) -> Self {
+        Self {
+            owner: repo_info.owner.clone(),
+            name: repo_info.name.clone(),
+            commit: repo_info.commit_hash.clone(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct License {
     pub label: String,
     pub file: Url,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum LanguageType {
     Cwl,
@@ -73,13 +102,13 @@ pub enum LanguageType {
     Smk,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Language {
     pub r#type: LanguageType,
     pub version: String,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum FileType {
     Primary,
@@ -87,7 +116,7 @@ pub enum FileType {
     Test,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct File {
     pub url: Url,
     pub target: PathBuf,
@@ -118,7 +147,7 @@ impl File {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Testing {
     pub id: String,
     pub files: Vec<File>,

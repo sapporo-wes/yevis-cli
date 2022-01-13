@@ -61,7 +61,7 @@ impl WfRepoInfo {
     }
 }
 
-pub fn to_raw_url(wf_repo_info: &WfRepoInfo, file_path: impl AsRef<Path>) -> Result<Url> {
+pub fn to_raw_url_from_path(wf_repo_info: &WfRepoInfo, file_path: impl AsRef<Path>) -> Result<Url> {
     Ok(Url::parse(&format!(
         "https://raw.githubusercontent.com/{}/{}/{}/{}",
         &wf_repo_info.owner,
@@ -75,12 +75,24 @@ pub fn to_raw_url(wf_repo_info: &WfRepoInfo, file_path: impl AsRef<Path>) -> Res
     ))?)
 }
 
+pub fn to_raw_url_from_url(github_token: impl AsRef<str>, url: &Url) -> Result<Url> {
+    match url.host_str() {
+        Some("github.com") | Some("raw.githubusercontent.com") => {
+            let wf_repo_info = WfRepoInfo::new(&github_token, &url)?;
+            let wf_loc = to_raw_url_from_path(&wf_repo_info, &wf_repo_info.file_path)?;
+            Ok(wf_loc)
+        }
+        Some(_) => Ok(url.clone()),
+        None => bail!("URL is not a valid URL"),
+    }
+}
+
 pub fn to_file_path(raw_url: &Url) -> Result<PathBuf> {
     let path_segments = raw_url
         .path_segments()
         .ok_or(anyhow!(
             "Failed to get path segments from url: {}",
-            raw_url.as_str()
+            &raw_url
         ))?
         .collect::<Vec<_>>();
     Ok(path_segments[3..].iter().collect())
@@ -304,6 +316,13 @@ pub fn get_file_list_recursive(
         }
         false => Err(anyhow!("Failed to parse response")),
     }
+}
+
+pub fn head_request(url: &Url) -> Result<()> {
+    let client = reqwest::blocking::Client::new();
+    let response = client.head(url.as_str()).send()?;
+    ensure!(response.status().is_success(), "Failed to head request");
+    Ok(())
 }
 
 #[cfg(test)]

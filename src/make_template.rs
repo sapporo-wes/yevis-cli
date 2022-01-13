@@ -24,15 +24,15 @@ pub fn make_template(
     let wf_repo_info = github_api::WfRepoInfo::new(&github_token, &workflow_location)?;
     let github_user_info = github_api::get_user(&github_token)?;
 
-    let wf_loc = github_api::to_raw_url(&wf_repo_info, &wf_repo_info.file_path)?;
+    let wf_loc = github_api::to_raw_url_from_path(&wf_repo_info, &wf_repo_info.file_path)?;
     let wf_type_version = workflow_type_version::inspect_wf_type_version(&wf_loc)?;
     let wf_name = path_utils::file_stem(&wf_repo_info.file_path)?;
     let wf_version = "1.0.0".to_string(); // TODO update
-    let readme_url = github_api::to_raw_url(&wf_repo_info, "README.md")?;
+    let readme_url = github_api::to_raw_url_from_path(&wf_repo_info, "README.md")?;
     let files = obtain_wf_files(&github_token, &wf_repo_info)?;
 
     let template_config = type_config::Config {
-        id: Uuid::new_v4().to_string(),
+        id: Uuid::new_v4(),
         version: wf_version,
         license: "CC0-1.0".to_string(),
         authors: vec![
@@ -41,11 +41,7 @@ pub fn make_template(
         ],
         workflow: type_config::Workflow {
             name: wf_name,
-            repo: type_config::Repo {
-                owner: wf_repo_info.owner.clone(),
-                name: wf_repo_info.name.clone(),
-                commit: wf_repo_info.commit_hash.clone(),
-            },
+            repo: type_config::Repo::new(&wf_repo_info),
             readme: readme_url,
             language: wf_type_version,
             files,
@@ -180,7 +176,7 @@ fn obtain_wf_files(
         .into_iter()
         .map(|file| -> Result<type_config::File> {
             Ok(type_config::File::new_from_raw_url(
-                &github_api::to_raw_url(&wf_repo_info, &file)?,
+                &github_api::to_raw_url_from_path(&wf_repo_info, &file)?,
                 &base_dir,
                 if file == wf_repo_info.file_path {
                     type_config::FileType::Primary
