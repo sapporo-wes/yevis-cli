@@ -10,6 +10,7 @@ use crate::{
     workflow_type_version::inspect_wf_type_version,
 };
 use anyhow::{anyhow, ensure, Result};
+use log::debug;
 use regex::Regex;
 use serde_json;
 use serde_yaml;
@@ -65,6 +66,7 @@ pub fn make_template(
             }],
         },
     };
+    debug!("template_config: {:?}", template_config);
 
     let mut output_path_buf = output.as_ref().to_path_buf();
     let template_config_str = match &format {

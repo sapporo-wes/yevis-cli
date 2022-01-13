@@ -4,8 +4,8 @@ version: 1.0.0
 license: CC0-1.0
 authors:
   - github_account: suecharo
-    name: Hirotaka Suetake
-    affiliation: "The University of Tokyo"
+    name: Example Name
+    affiliation: "Example Affiliation"
     orcid: "0000-0003-2765-0049"
   - github_account: ddbj
     name: ddbj-workflow

@@ -46,7 +46,10 @@ pub fn file_format(path: impl AsRef<Path>) -> Result<FileFormat> {
         "yml" => Ok(FileFormat::Yaml),
         "yaml" => Ok(FileFormat::Yaml),
         "json" => Ok(FileFormat::Json),
-        _ => Err(anyhow!("Invalid file format: {}", path.as_ref().display())),
+        _ => Err(anyhow!(
+            "Invalid file format: {}. Only `.yml`, `.yaml` and `.json` are supported",
+            ext
+        )),
     }
 }
 
@@ -66,6 +69,7 @@ pub fn file_name(path: impl AsRef<Path>) -> Result<String> {
         .to_string())
 }
 
+#[cfg(test)]
 mod tests {
     #[allow(unused_imports)]
     use super::*;

@@ -53,7 +53,11 @@ fn main() -> Result<()> {
             github_token,
             ..
         } => {
-            validate(&config_file, &github_token)?;
+            info!("Running validate");
+            match validate(&config_file, &github_token) {
+                Ok(_) => info!("Successfully validate"),
+                Err(e) => error!("{}", e),
+            };
         }
         Args::Test {
             config_file,
