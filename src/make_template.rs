@@ -54,9 +54,9 @@ pub fn make_template(
             testing: vec![Testing {
                 id: "test_1".to_string(),
                 files: vec![
-                    TestFile::new_file_template(TestFileType::WfParams),
-                    TestFile::new_file_template(TestFileType::WfEngineParams),
-                    TestFile::new_file_template(TestFileType::Other),
+                    TestFile::new_file_template(TestFileType::WfParams)?,
+                    TestFile::new_file_template(TestFileType::WfEngineParams)?,
+                    TestFile::new_file_template(TestFileType::Other)?,
                 ],
             }],
         },

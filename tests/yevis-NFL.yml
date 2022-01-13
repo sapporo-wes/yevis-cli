@@ -1,0 +1,39 @@
+---
+id: fbcc31af-dfbd-47ab-b4e5-07da79346cf9
+version: 1.0.0
+license: CC0-1.0
+authors:
+  - github_account: suecharo
+    name: Hirotaka Suetake
+    affiliation: "The University of Tokyo"
+    orcid: "0000-0003-2765-0049"
+  - github_account: ddbj
+    name: ddbj-workflow
+    affiliation: DNA Data Bank of Japan
+    orcid: DO NOT ENTER
+workflow:
+  name: NFL_file_input
+  repo:
+    owner: ddbj
+    name: yevis-cli
+    commit: 645a193826bdb3f0731421d4ff1468d0736b4a06
+  readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/README.md"
+  language:
+    type: NFL
+    version: "1.0"
+  files:
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/NFL/wf/file_input.nf"
+      target: file_input.nf
+      type: primary
+  testing:
+    - id: test_1
+      files:
+        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/NFL/test/wf_params.json"
+          target: wf_params.json
+          type: wf_params
+        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/NFL/test/wf_engine_params.json"
+          target: wf_engine_params.json
+          type: wf_engine_params
+        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/NFL/test/test_input.txt"
+          target: test_input.txt
+          type: other

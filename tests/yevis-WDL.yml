@@ -1,0 +1,36 @@
+---
+id: 245be3be-cc62-4073-84ac-de3a7b683920
+version: 1.0.0
+license: CC0-1.0
+authors:
+  - github_account: suecharo
+    name: Hirotaka Suetake
+    affiliation: "The University of Tokyo"
+    orcid: "0000-0003-2765-0049"
+  - github_account: ddbj
+    name: ddbj-workflow
+    affiliation: DNA Data Bank of Japan
+    orcid: DO NOT ENTER
+workflow:
+  name: WDL_dockstore-tool-bamstats
+  repo:
+    owner: ddbj
+    name: yevis-cli
+    commit: 645a193826bdb3f0731421d4ff1468d0736b4a06
+  readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/README.md"
+  language:
+    type: WDL
+    version: "1.0"
+  files:
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/WDL/wf/dockstore-tool-bamstats.wdl"
+      target: dockstore-tool-bamstats.wdl
+      type: primary
+  testing:
+    - id: test_1
+      files:
+        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/WDL/test/wf_params.json"
+          target: wf_params.json
+          type: wf_params
+        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/WDL/test/tiny.bam"
+          target: tiny.bam
+          type: other

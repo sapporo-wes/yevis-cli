@@ -1,4 +1,7 @@
-use crate::github_api::{to_file_path, GithubUser, WfRepoInfo};
+use crate::{
+    github_api::{to_file_path, GithubUser, WfRepoInfo},
+    path_utils::file_name,
+};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
@@ -136,22 +139,20 @@ pub struct TestFile {
 }
 
 impl TestFile {
-    pub fn new_file_template(r#type: TestFileType) -> Self {
+    pub fn new_file_template(r#type: TestFileType) -> Result<Self> {
         let url = match &r#type {
-            TestFileType::WfParams => {
-                Url::parse("https://example.com/path/to/wf_params.json").unwrap()
-            }
+            TestFileType::WfParams => Url::parse("https://example.com/path/to/wf_params.json")?,
             TestFileType::WfEngineParams => {
-                Url::parse("https://example.com/path/to/wf_engine_params.json").unwrap()
+                Url::parse("https://example.com/path/to/wf_engine_params.json")?
             }
-            TestFileType::Other => Url::parse("https://example.com/path/to/data.fq").unwrap(),
+            TestFileType::Other => Url::parse("https://example.com/path/to/data.fq")?,
         };
-        let target = PathBuf::from(url.path().trim_start_matches("/"));
-        Self {
+        let target = PathBuf::from(file_name(url.path().trim_start_matches("/"))?);
+        Ok(Self {
             url,
             target,
             r#type,
-        }
+        })
     }
 }
 

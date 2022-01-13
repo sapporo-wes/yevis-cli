@@ -50,6 +50,22 @@ pub fn file_format(path: impl AsRef<Path>) -> Result<FileFormat> {
     }
 }
 
+pub fn file_name(path: impl AsRef<Path>) -> Result<String> {
+    Ok(path
+        .as_ref()
+        .file_name()
+        .ok_or(anyhow!(
+            "Could not get file name from path: {}",
+            path.as_ref().display()
+        ))?
+        .to_str()
+        .ok_or(anyhow!(
+            "Could not convert file name to string: {}",
+            path.as_ref().display()
+        ))?
+        .to_string())
+}
+
 mod tests {
     #[allow(unused_imports)]
     use super::*;
@@ -85,5 +101,13 @@ mod tests {
         assert_eq!(file_format("path/to/file.yaml").unwrap(), FileFormat::Yaml);
         assert_eq!(file_format("file.json").unwrap(), FileFormat::Json);
         assert!(file_format("/path/to/file").is_err(),);
+    }
+
+    #[test]
+    fn test_file_name() {
+        assert_eq!(file_name("/path/to/file.yml").unwrap(), "file.yml");
+        assert_eq!(file_name("path/to/file.yaml").unwrap(), "file.yaml");
+        assert_eq!(file_name("file.json").unwrap(), "file.json");
+        assert_eq!(file_name("/path/to/file").unwrap(), "file");
     }
 }

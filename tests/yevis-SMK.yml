@@ -1,0 +1,66 @@
+---
+id: 4d167669-018c-40fb-a5be-04473103f850
+version: 1.0.0
+license: CC0-1.0
+authors:
+  - github_account: suecharo
+    name: Hirotaka Suetake
+    affiliation: "The University of Tokyo"
+    orcid: "0000-0003-2765-0049"
+  - github_account: ddbj
+    name: ddbj-workflow
+    affiliation: DNA Data Bank of Japan
+    orcid: DO NOT ENTER
+workflow:
+  name: SMK_tutorial
+  repo:
+    owner: ddbj
+    name: yevis-cli
+    commit: 645a193826bdb3f0731421d4ff1468d0736b4a06
+  readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/README.md"
+  language:
+    type: SMK
+    version: "1.0"
+  files:
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/Snakefile"
+      target: Snakefile
+      type: primary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa"
+      target: data/genome.fa
+      type: secondary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.amb"
+      target: data/genome.fa.amb
+      type: secondary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.ann"
+      target: data/genome.fa.ann
+      type: secondary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.bwt"
+      target: data/genome.fa.bwt
+      type: secondary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.fai"
+      target: data/genome.fa.fai
+      type: secondary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.pac"
+      target: data/genome.fa.pac
+      type: secondary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.sa"
+      target: data/genome.fa.sa
+      type: secondary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/samples/A.fastq"
+      target: data/samples/A.fastq
+      type: secondary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/samples/B.fastq"
+      target: data/samples/B.fastq
+      type: secondary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/envs/calling.yaml"
+      target: envs/calling.yaml
+      type: secondary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/envs/mapping.yaml"
+      target: envs/mapping.yaml
+      type: secondary
+  testing:
+    - id: test_1
+      files:
+        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/SMK/test/wf_engine_params.json"
+          target: wf_engine_params.json
+          type: wf_engine_params
