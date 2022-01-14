@@ -17,14 +17,14 @@ pub fn inspect_wf_type_version(wf_loc: impl AsRef<str>) -> Result<Language> {
     let r#type = match inspect_wf_type(&wf_content) {
         Ok(wf_type) => wf_type,
         Err(_) => {
-            info!("{}: Failed to detect workflow type from your inputted workflow location: {}. So default workflow type `CWL` will be used.", "Warn".yellow(), wf_loc.as_ref());
+            info!("{}: Failed to detect workflow type from your inputted workflow location: {}. So default workflow type `CWL` will be used.", "Warning".yellow(), wf_loc.as_ref());
             LanguageType::Cwl
         }
     };
     let version = match &inspect_wf_version(&wf_content, &r#type) {
         Ok(wf_version) => wf_version.to_string(),
         Err(_) => {
-            info!("{}: Failed to detect workflow version from your inputted workflow location: {}. So default workflow version `1.0` will be used.", "Warn".yellow(), wf_loc.as_ref());
+            info!("{}: Failed to detect workflow version from your inputted workflow location: {}. So default workflow version `1.0` will be used.", "Warnning".yellow(), wf_loc.as_ref());
             "1.0".to_string()
         }
     };

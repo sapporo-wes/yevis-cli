@@ -5,6 +5,7 @@ use crate::{
     type_config::{Author, Config, FileType, Repo, TestFileType, Workflow},
 };
 use anyhow::{bail, ensure, Context, Result};
+use colored::Colorize;
 use log::{debug, info};
 use regex::Regex;
 use serde_json;
@@ -165,6 +166,11 @@ fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Resu
     let raw_readme_url = to_raw_url_from_url(&github_token, &primary_wf.url)?;
     match head_request(&raw_readme_url) {
         Ok(_) => {
+            info!(
+                "{}: Readme URL is not raw URL. It will be converted to raw URL: {}",
+                "Warning".yellow(),
+                raw_readme_url.as_str()
+            );
             cloned_wf.readme = raw_readme_url;
         }
         Err(_) => bail!(
@@ -178,6 +184,11 @@ fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Resu
         let raw_file_url = to_raw_url_from_url(&github_token, &file.url)?;
         match head_request(&raw_file_url) {
             Ok(_) => {
+                info!(
+                    "{}: File URL is not raw URL. It will be converted to raw URL: {}",
+                    "Warning".yellow(),
+                    raw_file_url.as_str()
+                );
                 cloned_wf.files[i].url = raw_file_url;
             }
             Err(_) => bail!("Failed to head request to the file: {}", &raw_file_url),
@@ -213,6 +224,11 @@ fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Resu
             let raw_file_url = to_raw_url_from_url(&github_token, &file.url)?;
             match head_request(&raw_file_url) {
                 Ok(_) => {
+                    info!(
+                        "{}: Test file URL is not raw URL. It will be converted to raw URL: {}",
+                        "Warning".yellow(),
+                        raw_file_url.as_str()
+                    );
                     cloned_wf.testing[i].files[j].url = raw_file_url;
                 }
                 Err(_) => bail!("Failed to head request to the file: {}", &raw_file_url),
