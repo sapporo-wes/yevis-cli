@@ -75,6 +75,21 @@ fn validate_authors(authors: &Vec<Author>) -> Result<()> {
         authors.len() > 1,
         "Please add at least one person and ddbj as authors.",
     );
+
+    let mut account_set: HashSet<&str> = HashSet::new();
+    ensure!(
+        authors
+            .iter()
+            .all(|author| account_set.insert(author.github_account.as_ref())),
+        "Duplicated GitHub account found: {}",
+        authors
+            .iter()
+            .filter(|author| !account_set.insert(author.github_account.as_ref()))
+            .map(|author| author.github_account.as_ref())
+            .collect::<Vec<_>>()
+            .join(", ")
+    );
+
     let mut ddbj_found = false;
     for author in authors {
         match author.github_account.as_str() {
@@ -221,35 +236,35 @@ mod tests {
 
     #[test]
     fn test_validate_cwl_config() {
-        let config_file = "tests/yevis-CWL.yml";
+        let config_file = "tests/test_config_CWL.yml";
         let result = validate(config_file, &None::<String>);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_validate_wdl_config() {
-        let config_file = "tests/yevis-WDL.yml";
+        let config_file = "tests/test_config_WDL.yml";
         let result = validate(config_file, &None::<String>);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_validate_nfl_config() {
-        let config_file = "tests/yevis-NFL.yml";
+        let config_file = "tests/test_config_NFL.yml";
         let result = validate(config_file, &None::<String>);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_validate_smk_config() {
-        let config_file = "tests/yevis-SMK.yml";
+        let config_file = "tests/test_config_SMK.yml";
         let result = validate(config_file, &None::<String>);
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_validate_broken_config() {
-        let config_file = "tests/yevis_broken.yml";
+        let config_file = "tests/test_config_broken.yml";
         let result = validate(config_file, &None::<String>);
         assert!(result.is_err());
         assert!(result
@@ -390,7 +405,7 @@ mod tests {
     #[test]
     fn test_validate_workflow_with_no_primary_wf() {
         let github_token = read_github_token(&None::<String>).unwrap();
-        let reader = BufReader::new(File::open("./tests/yevis-CWL.yml").unwrap());
+        let reader = BufReader::new(File::open("./tests/test_config_CWL.yml").unwrap());
         let mut config: Config = serde_yaml::from_reader(reader).unwrap();
         config.workflow.files = vec![];
         let result = validate_workflow(&github_token, &config.workflow);
@@ -404,7 +419,7 @@ mod tests {
     #[test]
     fn test_validate_workflow_with_invalid_repo_info() {
         let github_token = read_github_token(&None::<String>).unwrap();
-        let reader = BufReader::new(File::open("./tests/yevis-CWL.yml").unwrap());
+        let reader = BufReader::new(File::open("./tests/test_config_CWL.yml").unwrap());
         let mut config: Config = serde_yaml::from_reader(reader).unwrap();
         config.workflow.repo = Repo {
             owner: "ddbj".to_string(),
@@ -422,7 +437,7 @@ mod tests {
     #[test]
     fn test_validate_workflow_update_raw_url() {
         let github_token = read_github_token(&None::<String>).unwrap();
-        let reader = BufReader::new(File::open("./tests/yevis-CWL.yml").unwrap());
+        let reader = BufReader::new(File::open("./tests/test_config_CWL.yml").unwrap());
         let mut config: Config = serde_yaml::from_reader(reader).unwrap();
         config.workflow.files.push(WfFile {
             url: Url::parse("https://github.com/ddbj/yevis-cli/blob/main/README.md").unwrap(),

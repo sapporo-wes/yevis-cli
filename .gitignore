@@ -14,5 +14,5 @@ Cargo.lock
 /target
 
 .env
-yevis.yml
-yevis.json
+yevis_config.yml
+yevis_config.json

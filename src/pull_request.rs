@@ -1,8 +1,8 @@
+use crate::type_config::Config;
 use anyhow::Result;
-use std::path::Path;
 
 pub fn pull_request(
-    _config_file: impl AsRef<Path>,
+    _config: &Config,
     _github_token: &Option<impl AsRef<str>>,
     _repository: impl AsRef<str>,
     _wes_location: &Option<impl AsRef<str>>,

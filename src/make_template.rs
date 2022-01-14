@@ -11,6 +11,7 @@ use crate::{
 };
 use anyhow::{anyhow, ensure, Result};
 use log::debug;
+use log::info;
 use regex::Regex;
 use serde_json;
 use serde_yaml;
@@ -32,6 +33,10 @@ pub fn make_template(
         "GitHub token is empty. Please set it with --github-token option or set GITHUB_TOKEN environment variable."
     );
 
+    info!(
+        "Making template config from workflow location: {}",
+        workflow_location.as_str()
+    );
     let wf_repo_info = WfRepoInfo::new(&github_token, &workflow_location)?;
     let github_user = get_user(&github_token)?;
 
@@ -277,7 +282,7 @@ mod tests {
         let result = make_template(
             &wf_loc,
             &arg_github_token,
-            &PathBuf::from("yevis.yml"),
+            &PathBuf::from("yevis_config.yml"),
             &FileFormat::Yaml,
         );
         assert!(result.is_err());
@@ -294,7 +299,7 @@ mod tests {
         let result = make_template(
             &wf_loc,
             &arg_github_token,
-            &PathBuf::from("yevis.yml"),
+            &PathBuf::from("yevis_config.yml"),
             &FileFormat::Yaml,
         );
         assert!(result.is_err());
@@ -312,7 +317,7 @@ mod tests {
         let result = make_template(
             &wf_loc,
             &arg_github_token,
-            &PathBuf::from("yevis.yml"),
+            &PathBuf::from("yevis_config.yml"),
             &FileFormat::Yaml,
         );
         assert!(result.is_err());

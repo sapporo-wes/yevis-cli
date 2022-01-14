@@ -10,11 +10,13 @@ mod validate;
 mod workflow_type_version;
 use anyhow::Result;
 use args::Args;
+use colored::Colorize;
 use env_logger;
 use lib_test::test;
 use log::{debug, error, info};
 use make_template::make_template;
 use pull_request::pull_request;
+use std::process::exit;
 use structopt::StructOpt;
 use validate::validate;
 
@@ -31,7 +33,7 @@ fn main() -> Result<()> {
         if verbose { "debug" } else { "info" },
     ));
 
-    info!("Start yevis {}", env!("CARGO_PKG_VERSION"));
+    info!("{} yevis {}", "Start".green(), env!("CARGO_PKG_VERSION"));
     debug!("args: {:?}", args);
 
     match &args {
@@ -42,10 +44,13 @@ fn main() -> Result<()> {
             format,
             ..
         } => {
-            info!("Running make-template");
+            info!("{} make-template", "Running".green());
             match make_template(&workflow_location, &github_token, &output, &format) {
-                Ok(()) => info!("Successfully make-template"),
-                Err(e) => error!("{}", e),
+                Ok(()) => info!("{} make-template successfully", "Finished".green()),
+                Err(e) => {
+                    error!("{}: {}", "Error".red(), e);
+                    exit(1);
+                }
             };
         }
         Args::Validate {
@@ -53,10 +58,13 @@ fn main() -> Result<()> {
             github_token,
             ..
         } => {
-            info!("Running validate");
+            info!("{} validate", "Running".green());
             match validate(&config_file, &github_token) {
-                Ok(_) => info!("Successfully validate"),
-                Err(e) => error!("{}", e),
+                Ok(_) => info!("{} validate successfully", "Finished".green()),
+                Err(e) => {
+                    error!("{}: {}", "Error".red(), e);
+                    exit(1);
+                }
             };
         }
         Args::Test {
@@ -66,7 +74,25 @@ fn main() -> Result<()> {
             docker_host,
             ..
         } => {
-            test(&config_file, &github_token, &wes_location, &docker_host)?;
+            info!("{} validate", "Running".green());
+            let config = match validate(&config_file, &github_token) {
+                Ok(config) => {
+                    info!("{} validate successfully", "Finished".green());
+                    config
+                }
+                Err(e) => {
+                    error!("{}: {}", "Error".red(), e);
+                    exit(1);
+                }
+            };
+            info!("{} test", "Running".green());
+            match test(&config, &github_token, &wes_location, &docker_host) {
+                Ok(_) => info!("{} test successfully", "Finished".green()),
+                Err(e) => {
+                    error!("{}: {}", "Error".red(), e);
+                    exit(1);
+                }
+            };
         }
         Args::PullRequest {
             config_file,
@@ -76,15 +102,39 @@ fn main() -> Result<()> {
             docker_host,
             ..
         } => {
-            validate(&config_file, &github_token)?;
-            test(&config_file, &github_token, &wes_location, &docker_host)?;
-            pull_request(
-                &config_file,
+            info!("{} validate", "Running".green());
+            let config = match validate(&config_file, &github_token) {
+                Ok(config) => {
+                    info!("{} validate successfully", "Finished".green());
+                    config
+                }
+                Err(e) => {
+                    error!("{}: {}", "Error".red(), e);
+                    exit(1);
+                }
+            };
+            info!("{} test", "Running".green());
+            match test(&config, &github_token, &wes_location, &docker_host) {
+                Ok(_) => info!("{} test successfully", "Finished".green()),
+                Err(e) => {
+                    error!("{}: {}", "Error".red(), e);
+                    exit(1);
+                }
+            };
+            info!("{} pull-request", "Running".green());
+            match pull_request(
+                &config,
                 &github_token,
                 &repository,
                 &wes_location,
                 &docker_host,
-            )?;
+            ) {
+                Ok(_) => info!("{} pull-request successfully", "Finished".green()),
+                Err(e) => {
+                    error!("{}: {}", "Error".red(), e);
+                    exit(1);
+                }
+            };
         }
     }
     Ok(())
