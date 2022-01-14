@@ -7,7 +7,10 @@ mod pull_request;
 mod remote;
 mod type_config;
 mod validate;
+mod wes;
 mod workflow_type_version;
+
+use crate::wes::stop_wes;
 use anyhow::Result;
 use args::Args;
 use colored::Colorize;
@@ -89,6 +92,13 @@ fn main() -> Result<()> {
             match test(&config, &github_token, &wes_location, &docker_host) {
                 Ok(_) => info!("{} test successfully", "Finished".green()),
                 Err(e) => {
+                    match stop_wes(&docker_host) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("{}: {}", "Error".red(), e);
+                            exit(1);
+                        }
+                    };
                     error!("{}: {}", "Error".red(), e);
                     exit(1);
                 }
@@ -117,6 +127,13 @@ fn main() -> Result<()> {
             match test(&config, &github_token, &wes_location, &docker_host) {
                 Ok(_) => info!("{} test successfully", "Finished".green()),
                 Err(e) => {
+                    match stop_wes(&docker_host) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            error!("{}: {}", "Error".red(), e);
+                            exit(1);
+                        }
+                    };
                     error!("{}: {}", "Error".red(), e);
                     exit(1);
                 }

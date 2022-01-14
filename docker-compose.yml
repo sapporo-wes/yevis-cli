@@ -8,6 +8,7 @@ services:
     container_name: yevis-cli
     volumes:
       - ${PWD}:/app
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - RUST_BACKTRACE=1
     restart: on-failure

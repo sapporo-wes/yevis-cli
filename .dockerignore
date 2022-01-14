@@ -1,0 +1,10 @@
+# Ignore everything
+**
+
+!src
+!tests
+!Cargo.toml
+!LICENSE
+!README.md
+
+**/__pycache__
