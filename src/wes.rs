@@ -7,7 +7,8 @@ use serde_json::Value;
 use std::env;
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::{thread, time};
+use std::thread;
+use std::time;
 use url::Url;
 
 const SAPPORO_SERVICE_IMAGE: &str = "ghcr.io/sapporo-wes/sapporo-service:1.1.0";
@@ -34,7 +35,6 @@ pub fn sapporo_run_dir() -> Result<String> {
 
 pub fn start_wes(docker_host: &Url) -> Result<()> {
     let status = check_wes_running(docker_host)?;
-    dbg!(status);
     if status {
         info!("The sapporo-service for yevis is already running. So skip starting it.");
         return Ok(());
@@ -186,7 +186,7 @@ pub fn get_service_info(wes_loc: &Url) -> Result<ServiceInfo> {
     }
 }
 
-fn post_runs(wes_loc: &Url, form: multipart::Form) -> Result<String> {
+pub fn post_run(wes_loc: &Url, form: multipart::Form) -> Result<String> {
     let url = wes_loc.join("/runs")?;
     let client = reqwest::blocking::Client::new();
     let response = client
@@ -210,6 +210,75 @@ fn post_runs(wes_loc: &Url, form: multipart::Form) -> Result<String> {
             .to_string()),
         false => bail!("Response from posting run is not an object"),
     }
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub enum RunStatus {
+    Running,
+    Complete,
+    Failed,
+}
+
+impl RunStatus {
+    pub fn from_str(s: &str) -> Result<RunStatus> {
+        match s {
+            "QUEUED" => Ok(RunStatus::Running),
+            "INITIALIZING" => Ok(RunStatus::Running),
+            "RUNNING" => Ok(RunStatus::Running),
+            "PAUSED" => Ok(RunStatus::Running),
+            "COMPLETE" => Ok(RunStatus::Complete),
+            "EXECUTOR_ERROR" => Ok(RunStatus::Failed),
+            "SYSTEM_ERROR" => Ok(RunStatus::Failed),
+            "CANCELED" => Ok(RunStatus::Failed),
+            "CANCELING" => Ok(RunStatus::Failed),
+            "UNKNOWN" => bail!("Unknown run status: {}", s),
+            _ => bail!("Unknown run status: {}", s),
+        }
+    }
+}
+
+pub fn get_run_status(wes_loc: &Url, run_id: impl AsRef<str>) -> Result<RunStatus> {
+    let url = wes_loc.join(&format!("/runs/{}/status", run_id.as_ref()))?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(url.as_str())
+        .header(reqwest::header::ACCEPT, "application/json")
+        .send()?;
+    ensure!(
+        response.status().is_success(),
+        "Failed to get run status with status: {} from {}",
+        response.status(),
+        url.as_str()
+    );
+    let body = response.json::<Value>()?;
+
+    match &body.is_object() {
+        true => {
+            let status = body["state"]
+                .as_str()
+                .ok_or(anyhow!("Failed to parse response when getting run status"))?
+                .to_string();
+            Ok(RunStatus::from_str(status.as_str())?)
+        }
+        false => bail!("Response from getting run status is not an object"),
+    }
+}
+
+pub fn get_run_log(wes_loc: &Url, run_id: impl AsRef<str>) -> Result<Value> {
+    let url = wes_loc.join(&format!("/runs/{}", run_id.as_ref()))?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(url.as_str())
+        .header(reqwest::header::ACCEPT, "application/json")
+        .send()?;
+    ensure!(
+        response.status().is_success(),
+        "Failed to get run log with status: {} from {}",
+        response.status(),
+        url.as_str()
+    );
+    let body = response.json::<Value>()?;
+    Ok(body)
 }
 
 #[cfg(test)]
@@ -263,13 +332,21 @@ mod tests {
     }
 
     #[test]
-    fn test_post_runs() {
+    fn test_post_run() {
         let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
         start_wes(&docker_host).unwrap();
         let wf_loc = Url::parse(&default_wes_location()).unwrap();
         let config = validate("tests/test_config_CWL.yml", &None::<String>).unwrap();
         let form = test_case_to_form(&config.workflow, &config.workflow.testing[0]).unwrap();
-        assert!(post_runs(&wf_loc, form).is_ok());
-        stop_wes(&docker_host).unwrap();
+        match post_run(&wf_loc, form) {
+            Ok(run_id) => {
+                assert!(run_id.len() > 0);
+                stop_wes(&docker_host).unwrap();
+            }
+            Err(e) => {
+                stop_wes(&docker_host).unwrap();
+                println!("{}", e);
+            }
+        }
     }
 }

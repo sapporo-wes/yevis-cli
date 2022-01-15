@@ -1,13 +1,18 @@
 use crate::{
     remote::fetch_raw_content,
     type_config::{Config, FileType, LanguageType, TestFileType, Testing, Workflow},
-    wes::{default_wes_location, get_service_info, start_wes},
+    wes::{
+        default_wes_location, get_run_log, get_run_status, get_service_info, post_run, start_wes,
+        stop_wes, RunStatus,
+    },
 };
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use log::{debug, info};
 use reqwest::blocking::multipart;
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::thread;
+use std::time;
 use url::Url;
 
 pub fn test(config: &Config, wes_location: &Option<Url>, docker_host: &Url) -> Result<()> {
@@ -33,10 +38,31 @@ pub fn test(config: &Config, wes_location: &Option<Url>, docker_host: &Url) -> R
         "yevis only supports WES version sapporo-wes-1.0.1"
     );
     for test_case in &config.workflow.testing {
-        info!("Testing {}", test_case.id);
+        info!("Testing {}", &test_case.id);
         let form = test_case_to_form(&config.workflow, &test_case)?;
-        debug!("form: {:?}", form);
+        debug!("form: {:?}", &form);
+        let run_id = post_run(&wes_location, form)?;
+        debug!("run_id: {}", &run_id);
+        let mut status = RunStatus::Running;
+        while status == RunStatus::Running {
+            status = get_run_status(&wes_location, &run_id)?;
+            debug!("status: {:?}", &status);
+            thread::sleep(time::Duration::from_secs(5));
+        }
+        match status {
+            RunStatus::Complete => {
+                info!("Test {} success", &test_case.id);
+                let run_log = get_run_log(&wes_location, &run_id)?;
+                let run_log_str = serde_json::to_string_pretty(&run_log)?;
+                debug!("result: \n{}", &run_log_str);
+            }
+            RunStatus::Failed => {
+                bail!("Test {} failed", &test_case.id);
+            }
+            _ => {}
+        }
     }
+    stop_wes(&docker_host)?;
 
     Ok(())
 }
@@ -67,7 +93,16 @@ fn wf_url(workflow: &Workflow) -> Result<String> {
         .iter()
         .find(|f| f.r#type == FileType::Primary)
         .ok_or(anyhow!("No primary workflow file"))?;
-    Ok(primary_wf.url.to_string())
+    match workflow.language.r#type {
+        LanguageType::Nfl => {
+            let file_name = match primary_wf.target.to_str() {
+                Some(file_name) => file_name.to_string(),
+                None => primary_wf.url.path().to_string(),
+            };
+            Ok(file_name)
+        }
+        _ => Ok(primary_wf.url.to_string()),
+    }
 }
 
 fn wf_engine_name(workflow: &Workflow) -> String {
@@ -109,8 +144,21 @@ struct AttachedFile {
 
 fn wf_attachment(workflow: &Workflow, test_case: &Testing) -> Result<String> {
     let mut attachments: Vec<AttachedFile> = vec![];
-    workflow.files.iter().for_each(|f| {
-        if f.r#type == FileType::Secondary {
+    workflow.files.iter().for_each(|f| match &f.r#type {
+        FileType::Primary => match workflow.language.r#type {
+            LanguageType::Nfl => {
+                let file_name = match f.target.to_str() {
+                    Some(file_name) => file_name.to_string(),
+                    None => f.url.path().to_string(),
+                };
+                attachments.push(AttachedFile {
+                    file_name: file_name,
+                    file_url: f.url.clone(),
+                })
+            }
+            _ => {}
+        },
+        FileType::Secondary => {
             let file_name = match f.target.to_str() {
                 Some(file_name) => file_name.to_string(),
                 None => f.url.path().to_string(),
@@ -118,11 +166,11 @@ fn wf_attachment(workflow: &Workflow, test_case: &Testing) -> Result<String> {
             attachments.push(AttachedFile {
                 file_name: file_name,
                 file_url: f.url.clone(),
-            });
+            })
         }
     });
-    test_case.files.iter().for_each(|f| {
-        if f.r#type == TestFileType::Other {
+    test_case.files.iter().for_each(|f| match &f.r#type {
+        TestFileType::Other => {
             let file_name = match f.target.to_str() {
                 Some(file_name) => file_name.to_string(),
                 None => f.url.path().to_string(),
@@ -132,6 +180,7 @@ fn wf_attachment(workflow: &Workflow, test_case: &Testing) -> Result<String> {
                 file_url: f.url.clone(),
             });
         }
+        _ => {}
     });
     let attachments_json = serde_json::to_string(&attachments)?;
     Ok(attachments_json)
@@ -143,6 +192,54 @@ mod tests {
     use crate::validate::validate;
     use std::fs::File;
     use std::io::BufReader;
+
+    #[test]
+    fn test_test_cwl() {
+        let config = validate("tests/test_config_CWL.yml", &None::<String>).unwrap();
+        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
+        match test(&config, &None::<Url>, &docker_host) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("{}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_test_wdl() {
+        let config = validate("tests/test_config_WDL.yml", &None::<String>).unwrap();
+        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
+        match test(&config, &None::<Url>, &docker_host) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("{}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_test_nfl() {
+        let config = validate("tests/test_config_NFL.yml", &None::<String>).unwrap();
+        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
+        match test(&config, &None::<Url>, &docker_host) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("{}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn test_test_smk() {
+        let config = validate("tests/test_config_SMK.yml", &None::<String>).unwrap();
+        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
+        match test(&config, &None::<Url>, &docker_host) {
+            Ok(_) => {}
+            Err(e) => {
+                println!("{}", e);
+            }
+        }
+    }
 
     #[test]
     fn test_test_case_to_form() {

@@ -173,9 +173,10 @@ fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Resu
             );
             cloned_wf.readme = raw_readme_url;
         }
-        Err(_) => bail!(
-            "Failed to head request to the readme file: {}",
-            &raw_readme_url
+        Err(e) => bail!(
+            "Failed to head request to the readme file: {}, error: {}",
+            &raw_readme_url,
+            e
         ),
     };
 
@@ -191,7 +192,11 @@ fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Resu
                 );
                 cloned_wf.files[i].url = raw_file_url;
             }
-            Err(_) => bail!("Failed to head request to the file: {}", &raw_file_url),
+            Err(e) => bail!(
+                "Failed to head request to the file: {}, error: {}",
+                &raw_file_url,
+                e
+            ),
         };
     }
 
@@ -235,7 +240,11 @@ fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Resu
                     );
                     cloned_wf.testing[i].files[j].url = raw_file_url;
                 }
-                Err(_) => bail!("Failed to head request to the file: {}", &raw_file_url),
+                Err(e) => bail!(
+                    "Failed to head request to the file: {}, error: {}",
+                    &raw_file_url,
+                    e
+                ),
             };
         }
         match test_id_set.insert(testing.id.as_str()) {
