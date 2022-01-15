@@ -49,15 +49,15 @@ pub fn test(config: &Config, wes_location: &Option<Url>, docker_host: &Url) -> R
             debug!("status: {:?}", &status);
             thread::sleep(time::Duration::from_secs(5));
         }
+        let run_log = get_run_log(&wes_location, &run_id)?;
+        let run_log_str = serde_json::to_string_pretty(&run_log)?;
         match status {
             RunStatus::Complete => {
-                info!("Test {} success", &test_case.id);
-                let run_log = get_run_log(&wes_location, &run_id)?;
-                let run_log_str = serde_json::to_string_pretty(&run_log)?;
+                info!("Complete {}", &test_case.id);
                 debug!("result: \n{}", &run_log_str);
             }
             RunStatus::Failed => {
-                bail!("Test {} failed", &test_case.id);
+                bail!("Failed {}. Log is:\n{}", &test_case.id, &run_log_str);
             }
             _ => {}
         }
