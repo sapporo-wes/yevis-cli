@@ -16,3 +16,4 @@ Cargo.lock
 .env
 yevis_config.yml
 yevis_config.json
+run

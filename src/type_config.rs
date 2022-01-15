@@ -4,6 +4,7 @@ use crate::{
 };
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::path::{Path, PathBuf};
 use url::Url;
 use uuid::Uuid;
@@ -85,6 +86,17 @@ pub enum LanguageType {
     Wdl,
     Nfl,
     Smk,
+}
+
+impl fmt::Display for LanguageType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            LanguageType::Cwl => write!(f, "CWL"),
+            LanguageType::Wdl => write!(f, "WDL"),
+            LanguageType::Nfl => write!(f, "NFL"),
+            LanguageType::Smk => write!(f, "SMK"),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

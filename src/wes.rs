@@ -1,15 +1,40 @@
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use log::info;
+use reqwest;
+use reqwest::blocking::multipart;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::env;
+use std::path::Path;
 use std::process::{Command, Stdio};
+use std::{thread, time};
 use url::Url;
 
-pub const DEFAULT_WES_LOCATION: &str = "http://yevis-sapporo-service:1122";
-const YEVIS_NETWORK_NAME: &str = "yevis-cli_default";
 const SAPPORO_SERVICE_IMAGE: &str = "ghcr.io/sapporo-wes/sapporo-service:1.1.0";
 const SAPPORO_SERVICE_NAME: &str = "yevis-sapporo-service";
 
+pub fn inside_docker_container() -> bool {
+    Path::new("/.dockerenv").exists()
+}
+
+pub fn default_wes_location() -> String {
+    if inside_docker_container() {
+        "http://yevis-sapporo-service:1122".to_string()
+    } else {
+        "http://localhost:1122".to_string()
+    }
+}
+
+pub fn sapporo_run_dir() -> Result<String> {
+    match env::var("SAPPORO_RUN_DIR") {
+        Ok(run_dir) => Ok(run_dir),
+        Err(e) => bail!("SAPPORO_RUN_DIR is not set: {}", e),
+    }
+}
+
 pub fn start_wes(docker_host: &Url) -> Result<()> {
     let status = check_wes_running(docker_host)?;
+    dbg!(status);
     if status {
         info!("The sapporo-service for yevis is already running. So skip starting it.");
         return Ok(());
@@ -19,6 +44,14 @@ pub fn start_wes(docker_host: &Url) -> Result<()> {
         "Starting the sapporo-service for yevis using docker_host: {}",
         docker_host.as_str()
     );
+    let arg_socket_val = &format!("{}:/var/run/docker.sock", docker_host.path());
+    let sapporo_run_dir = &sapporo_run_dir()?;
+    let arg_run_dir_val = &format!("{}:{}", sapporo_run_dir, sapporo_run_dir);
+    let (arg_network, arg_network_val) = if inside_docker_container() {
+        ("--network", "yevis-cli_default")
+    } else {
+        ("-p", "1122:1122")
+    };
     let process = Command::new("docker")
         .args(&[
             "-H",
@@ -26,14 +59,22 @@ pub fn start_wes(docker_host: &Url) -> Result<()> {
             "run",
             "-d",
             "--rm",
+            "-v",
+            arg_socket_val,
+            "-v",
+            "/tmp:/tmp",
+            "-v",
+            arg_run_dir_val,
+            arg_network,
+            arg_network_val,
             "--name",
             SAPPORO_SERVICE_NAME,
-            "--network",
-            YEVIS_NETWORK_NAME,
             SAPPORO_SERVICE_IMAGE,
             "sapporo",
+            "--run-dir",
+            sapporo_run_dir,
         ])
-        .stdout(Stdio::inherit())
+        .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
         .context("Please make sure that the docker command is present in your PATH")?;
@@ -43,6 +84,8 @@ pub fn start_wes(docker_host: &Url) -> Result<()> {
         "Failed to start the sapporo-service: {}",
         String::from_utf8_lossy(&output.stderr)
     );
+    info!("{}", String::from_utf8_lossy(&output.stdout));
+    thread::sleep(time::Duration::from_secs(3));
     Ok(())
 }
 
@@ -66,6 +109,8 @@ pub fn stop_wes(docker_host: &Url) -> Result<()> {
         "Failed to stop the sapporo-service: {}",
         String::from_utf8_lossy(&output.stderr)
     );
+    info!("{}", String::from_utf8_lossy(&output.stdout));
+    thread::sleep(time::Duration::from_secs(3));
     Ok(())
 }
 
@@ -96,9 +141,82 @@ fn check_wes_running(docker_host: &Url) -> Result<bool> {
     }
 }
 
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct ServiceInfo {
+    pub supported_wes_versions: Vec<String>,
+}
+
+pub fn get_service_info(wes_loc: &Url) -> Result<ServiceInfo> {
+    let url = wes_loc.join("/service-info")?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(url.as_str())
+        .header(reqwest::header::ACCEPT, "application/json")
+        .send()?;
+    ensure!(
+        response.status().is_success(),
+        "Failed to get the service info with status: {} from {}",
+        response.status(),
+        url.as_str()
+    );
+    let body = response.json::<Value>()?;
+
+    match &body.is_object() {
+        true => {
+            let supported_wes_versions = body["supported_wes_versions"]
+                .as_array()
+                .ok_or(anyhow!(
+                    "Failed to parse response when getting service info"
+                ))?
+                .iter()
+                .map(|v| -> Result<&str> {
+                    v.as_str().ok_or(anyhow!(
+                        "Failed to parse response when getting service info"
+                    ))
+                })
+                .collect::<Result<Vec<&str>>>()?
+                .into_iter()
+                .map(|v| v.to_string())
+                .collect::<Vec<String>>();
+            Ok(ServiceInfo {
+                supported_wes_versions,
+            })
+        }
+        false => bail!("The service info is not an object"),
+    }
+}
+
+fn post_runs(wes_loc: &Url, form: multipart::Form) -> Result<String> {
+    let url = wes_loc.join("/runs")?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .post(url.as_str())
+        .header(reqwest::header::ACCEPT, "application/json")
+        .header(reqwest::header::CONTENT_TYPE, "multipart/form-data")
+        .multipart(form)
+        .send()?;
+    ensure!(
+        response.status().is_success(),
+        "Failed to post run with status: {} from {}",
+        response.status(),
+        url.as_str()
+    );
+    let body = response.json::<Value>()?;
+
+    match &body.is_object() {
+        true => Ok(body["run_id"]
+            .as_str()
+            .ok_or(anyhow!("Failed to parse response when posting run"))?
+            .to_string()),
+        false => bail!("Response from posting run is not an object"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::lib_test::test_case_to_form;
+    use crate::validate::validate;
 
     #[test]
     fn test_start_wes() {
@@ -127,5 +245,31 @@ mod tests {
         let result = check_wes_running(&docker_host);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Cannot connect to the Docker daemon at unix:///var/run/invalid. Is the docker daemon running?"));
+    }
+
+    #[test]
+    fn test_get_service_info() {
+        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
+        start_wes(&docker_host).unwrap();
+        let wf_loc = Url::parse(&default_wes_location()).unwrap();
+        let service_info = get_service_info(&wf_loc).unwrap();
+        assert_eq!(
+            service_info,
+            ServiceInfo {
+                supported_wes_versions: vec!["sapporo-wes-1.0.1".to_string()],
+            }
+        );
+        stop_wes(&docker_host).unwrap();
+    }
+
+    #[test]
+    fn test_post_runs() {
+        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
+        start_wes(&docker_host).unwrap();
+        let wf_loc = Url::parse(&default_wes_location()).unwrap();
+        let config = validate("tests/test_config_CWL.yml", &None::<String>).unwrap();
+        let form = test_case_to_form(&config.workflow, &config.workflow.testing[0]).unwrap();
+        assert!(post_runs(&wf_loc, form).is_ok());
+        stop_wes(&docker_host).unwrap();
     }
 }

@@ -215,13 +215,12 @@ mod tests {
     fn test_make_template_cwl() {
         let temp_dir = temp_dir();
         let temp_file = temp_dir.join("yevis_test_template_cwl.yml");
-        let arg_github_token: Option<&str> = None;
         let result = make_template(
             &Url::parse(
                 "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
             )
             .unwrap(),
-            &arg_github_token,
+            &None::<String>,
             &temp_file,
             &FileFormat::Yaml,
         );
@@ -232,13 +231,12 @@ mod tests {
     fn test_make_template_wdl() {
         let temp_dir = temp_dir();
         let temp_file = temp_dir.join("yevis_test_template_wdl.yml");
-        let arg_github_token: Option<&str> = None;
         let result = make_template(
             &Url::parse(
                 "https://github.com/ddbj/yevis-cli/blob/main/tests/WDL/wf/dockstore-tool-bamstats.wdl",
             )
             .unwrap(),
-            &arg_github_token,
+            &None::<String>,
             &temp_file,
             &FileFormat::Yaml,
         );
@@ -249,11 +247,10 @@ mod tests {
     fn test_make_template_nfl() {
         let temp_dir = temp_dir();
         let temp_file = temp_dir.join("yevis_test_template_nfl.yml");
-        let arg_github_token: Option<&str> = None;
         let result = make_template(
             &Url::parse("https://github.com/ddbj/yevis-cli/blob/main/tests/NFL/wf/file_input.nf")
                 .unwrap(),
-            &arg_github_token,
+            &None::<String>,
             &temp_file,
             &FileFormat::Yaml,
         );
@@ -264,11 +261,10 @@ mod tests {
     fn test_make_template_smk() {
         let temp_dir = temp_dir();
         let temp_file = temp_dir.join("yevis_test_template_smk.yml");
-        let arg_github_token: Option<&str> = None;
         let result = make_template(
             &Url::parse("https://github.com/ddbj/yevis-cli/blob/main/tests/SMK/wf/Snakefile")
                 .unwrap(),
-            &arg_github_token,
+            &None::<String>,
             &temp_file,
             &FileFormat::Yaml,
         );
@@ -278,10 +274,9 @@ mod tests {
     #[test]
     fn test_make_template_with_not_github() {
         let wf_loc = Url::parse("https://example.com").unwrap();
-        let arg_github_token: Option<&str> = None;
         let result = make_template(
             &wf_loc,
-            &arg_github_token,
+            &None::<String>,
             &PathBuf::from("yevis_config.yml"),
             &FileFormat::Yaml,
         );
@@ -313,10 +308,9 @@ mod tests {
     fn test_make_template_with_invalid_wf_loc() {
         let wf_loc =
             Url::parse("https://github.com/ddbj/yevis-cli/blob/main/invalid_wf_loc").unwrap();
-        let arg_github_token: Option<&str> = None;
         let result = make_template(
             &wf_loc,
-            &arg_github_token,
+            &None::<String>,
             &PathBuf::from("yevis_config.yml"),
             &FileFormat::Yaml,
         );
@@ -389,8 +383,7 @@ mod tests {
 
     #[test]
     fn test_obtain_wf_files() {
-        let arg_github_token: Option<&str> = None;
-        let github_token = read_github_token(&arg_github_token).unwrap();
+        let github_token = read_github_token(&None::<String>).unwrap();
         let wf_loc =
             Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/main/README.md").unwrap();
         let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc).unwrap();

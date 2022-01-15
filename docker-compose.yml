@@ -11,6 +11,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - RUST_BACKTRACE=1
+      - SAPPORO_RUN_DIR=${PWD}/run
     restart: on-failure
     working_dir: /app
     command: [ "sleep", "infinity" ]

@@ -164,7 +164,7 @@ fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Resu
     );
 
     let raw_readme_url = to_raw_url_from_url(&github_token, &primary_wf.url)?;
-    match head_request(&raw_readme_url) {
+    match head_request(&raw_readme_url, None) {
         Ok(_) => {
             info!(
                 "{}: Readme URL is not raw URL. It will be converted to raw URL: {}",
@@ -182,7 +182,7 @@ fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Resu
     for i in 0..workflow.files.len() {
         let file = &workflow.files[i];
         let raw_file_url = to_raw_url_from_url(&github_token, &file.url)?;
-        match head_request(&raw_file_url) {
+        match head_request(&raw_file_url, None) {
             Ok(_) => {
                 info!(
                     "{}: File URL is not raw URL. It will be converted to raw URL: {}",
@@ -195,6 +195,10 @@ fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Resu
         };
     }
 
+    ensure!(
+        workflow.testing.len() > 0,
+        "Please specify at least one testing for workflow."
+    );
     let mut test_id_set: HashSet<&str> = HashSet::new();
     for i in 0..workflow.testing.len() {
         let testing = &workflow.testing[i];
@@ -222,7 +226,7 @@ fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Resu
         for j in 0..testing.files.len() {
             let file = &testing.files[j];
             let raw_file_url = to_raw_url_from_url(&github_token, &file.url)?;
-            match head_request(&raw_file_url) {
+            match head_request(&raw_file_url, None) {
                 Ok(_) => {
                     info!(
                         "{}: Test file URL is not raw URL. It will be converted to raw URL: {}",

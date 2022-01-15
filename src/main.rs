@@ -89,7 +89,7 @@ fn main() -> Result<()> {
                 }
             };
             info!("{} test", "Running".green());
-            match test(&config, &github_token, &wes_location, &docker_host) {
+            match test(&config, &wes_location, &docker_host) {
                 Ok(_) => info!("{} test successfully", "Finished".green()),
                 Err(e) => {
                     match stop_wes(&docker_host) {
@@ -124,7 +124,7 @@ fn main() -> Result<()> {
                 }
             };
             info!("{} test", "Running".green());
-            match test(&config, &github_token, &wes_location, &docker_host) {
+            match test(&config, &wes_location, &docker_host) {
                 Ok(_) => info!("{} test successfully", "Finished".green()),
                 Err(e) => {
                     match stop_wes(&docker_host) {

@@ -83,7 +83,7 @@ pub fn to_file_path(raw_url: &Url) -> Result<PathBuf> {
             &raw_url
         ))?
         .collect::<Vec<_>>();
-    Ok(path_segments[3..].iter().collect())
+    Ok(path_segments[3..].into_iter().collect())
 }
 
 pub fn read_github_token(arg_token: &Option<impl AsRef<str>>) -> Result<String> {
@@ -133,22 +133,22 @@ pub fn get_repos(
         true => Ok(GetReposResponse {
             private: body["private"]
                 .as_bool()
-                .ok_or(anyhow!("Failed to parse response"))?,
+                .ok_or(anyhow!("Failed to parse response when getting repos"))?,
             default_branch: body["default_branch"]
                 .as_str()
-                .ok_or(anyhow!("Failed to parse response"))?
+                .ok_or(anyhow!("Failed to parse response when getting repos"))?
                 .to_string(),
             license: match &body["license"] {
                 Value::Object(license) => Some(
                     license["spdx_id"]
                         .as_str()
-                        .ok_or(anyhow!("Failed to parse response"))?
+                        .ok_or(anyhow!("Failed to parse response when getting repos"))?
                         .to_string(),
                 ),
                 _ => None,
             },
         }),
-        false => Err(anyhow!("Failed to parse response")),
+        false => bail!("Failed to parse response when getting repos"),
     }
 }
 
@@ -196,15 +196,15 @@ pub fn get_latest_commit_hash(
 
     match &body.is_object() {
         true => {
-            let commit = body["commit"]
-                .as_object()
-                .ok_or(anyhow!("Failed to parse response"))?;
-            let sha = commit["sha"]
-                .as_str()
-                .ok_or(anyhow!("Failed to parse response"))?;
+            let commit = body["commit"].as_object().ok_or(anyhow!(
+                "Failed to parse response when getting latest commit hash"
+            ))?;
+            let sha = commit["sha"].as_str().ok_or(anyhow!(
+                "Failed to parse response when getting latest commit hash"
+            ))?;
             Ok(sha.to_string())
         }
-        false => Err(anyhow!("Failed to parse response")),
+        false => bail!("Failed to parse response when getting latest commit hash"),
     }
 }
 
@@ -243,18 +243,18 @@ pub fn get_user(github_token: impl AsRef<str>) -> Result<GithubUser> {
         true => Ok(GithubUser {
             login: body["login"]
                 .as_str()
-                .ok_or(anyhow!("Failed to parse response"))?
+                .ok_or(anyhow!("Failed to parse response when getting user"))?
                 .to_string(),
             name: body["name"]
                 .as_str()
-                .ok_or(anyhow!("Failed to parse response"))?
+                .ok_or(anyhow!("Failed to parse response when getting user"))?
                 .to_string(),
             company: body["company"]
                 .as_str()
-                .ok_or(anyhow!("Failed to parse response"))?
+                .ok_or(anyhow!("Failed to parse response when getting user"))?
                 .to_string(),
         }),
-        false => Err(anyhow!("Failed to parse response")),
+        false => bail!("Failed to parse response when getting user"),
     }
 }
 
@@ -310,18 +310,18 @@ pub fn get_file_list_recursive(
             for obj in body.as_array().ok_or(anyhow!("Failed to parse response"))? {
                 let obj_type = obj["type"]
                     .as_str()
-                    .ok_or(anyhow!("Failed to parse response"))?;
+                    .ok_or(anyhow!("Failed to parse response when getting file list"))?;
                 match obj_type {
                     "file" => {
                         let path = obj["path"]
                             .as_str()
-                            .ok_or(anyhow!("Failed to parse response"))?;
+                            .ok_or(anyhow!("Failed to parse response when getting file list"))?;
                         file_list.push(PathBuf::from(path));
                     }
                     "dir" => {
                         let path = obj["path"]
                             .as_str()
-                            .ok_or(anyhow!("Failed to parse response"))?;
+                            .ok_or(anyhow!("Failed to parse response when getting file list"))?;
                         let mut sub_file_list = get_file_list_recursive(
                             github_token.as_ref(),
                             owner.as_ref(),
@@ -336,21 +336,25 @@ pub fn get_file_list_recursive(
             }
             Ok(file_list)
         }
-        false => Err(anyhow!("Failed to parse response")),
+        false => bail!("Failed to parse response when getting file list"),
     }
 }
 
-pub fn head_request(url: &Url) -> Result<()> {
+pub fn head_request(url: &Url, retry: Option<()>) -> Result<()> {
     let client = reqwest::blocking::Client::new();
     let response = client.head(url.as_str()).send()?;
-    ensure!(
-        response.status().is_success(),
-        format!(
-            "Failed to head request to {} with status: {:?}",
-            url.as_str(),
-            response.status()
-        )
-    );
+    if !response.status().is_success() {
+        match retry {
+            Some(_) => {
+                bail!(
+                    "Failed to head request to {} with status: {:?}",
+                    url.as_str(),
+                    response.status()
+                )
+            }
+            None => head_request(&url, Some(()))?,
+        }
+    }
     Ok(())
 }
 
@@ -361,8 +365,7 @@ mod tests {
 
     #[test]
     fn test_wf_repo_info_new() {
-        let arg_github_token: Option<&str> = None;
-        let github_token = read_github_token(&arg_github_token).unwrap();
+        let github_token = read_github_token(&None::<String>).unwrap();
         let wf_loc = Url::parse(
             "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
         )
@@ -379,8 +382,7 @@ mod tests {
 
     #[test]
     fn test_raw_url_from_path() {
-        let arg_github_token: Option<&str> = None;
-        let github_token = read_github_token(&arg_github_token).unwrap();
+        let github_token = read_github_token(&None::<String>).unwrap();
         let wf_loc = Url::parse(
             "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
         )
@@ -392,8 +394,7 @@ mod tests {
 
     #[test]
     fn test_to_raw_url_from_url() {
-        let arg_github_token: Option<&str> = None;
-        let github_token = read_github_token(&arg_github_token).unwrap();
+        let github_token = read_github_token(&None::<String>).unwrap();
         let wf_loc = Url::parse(
             "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
         )
@@ -417,15 +418,13 @@ mod tests {
 
     #[test]
     fn test_read_github_token_env() {
-        let arg_token: Option<&str> = None;
-        let token = read_github_token(&arg_token).unwrap();
+        let token = read_github_token(&None::<String>).unwrap();
         assert!(token.chars().count() > 0);
     }
 
     #[test]
     fn test_get_repos() {
-        let arg_token: Option<&str> = None;
-        let token = read_github_token(&arg_token).unwrap();
+        let token = read_github_token(&None::<String>).unwrap();
         let response = get_repos(&token, "ddbj", "yevis-cli").unwrap();
         assert_eq!(
             response,
@@ -439,23 +438,20 @@ mod tests {
 
     #[test]
     fn test_get_latest_commit_hash() {
-        let arg_token: Option<&str> = None;
-        let token = read_github_token(&arg_token).unwrap();
+        let token = read_github_token(&None::<String>).unwrap();
         let response = get_latest_commit_hash(&token, "ddbj", "yevis-cli", "main").unwrap();
         is_commit_hash(&response).unwrap();
     }
 
     #[test]
     fn test_get_user() {
-        let arg_token: Option<&str> = None;
-        let token = read_github_token(&arg_token).unwrap();
+        let token = read_github_token(&None::<String>).unwrap();
         get_user(&token).unwrap();
     }
 
     #[test]
     fn test_get_file_list_recursive() {
-        let arg_token: Option<&str> = None;
-        let token = read_github_token(&arg_token).unwrap();
+        let token = read_github_token(&None::<String>).unwrap();
         let commit_hash = get_latest_commit_hash(&token, "ddbj", "yevis-cli", "main").unwrap();
         let response =
             get_file_list_recursive(&token, "ddbj", "yevis-cli", &commit_hash, ".").unwrap();
@@ -467,12 +463,12 @@ mod tests {
     #[test]
     fn test_head_request_ok() {
         let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/CWL/wf/trimming_and_qc.cwl").unwrap();
-        assert!(head_request(&url).is_ok());
+        assert!(head_request(&url, None).is_ok());
     }
 
     #[test]
     fn test_head_request_error() {
         let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/nothing").unwrap();
-        assert!(head_request(&url).is_err());
+        assert!(head_request(&url, None).is_err());
     }
 }
