@@ -130,24 +130,48 @@ pub fn get_repos(
     let body = response.json::<Value>()?;
 
     match &body.is_object() {
-        true => Ok(GetReposResponse {
-            private: body["private"]
-                .as_bool()
-                .ok_or(anyhow!("Failed to parse response when getting repos"))?,
-            default_branch: body["default_branch"]
-                .as_str()
-                .ok_or(anyhow!("Failed to parse response when getting repos"))?
-                .to_string(),
-            license: match &body["license"] {
-                Value::Object(license) => Some(
-                    license["spdx_id"]
+        true => {
+            let parent = match &body["parent"].as_object() {
+                Some(parent) => {
+                    let parts = parent["full_name"]
                         .as_str()
                         .ok_or(anyhow!("Failed to parse response when getting repos"))?
-                        .to_string(),
-                ),
-                _ => None,
-            },
-        }),
+                        .split("/")
+                        .collect::<Vec<_>>();
+                    ensure!(
+                        parts.len() == 2,
+                        "Failed to parse response when getting repos"
+                    );
+                    Some(ForkParent {
+                        owner: parts[0].to_string(),
+                        name: parts[1].to_string(),
+                    })
+                }
+                None => None::<ForkParent>,
+            };
+            Ok(GetReposResponse {
+                private: body["private"]
+                    .as_bool()
+                    .ok_or(anyhow!("Failed to parse response when getting repos"))?,
+                default_branch: body["default_branch"]
+                    .as_str()
+                    .ok_or(anyhow!("Failed to parse response when getting repos"))?
+                    .to_string(),
+                license: match &body["license"].as_object() {
+                    Some(license) => Some(
+                        license["spdx_id"]
+                            .as_str()
+                            .ok_or(anyhow!("Failed to parse response when getting repos"))?
+                            .to_string(),
+                    ),
+                    None => None,
+                },
+                fork: body["fork"]
+                    .as_bool()
+                    .ok_or(anyhow!("Failed to parse response when getting repos"))?,
+                fork_parent: parent,
+            })
+        }
         false => bail!("Failed to parse response when getting repos"),
     }
 }
@@ -157,6 +181,14 @@ pub struct GetReposResponse {
     pub private: bool,
     pub default_branch: String,
     pub license: Option<String>,
+    pub fork: bool,
+    pub fork_parent: Option<ForkParent>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct ForkParent {
+    pub owner: String,
+    pub name: String,
 }
 
 pub fn get_latest_commit_hash(
@@ -270,7 +302,7 @@ pub fn get_file_list_recursive(
     commit_hash: impl AsRef<str>,
     dir_path: impl AsRef<Path>,
 ) -> Result<Vec<PathBuf>> {
-    let url = format!(
+    let url = Url::parse(&format!(
         "https://api.github.com/repos/{}/{}/contents/{}",
         owner.as_ref(),
         name.as_ref(),
@@ -279,10 +311,10 @@ pub fn get_file_list_recursive(
             .display()
             .to_string()
             .trim_start_matches("/")
-    );
+    ))?;
     let client = reqwest::blocking::Client::new();
     let response = client
-        .get(&url)
+        .get(url.as_str())
         .header(reqwest::header::USER_AGENT, "yevis")
         .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
         .header(
@@ -358,117 +390,217 @@ pub fn head_request(url: &Url, retry: Option<()>) -> Result<()> {
     Ok(())
 }
 
+pub fn post_fork(
+    github_token: impl AsRef<str>,
+    from_repo_owner: impl AsRef<str>,
+    from_repo_name: impl AsRef<str>,
+) -> Result<()> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/forks",
+        from_repo_owner.as_ref(),
+        from_repo_name.as_ref()
+    ))?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .post(url.as_str())
+        .header(reqwest::header::USER_AGENT, "yevis")
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("token {}", github_token.as_ref()),
+        )
+        .send()?;
+    ensure!(
+        response.status() != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
+        response.status().is_success(),
+        format!(
+            "Failed to post fork to GitHub with status: {:?}",
+            response.status()
+        )
+    );
+
+    Ok(())
+}
+
+pub fn has_forked_repo(
+    github_token: impl AsRef<str>,
+    user_name: impl AsRef<str>,
+    repo_owner: impl AsRef<str>,
+    repo_name: impl AsRef<str>,
+) -> Result<bool> {
+    let response = match get_repos(&github_token, &user_name, &repo_name) {
+        Ok(response) => response,
+        Err(err) => {
+            if err.to_string().contains("404") {
+                return Ok(false);
+            }
+            bail!(err)
+        }
+    };
+    match response.fork {
+        true => match &response.fork_parent {
+            Some(fork_parent) => {
+                if fork_parent.owner == repo_owner.as_ref()
+                    && fork_parent.name == repo_name.as_ref()
+                {
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            }
+            None => Ok(false),
+        },
+        false => Ok(false),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::make_template::is_commit_hash;
 
     #[test]
-    fn test_wf_repo_info_new() {
-        let github_token = read_github_token(&None::<String>).unwrap();
+    fn test_wf_repo_info_new() -> Result<()> {
+        let github_token = read_github_token(&None::<String>)?;
         let wf_loc = Url::parse(
             "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
-        )
-        .unwrap();
-        let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc).unwrap();
+        )?;
+        let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc)?;
         assert_eq!(wf_repo_info.owner, "ddbj");
         assert_eq!(wf_repo_info.name, "yevis-cli");
-        is_commit_hash(&wf_repo_info.commit_hash).unwrap();
+        is_commit_hash(&wf_repo_info.commit_hash)?;
         assert_eq!(
             wf_repo_info.file_path,
             PathBuf::from("tests/CWL/wf/trimming_and_qc.cwl")
         );
+        Ok(())
     }
 
     #[test]
-    fn test_raw_url_from_path() {
-        let github_token = read_github_token(&None::<String>).unwrap();
+    fn test_raw_url_from_path() -> Result<()> {
+        let github_token = read_github_token(&None::<String>)?;
         let wf_loc = Url::parse(
             "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
-        )
-        .unwrap();
-        let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc).unwrap();
-        let raw_url = raw_url_from_path(&wf_repo_info, &Path::new("path/to/file")).unwrap();
+        )?;
+        let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc)?;
+        let raw_url = raw_url_from_path(&wf_repo_info, &Path::new("path/to/file"))?;
         assert_eq!(raw_url.host_str(), Some("raw.githubusercontent.com"));
+        Ok(())
     }
 
     #[test]
-    fn test_to_raw_url_from_url() {
-        let github_token = read_github_token(&None::<String>).unwrap();
+    fn test_to_raw_url_from_url() -> Result<()> {
+        let github_token = read_github_token(&None::<String>)?;
         let wf_loc = Url::parse(
             "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
-        )
-        .unwrap();
-        let raw_url = to_raw_url_from_url(&github_token, &wf_loc).unwrap();
+        )?;
+        let raw_url = to_raw_url_from_url(&github_token, &wf_loc)?;
         assert_eq!(raw_url.host_str(), Some("raw.githubusercontent.com"));
+        Ok(())
     }
 
     #[test]
-    fn test_to_file_path() {
-        let raw_url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/CWL/wf/trimming_and_qc.cwl").unwrap();
-        let file_path = to_file_path(&raw_url).unwrap();
+    fn test_to_file_path() -> Result<()> {
+        let raw_url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/CWL/wf/trimming_and_qc.cwl")?;
+        let file_path = to_file_path(&raw_url)?;
         assert_eq!(file_path, PathBuf::from("tests/CWL/wf/trimming_and_qc.cwl"));
+        Ok(())
     }
 
     #[test]
-    fn test_read_github_token_args() {
-        let token = read_github_token(&Some("token")).unwrap();
+    fn test_read_github_token_args() -> Result<()> {
+        let token = read_github_token(&Some("token"))?;
         assert_eq!(token, "token");
+        Ok(())
     }
 
     #[test]
-    fn test_read_github_token_env() {
-        let token = read_github_token(&None::<String>).unwrap();
+    fn test_read_github_token_env() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
         assert!(token.chars().count() > 0);
+        Ok(())
     }
 
     #[test]
-    fn test_get_repos() {
-        let token = read_github_token(&None::<String>).unwrap();
-        let response = get_repos(&token, "ddbj", "yevis-cli").unwrap();
+    fn test_get_repos() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        let response = get_repos(&token, "ddbj", "yevis-cli")?;
         assert_eq!(
             response,
             GetReposResponse {
                 private: false,
                 default_branch: "main".to_string(),
-                license: Some("Apache-2.0".to_string())
+                license: Some("Apache-2.0".to_string()),
+                fork: false,
+                fork_parent: None,
             }
         );
+        Ok(())
     }
 
     #[test]
-    fn test_get_latest_commit_hash() {
-        let token = read_github_token(&None::<String>).unwrap();
-        let response = get_latest_commit_hash(&token, "ddbj", "yevis-cli", "main").unwrap();
-        is_commit_hash(&response).unwrap();
+    fn test_get_latest_commit_hash() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        let response = get_latest_commit_hash(&token, "ddbj", "yevis-cli", "main")?;
+        is_commit_hash(&response)?;
+        Ok(())
     }
 
     #[test]
-    fn test_get_user() {
-        let token = read_github_token(&None::<String>).unwrap();
-        get_user(&token).unwrap();
+    fn test_get_user() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        get_user(&token)?;
+        Ok(())
     }
 
     #[test]
-    fn test_get_file_list_recursive() {
-        let token = read_github_token(&None::<String>).unwrap();
-        let commit_hash = get_latest_commit_hash(&token, "ddbj", "yevis-cli", "main").unwrap();
-        let response =
-            get_file_list_recursive(&token, "ddbj", "yevis-cli", &commit_hash, ".").unwrap();
+    fn test_get_file_list_recursive() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        let commit_hash = get_latest_commit_hash(&token, "ddbj", "yevis-cli", "main")?;
+        let response = get_file_list_recursive(&token, "ddbj", "yevis-cli", &commit_hash, ".")?;
         assert!(response.contains(&PathBuf::from("README.md")));
         assert!(response.contains(&PathBuf::from("LICENSE")));
         assert!(response.contains(&PathBuf::from("src/main.rs")));
+        Ok(())
     }
 
     #[test]
-    fn test_head_request_ok() {
-        let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/CWL/wf/trimming_and_qc.cwl").unwrap();
+    fn test_head_request_ok() -> Result<()> {
+        let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/CWL/wf/trimming_and_qc.cwl")?;
         assert!(head_request(&url, None).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn test_head_request_error() {
-        let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/nothing").unwrap();
+    fn test_head_request_error() -> Result<()> {
+        let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/nothing")?;
         assert!(head_request(&url, None).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_post_fork() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        post_fork(&token, "ddbj", "yevis-workflows-dev")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_has_forked_repo() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        let response = has_forked_repo(&token, "suecharo", "ddbj", "yevis-workflows-dev")?;
+        assert!(response);
+        Ok(())
+    }
+
+    #[test]
+    fn test_has_forked_repo_invalid_name() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        let response = has_forked_repo(&token, "suecharo", "ddbj", "invalid_name")?;
+        assert_eq!(response, false);
+        Ok(())
     }
 }

@@ -288,65 +288,64 @@ mod tests {
     use crate::validate::validate;
 
     #[test]
-    fn test_start_wes() {
-        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
+    fn test_start_wes() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
         assert!(start_wes(&docker_host).is_ok());
-        stop_wes(&docker_host).unwrap();
+        stop_wes(&docker_host)?;
+        Ok(())
     }
 
     #[test]
-    fn test_stop_wes() {
-        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
-        start_wes(&docker_host).unwrap();
+    fn test_stop_wes() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        start_wes(&docker_host)?;
         assert!(stop_wes(&docker_host).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn test_check_wes_running() {
-        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
-        start_wes(&docker_host).unwrap();
-        assert!(check_wes_running(&docker_host).unwrap());
+    fn test_check_wes_running() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        start_wes(&docker_host)?;
+        assert!(check_wes_running(&docker_host)?);
+        Ok(())
     }
 
     #[test]
-    fn test_check_wes_running_with_invalid_docker_host() {
-        let docker_host = Url::parse("unix:///var/run/invalid").unwrap();
+    fn test_check_wes_running_with_invalid_docker_host() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/invalid")?;
         let result = check_wes_running(&docker_host);
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Cannot connect to the Docker daemon at unix:///var/run/invalid. Is the docker daemon running?"));
+        Ok(())
     }
 
     #[test]
-    fn test_get_service_info() {
-        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
-        start_wes(&docker_host).unwrap();
-        let wf_loc = Url::parse(&default_wes_location()).unwrap();
-        let service_info = get_service_info(&wf_loc).unwrap();
+    fn test_get_service_info() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        start_wes(&docker_host)?;
+        let wf_loc = Url::parse(&default_wes_location())?;
+        let service_info = get_service_info(&wf_loc)?;
         assert_eq!(
             service_info,
             ServiceInfo {
                 supported_wes_versions: vec!["sapporo-wes-1.0.1".to_string()],
             }
         );
-        stop_wes(&docker_host).unwrap();
+        stop_wes(&docker_host)?;
+        Ok(())
     }
 
     #[test]
-    fn test_post_run() {
-        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
-        start_wes(&docker_host).unwrap();
-        let wf_loc = Url::parse(&default_wes_location()).unwrap();
-        let config = validate("tests/test_config_CWL.yml", &None::<String>).unwrap();
-        let form = test_case_to_form(&config.workflow, &config.workflow.testing[0]).unwrap();
-        match post_run(&wf_loc, form) {
-            Ok(run_id) => {
-                assert!(run_id.len() > 0);
-                stop_wes(&docker_host).unwrap();
-            }
-            Err(e) => {
-                stop_wes(&docker_host).unwrap();
-                println!("{}", e);
-            }
-        }
+    fn test_post_run() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        start_wes(&docker_host)?;
+        let wf_loc = Url::parse(&default_wes_location())?;
+        let config = validate("tests/test_config_CWL.yml", &None::<String>)?;
+        let form = test_case_to_form(&config.workflow, &config.workflow.testing[0])?;
+        let run_id = post_run(&wf_loc, form)?;
+        assert!(run_id.len() > 0);
+        stop_wes(&docker_host)?;
+        Ok(())
     }
 }

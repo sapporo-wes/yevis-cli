@@ -71,47 +71,41 @@ pub fn file_name(path: impl AsRef<Path>) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    #[allow(unused_imports)]
     use super::*;
 
     #[test]
-    fn test_file_stem() {
-        assert_eq!(file_stem("/path/to/file.yml").unwrap(), "file");
-        assert_eq!(file_stem("path/to/file.yaml").unwrap(), "file");
-        assert_eq!(file_stem("file.json").unwrap(), "file");
-        assert_eq!(file_stem("/path/to/file").unwrap(), "file");
+    fn test_file_stem() -> Result<()> {
+        assert_eq!(file_stem("/path/to/file.yml")?, "file");
+        assert_eq!(file_stem("path/to/file.yaml")?, "file");
+        assert_eq!(file_stem("file.json")?, "file");
+        assert_eq!(file_stem("/path/to/file")?, "file");
+        Ok(())
     }
 
     #[test]
-    fn test_dir_path() {
-        assert_eq!(
-            dir_path("/path/to/file.yml").unwrap(),
-            PathBuf::from("/path/to")
-        );
-        assert_eq!(
-            dir_path("path/to/file.yaml").unwrap(),
-            PathBuf::from("path/to")
-        );
-        assert_eq!(dir_path("file.json").unwrap(), PathBuf::from(""));
-        assert_eq!(
-            dir_path("/path/to/file").unwrap(),
-            PathBuf::from("/path/to")
-        );
+    fn test_dir_path() -> Result<()> {
+        assert_eq!(dir_path("/path/to/file.yml")?, PathBuf::from("/path/to"));
+        assert_eq!(dir_path("path/to/file.yaml")?, PathBuf::from("path/to"));
+        assert_eq!(dir_path("file.json")?, PathBuf::from(""));
+        assert_eq!(dir_path("/path/to/file")?, PathBuf::from("/path/to"));
+        Ok(())
     }
 
     #[test]
-    fn test_file_format() {
-        assert_eq!(file_format("/path/to/file.yml").unwrap(), FileFormat::Yaml);
-        assert_eq!(file_format("path/to/file.yaml").unwrap(), FileFormat::Yaml);
-        assert_eq!(file_format("file.json").unwrap(), FileFormat::Json);
+    fn test_file_format() -> Result<()> {
+        assert_eq!(file_format("/path/to/file.yml")?, FileFormat::Yaml);
+        assert_eq!(file_format("path/to/file.yaml")?, FileFormat::Yaml);
+        assert_eq!(file_format("file.json")?, FileFormat::Json);
         assert!(file_format("/path/to/file").is_err(),);
+        Ok(())
     }
 
     #[test]
-    fn test_file_name() {
-        assert_eq!(file_name("/path/to/file.yml").unwrap(), "file.yml");
-        assert_eq!(file_name("path/to/file.yaml").unwrap(), "file.yaml");
-        assert_eq!(file_name("file.json").unwrap(), "file.json");
-        assert_eq!(file_name("/path/to/file").unwrap(), "file");
+    fn test_file_name() -> Result<()> {
+        assert_eq!(file_name("/path/to/file.yml")?, "file.yml");
+        assert_eq!(file_name("path/to/file.yaml")?, "file.yaml");
+        assert_eq!(file_name("file.json")?, "file.json");
+        assert_eq!(file_name("/path/to/file")?, "file");
+        Ok(())
     }
 }

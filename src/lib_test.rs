@@ -194,114 +194,90 @@ mod tests {
     use std::io::BufReader;
 
     #[test]
-    fn test_test_cwl() {
-        let config = validate("tests/test_config_CWL.yml", &None::<String>).unwrap();
-        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
-        match test(&config, &None::<Url>, &docker_host) {
-            Ok(_) => {}
-            Err(e) => {
-                println!("{}", e);
-            }
-        }
+    fn test_test_cwl() -> Result<()> {
+        let config = validate("tests/test_config_CWL.yml", &None::<String>)?;
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        test(&config, &None::<Url>, &docker_host)?;
+        Ok(())
     }
 
     #[test]
-    fn test_test_wdl() {
-        let config = validate("tests/test_config_WDL.yml", &None::<String>).unwrap();
-        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
-        match test(&config, &None::<Url>, &docker_host) {
-            Ok(_) => {}
-            Err(e) => {
-                println!("{}", e);
-            }
-        }
+    fn test_test_wdl() -> Result<()> {
+        let config = validate("tests/test_config_WDL.yml", &None::<String>)?;
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        test(&config, &None::<Url>, &docker_host)?;
+        Ok(())
     }
 
     #[test]
-    fn test_test_nfl() {
-        let config = validate("tests/test_config_NFL.yml", &None::<String>).unwrap();
-        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
-        match test(&config, &None::<Url>, &docker_host) {
-            Ok(_) => {}
-            Err(e) => {
-                println!("{}", e);
-            }
-        }
+    fn test_test_nfl() -> Result<()> {
+        let config = validate("tests/test_config_NFL.yml", &None::<String>)?;
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        test(&config, &None::<Url>, &docker_host)?;
+        Ok(())
     }
 
     #[test]
-    fn test_test_smk() {
-        let config = validate("tests/test_config_SMK.yml", &None::<String>).unwrap();
-        let docker_host = Url::parse("unix:///var/run/docker.sock").unwrap();
-        match test(&config, &None::<Url>, &docker_host) {
-            Ok(_) => {}
-            Err(e) => {
-                println!("{}", e);
-            }
-        }
+    fn test_test_smk() -> Result<()> {
+        let config = validate("tests/test_config_SMK.yml", &None::<String>)?;
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        test(&config, &None::<Url>, &docker_host)?;
+        Ok(())
     }
 
     #[test]
-    fn test_test_case_to_form() {
-        let config = validate("tests/test_config_CWL.yml", &None::<String>).unwrap();
+    fn test_test_case_to_form() -> Result<()> {
+        let config = validate("tests/test_config_CWL.yml", &None::<String>)?;
         let result = test_case_to_form(&config.workflow, &config.workflow.testing[0]);
         assert!(result.is_ok());
+        Ok(())
     }
 
     #[test]
-    fn test_wf_type() {
-        let config: Config = serde_yaml::from_reader(BufReader::new(
-            File::open("tests/test_config_CWL.yml").unwrap(),
-        ))
-        .unwrap();
+    fn test_wf_type() -> Result<()> {
+        let config: Config =
+            serde_yaml::from_reader(BufReader::new(File::open("tests/test_config_CWL.yml")?))?;
         assert_eq!(&wf_type(&config.workflow), "CWL");
+        Ok(())
     }
 
     #[test]
-    fn test_wf_version() {
-        let config: Config = serde_yaml::from_reader(BufReader::new(
-            File::open("tests/test_config_CWL.yml").unwrap(),
-        ))
-        .unwrap();
+    fn test_wf_version() -> Result<()> {
+        let config: Config =
+            serde_yaml::from_reader(BufReader::new(File::open("tests/test_config_CWL.yml")?))?;
         assert_eq!(&wf_version(&config.workflow), "v1.0");
+        Ok(())
     }
 
     #[test]
-    fn test_wf_url() {
-        let config: Config = serde_yaml::from_reader(BufReader::new(
-            File::open("tests/test_config_CWL.yml").unwrap(),
-        ))
-        .unwrap();
-        assert_eq!(&wf_url(&config.workflow).unwrap(), "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/CWL/wf/trimming_and_qc.cwl");
+    fn test_wf_url() -> Result<()> {
+        let config: Config =
+            serde_yaml::from_reader(BufReader::new(File::open("tests/test_config_CWL.yml")?))?;
+        assert_eq!(&wf_url(&config.workflow)?, "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/CWL/wf/trimming_and_qc.cwl");
+        Ok(())
     }
 
     #[test]
-    fn test_wf_engine_name() {
-        let config: Config = serde_yaml::from_reader(BufReader::new(
-            File::open("tests/test_config_CWL.yml").unwrap(),
-        ))
-        .unwrap();
+    fn test_wf_engine_name() -> Result<()> {
+        let config: Config =
+            serde_yaml::from_reader(BufReader::new(File::open("tests/test_config_CWL.yml")?))?;
         assert_eq!(&wf_engine_name(&config.workflow), "cwltool");
+        Ok(())
     }
 
     #[test]
-    fn test_wf_params() {
-        let config: Config = serde_yaml::from_reader(BufReader::new(
-            File::open("tests/test_config_CWL.yml").unwrap(),
-        ))
-        .unwrap();
+    fn test_wf_params() -> Result<()> {
+        let config: Config =
+            serde_yaml::from_reader(BufReader::new(File::open("tests/test_config_CWL.yml")?))?;
         assert!(&wf_params(&config.workflow.testing[0]).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn test_wf_engine_params() {
-        let config: Config = serde_yaml::from_reader(BufReader::new(
-            File::open("tests/test_config_CWL.yml").unwrap(),
-        ))
-        .unwrap();
-        assert_eq!(
-            &wf_engine_params(&config.workflow.testing[0]).unwrap(),
-            "{}"
-        );
+    fn test_wf_engine_params() -> Result<()> {
+        let config: Config =
+            serde_yaml::from_reader(BufReader::new(File::open("tests/test_config_CWL.yml")?))?;
+        assert_eq!(&wf_engine_params(&config.workflow.testing[0])?, "{}");
+        Ok(())
     }
 }

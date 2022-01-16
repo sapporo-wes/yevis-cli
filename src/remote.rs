@@ -23,10 +23,10 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_fetch_wf_content() {
+    fn test_fetch_wf_content() -> Result<()> {
         let wf_content =
-            fetch_raw_content("https://raw.githubusercontent.com/ddbj/yevis-cli/main/README.md")
-                .unwrap();
+            fetch_raw_content("https://raw.githubusercontent.com/ddbj/yevis-cli/main/README.md")?;
         assert!(wf_content.contains("yevis-cli"));
+        Ok(())
     }
 }

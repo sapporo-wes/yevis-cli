@@ -125,7 +125,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_make_template() {
+    fn test_make_template() -> Result<()> {
         let args = Args::from_iter(&[
             "yevis",
             "make-template",
@@ -144,10 +144,11 @@ mod tests {
                 verbose: false,
             }
         );
+        Ok(())
     }
 
     #[test]
-    fn test_json_format() {
+    fn test_json_format() -> Result<()> {
         let args = Args::from_iter(&[
             "yevis",
             "make-template",
@@ -168,10 +169,11 @@ mod tests {
                 verbose: false,
             }
         );
+        Ok(())
     }
 
     #[test]
-    fn test_invalid_format() {
+    fn test_invalid_format() -> Result<()> {
         let result = Args::from_iter_safe(&[
             "yevis",
             "make-template",
@@ -180,10 +182,11 @@ mod tests {
             "https://github.com/ddbj/yevis-cli/path/to/workflow.yml",
         ]);
         assert!(result.is_err());
+        Ok(())
     }
 
     #[test]
-    fn test_validate() {
+    fn test_validate() -> Result<()> {
         let args = Args::from_iter(&["yevis", "validate", "yevis_config.yml"]);
         assert_eq!(
             args,
@@ -193,10 +196,11 @@ mod tests {
                 verbose: false,
             }
         );
+        Ok(())
     }
 
     #[test]
-    fn test_test() {
+    fn test_test() -> Result<()> {
         let args = Args::from_iter(&["yevis", "test", "yevis_config.yml"]);
         assert_eq!(
             args,
@@ -208,10 +212,11 @@ mod tests {
                 verbose: false,
             }
         );
+        Ok(())
     }
 
     #[test]
-    fn test_pull_request() {
+    fn test_pull_request() -> Result<()> {
         let args = Args::from_iter(&["yevis", "pull-request", "yevis_config.yml"]);
         assert_eq!(
             args,
@@ -224,5 +229,6 @@ mod tests {
                 verbose: false,
             }
         );
+        Ok(())
     }
 }

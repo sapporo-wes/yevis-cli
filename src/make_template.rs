@@ -212,68 +212,65 @@ mod tests {
     use std::env::temp_dir;
 
     #[test]
-    fn test_make_template_cwl() {
+    fn test_make_template_cwl() -> Result<()> {
         let temp_dir = temp_dir();
         let temp_file = temp_dir.join("yevis_test_template_cwl.yml");
-        let result = make_template(
+        make_template(
             &Url::parse(
                 "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
-            )
-            .unwrap(),
+            )?,
             &None::<String>,
             &temp_file,
             &FileFormat::Yaml,
-        );
-        assert!(result.is_ok());
+        )?;
+        Ok(())
     }
 
     #[test]
-    fn test_make_template_wdl() {
+    fn test_make_template_wdl() -> Result<()> {
         let temp_dir = temp_dir();
         let temp_file = temp_dir.join("yevis_test_template_wdl.yml");
-        let result = make_template(
+        make_template(
             &Url::parse(
                 "https://github.com/ddbj/yevis-cli/blob/main/tests/WDL/wf/dockstore-tool-bamstats.wdl",
             )
-            .unwrap(),
+            ?,
             &None::<String>,
             &temp_file,
             &FileFormat::Yaml,
-        );
-        assert!(result.is_ok());
+        )?;
+        Ok(())
     }
 
     #[test]
-    fn test_make_template_nfl() {
+    fn test_make_template_nfl() -> Result<()> {
         let temp_dir = temp_dir();
         let temp_file = temp_dir.join("yevis_test_template_nfl.yml");
-        let result = make_template(
-            &Url::parse("https://github.com/ddbj/yevis-cli/blob/main/tests/NFL/wf/file_input.nf")
-                .unwrap(),
+        make_template(
+            &Url::parse("https://github.com/ddbj/yevis-cli/blob/main/tests/NFL/wf/file_input.nf")?,
             &None::<String>,
             &temp_file,
             &FileFormat::Yaml,
-        );
-        assert!(result.is_ok());
+        )?;
+        Ok(())
     }
 
     #[test]
-    fn test_make_template_smk() {
+    fn test_make_template_smk() -> Result<()> {
         let temp_dir = temp_dir();
         let temp_file = temp_dir.join("yevis_test_template_smk.yml");
-        let result = make_template(
-            &Url::parse("https://github.com/ddbj/yevis-cli/blob/main/tests/SMK/wf/Snakefile")
-                .unwrap(),
+        make_template(
+            &Url::parse("https://github.com/ddbj/yevis-cli/blob/main/tests/SMK/wf/Snakefile")?,
             &None::<String>,
             &temp_file,
             &FileFormat::Yaml,
-        );
-        assert!(result.is_ok());
+        )?;
+        Ok(())
     }
 
     #[test]
-    fn test_make_template_with_not_github() {
-        let wf_loc = Url::parse("https://example.com").unwrap();
+    fn test_make_template_with_not_github() -> Result<()> {
+        let wf_loc = Url::parse("https://example.com")?;
         let result = make_template(
             &wf_loc,
             &None::<String>,
@@ -282,14 +279,14 @@ mod tests {
         );
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("yevis-cli is only supported on `github.com` and `raw.githubusercontent.com` as the workflow location."));
+        Ok(())
     }
 
     #[test]
-    fn test_make_template_with_invalid_github_token() {
+    fn test_make_template_with_invalid_github_token() -> Result<()> {
         let wf_loc = Url::parse(
             "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
-        )
-        .unwrap();
+        )?;
         let arg_github_token: Option<&str> = Some("invalid_token");
         let result = make_template(
             &wf_loc,
@@ -302,12 +299,12 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("Failed to authenticate with GitHub."));
+        Ok(())
     }
 
     #[test]
-    fn test_make_template_with_invalid_wf_loc() {
-        let wf_loc =
-            Url::parse("https://github.com/ddbj/yevis-cli/blob/main/invalid_wf_loc").unwrap();
+    fn test_make_template_with_invalid_wf_loc() -> Result<()> {
+        let wf_loc = Url::parse("https://github.com/ddbj/yevis-cli/blob/main/invalid_wf_loc")?;
         let result = make_template(
             &wf_loc,
             &None::<String>,
@@ -319,14 +316,14 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("Failed to fetch contents from your inputted workflow location"));
+        Ok(())
     }
 
     #[test]
-    fn test_parse_wf_loc() {
-        let parse_result_1 = parse_wf_loc(
-            &Url::parse("https://github.com/ddbj/yevis-cli/blob/main/path/to/workflow").unwrap(),
-        )
-        .unwrap();
+    fn test_parse_wf_loc() -> Result<()> {
+        let parse_result_1 = parse_wf_loc(&Url::parse(
+            "https://github.com/ddbj/yevis-cli/blob/main/path/to/workflow",
+        )?)?;
         assert_eq!(
             parse_result_1,
             ParseResult {
@@ -337,7 +334,7 @@ mod tests {
                 file_path: PathBuf::from("path/to/workflow"),
             },
         );
-        let parse_result_2 = parse_wf_loc(&Url::parse("https://github.com/ddbj/yevis-cli/blob/752eab2a3b34f0c2fe4489a591303ded6906169d/path/to/workflow").unwrap()).unwrap();
+        let parse_result_2 = parse_wf_loc(&Url::parse("https://github.com/ddbj/yevis-cli/blob/752eab2a3b34f0c2fe4489a591303ded6906169d/path/to/workflow")?)?;
         assert_eq!(
             parse_result_2,
             ParseResult {
@@ -348,11 +345,9 @@ mod tests {
                 file_path: PathBuf::from("path/to/workflow"),
             },
         );
-        let parse_result_3 = parse_wf_loc(
-            &Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/main/path/to/workflow")
-                .unwrap(),
-        )
-        .unwrap();
+        let parse_result_3 = parse_wf_loc(&Url::parse(
+            "https://raw.githubusercontent.com/ddbj/yevis-cli/main/path/to/workflow",
+        )?)?;
         assert_eq!(
             parse_result_3,
             ParseResult {
@@ -363,7 +358,7 @@ mod tests {
                 file_path: PathBuf::from("path/to/workflow"),
             },
         );
-        let parse_result_4 = parse_wf_loc(&Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/752eab2a3b34f0c2fe4489a591303ded6906169d/path/to/workflow").unwrap()).unwrap();
+        let parse_result_4 = parse_wf_loc(&Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/752eab2a3b34f0c2fe4489a591303ded6906169d/path/to/workflow")?)?;
         assert_eq!(
             parse_result_4,
             ParseResult {
@@ -374,29 +369,31 @@ mod tests {
                 file_path: PathBuf::from("path/to/workflow"),
             },
         );
+        Ok(())
     }
 
     #[test]
-    fn test_is_commit_hash() {
-        is_commit_hash("752eab2a3b34f0c2fe4489a591303ded6906169d").unwrap();
+    fn test_is_commit_hash() -> Result<()> {
+        is_commit_hash("752eab2a3b34f0c2fe4489a591303ded6906169d")?;
+        Ok(())
     }
 
     #[test]
-    fn test_obtain_wf_files() {
-        let github_token = read_github_token(&None::<String>).unwrap();
-        let wf_loc =
-            Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/main/README.md").unwrap();
-        let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc).unwrap();
-        let result = obtain_wf_files(&github_token, &wf_repo_info).unwrap();
+    fn test_obtain_wf_files() -> Result<()> {
+        let github_token = read_github_token(&None::<String>)?;
+        let wf_loc = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/main/README.md")?;
+        let wf_repo_info = WfRepoInfo::new(&github_token, &wf_loc)?;
+        let result = obtain_wf_files(&github_token, &wf_repo_info)?;
         let readme = result
             .iter()
             .find(|f| f.target == PathBuf::from("README.md"))
-            .unwrap();
+            .ok_or(anyhow!("Failed to find README.md"))?;
         assert_eq!(readme.r#type, FileType::Primary);
         let license = result
             .iter()
             .find(|f| f.target == PathBuf::from("LICENSE"))
-            .unwrap();
+            .ok_or(anyhow!("Failed to find LICENSE"))?;
         assert_eq!(license.r#type, FileType::Secondary);
+        Ok(())
     }
 }

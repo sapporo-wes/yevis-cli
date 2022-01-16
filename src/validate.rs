@@ -260,39 +260,40 @@ fn validate_workflow(github_token: impl AsRef<str>, workflow: &Workflow) -> Resu
 mod tests {
     use super::*;
     use crate::type_config::{File as WfFile, TestFile};
+    use anyhow::anyhow;
     use std::path::PathBuf;
     use url::Url;
 
     #[test]
-    fn test_validate_cwl_config() {
+    fn test_validate_cwl_config() -> Result<()> {
         let config_file = "tests/test_config_CWL.yml";
-        let result = validate(config_file, &None::<String>);
-        assert!(result.is_ok());
+        validate(config_file, &None::<String>)?;
+        Ok(())
     }
 
     #[test]
-    fn test_validate_wdl_config() {
+    fn test_validate_wdl_config() -> Result<()> {
         let config_file = "tests/test_config_WDL.yml";
-        let result = validate(config_file, &None::<String>);
-        assert!(result.is_ok());
+        validate(config_file, &None::<String>)?;
+        Ok(())
     }
 
     #[test]
-    fn test_validate_nfl_config() {
+    fn test_validate_nfl_config() -> Result<()> {
         let config_file = "tests/test_config_NFL.yml";
-        let result = validate(config_file, &None::<String>);
-        assert!(result.is_ok());
+        validate(config_file, &None::<String>)?;
+        Ok(())
     }
 
     #[test]
-    fn test_validate_smk_config() {
+    fn test_validate_smk_config() -> Result<()> {
         let config_file = "tests/test_config_SMK.yml";
-        let result = validate(config_file, &None::<String>);
-        assert!(result.is_ok());
+        validate(config_file, &None::<String>)?;
+        Ok(())
     }
 
     #[test]
-    fn test_validate_broken_config() {
+    fn test_validate_broken_config() -> Result<()> {
         let config_file = "tests/test_config_broken.yml";
         let result = validate(config_file, &None::<String>);
         assert!(result.is_err());
@@ -300,10 +301,11 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("Failed to parse YAML because it does not conform to the expected schema."));
+        Ok(())
     }
 
     #[test]
-    fn test_validate_with_invalid_file_format() {
+    fn test_validate_with_invalid_file_format() -> Result<()> {
         let config_file = "tests/yevis.foobar";
         let result = validate(config_file, &None::<String>);
         assert!(result.is_err());
@@ -311,10 +313,11 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("Invalid file format"));
+        Ok(())
     }
 
     #[test]
-    fn test_validate_with_not_found_config_file() {
+    fn test_validate_with_not_found_config_file() -> Result<()> {
         let config_file = "foobar.yml";
         let result = validate(config_file, &None::<String>);
         assert!(result.is_err());
@@ -322,23 +325,26 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("Failed to open inputted config file"));
+        Ok(())
     }
 
     #[test]
-    fn test_validate_version() {
+    fn test_validate_version() -> Result<()> {
         assert!(validate_version("0.1.0").is_ok());
         assert!(validate_version("v0.1.0").is_err());
         assert!(validate_version("0.1.0-alpha").is_err());
+        Ok(())
     }
 
     #[test]
-    fn test_validate_license() {
+    fn test_validate_license() -> Result<()> {
         assert!(validate_license("CC0-1.0").is_ok());
         assert!(validate_license("MIT").is_err());
+        Ok(())
     }
 
     #[test]
-    fn test_validate_authors_ok() {
+    fn test_validate_authors_ok() -> Result<()> {
         let authors = vec![
             Author {
                 github_account: "suecharo".to_string(),
@@ -354,10 +360,11 @@ mod tests {
             },
         ];
         assert!(validate_authors(&authors).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn test_validate_authors_with_only_ddbj() {
+    fn test_validate_authors_with_only_ddbj() -> Result<()> {
         let authors = vec![Author {
             github_account: "ddbj".to_string(),
             name: "ddbj-workflow".to_string(),
@@ -370,10 +377,11 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("Please add at least one person and ddbj as authors."));
+        Ok(())
     }
 
     #[test]
-    fn test_validate_authors_with_ddbj_fixed() {
+    fn test_validate_authors_with_ddbj_fixed() -> Result<()> {
         let authors = vec![
             Author {
                 github_account: "suecharo".to_string(),
@@ -394,10 +402,11 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("The ddbj author in authors field has been changed."));
+        Ok(())
     }
 
     #[test]
-    fn test_validate_authors_no_ddbj() {
+    fn test_validate_authors_no_ddbj() -> Result<()> {
         let authors = vec![
             Author {
                 github_account: "suecharo".to_string(),
@@ -418,10 +427,11 @@ mod tests {
             result.unwrap_err().to_string(),
             "Please add ddbj as an author."
         );
+        Ok(())
     }
 
     #[test]
-    fn test_validate_author() {
+    fn test_validate_author() -> Result<()> {
         let author = Author {
             github_account: "suecharo".to_string(),
             name: "Example Name".to_string(),
@@ -429,13 +439,14 @@ mod tests {
             orcid: "0000-0003-2765-0049".to_string(),
         };
         assert!(validate_author(&author).is_ok());
+        Ok(())
     }
 
     #[test]
-    fn test_validate_workflow_with_no_primary_wf() {
-        let github_token = read_github_token(&None::<String>).unwrap();
-        let reader = BufReader::new(File::open("./tests/test_config_CWL.yml").unwrap());
-        let mut config: Config = serde_yaml::from_reader(reader).unwrap();
+    fn test_validate_workflow_with_no_primary_wf() -> Result<()> {
+        let github_token = read_github_token(&None::<String>)?;
+        let reader = BufReader::new(File::open("./tests/test_config_CWL.yml")?);
+        let mut config: Config = serde_yaml::from_reader(reader)?;
         config.workflow.files = vec![];
         let result = validate_workflow(&github_token, &config.workflow);
         assert!(result.is_err());
@@ -443,13 +454,14 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("Please specify only one primary workflow."));
+        Ok(())
     }
 
     #[test]
-    fn test_validate_workflow_with_invalid_repo_info() {
-        let github_token = read_github_token(&None::<String>).unwrap();
-        let reader = BufReader::new(File::open("./tests/test_config_CWL.yml").unwrap());
-        let mut config: Config = serde_yaml::from_reader(reader).unwrap();
+    fn test_validate_workflow_with_invalid_repo_info() -> Result<()> {
+        let github_token = read_github_token(&None::<String>)?;
+        let reader = BufReader::new(File::open("./tests/test_config_CWL.yml")?);
+        let mut config: Config = serde_yaml::from_reader(reader)?;
         config.workflow.repo = Repo {
             owner: "ddbj".to_string(),
             name: "yevis-cli".to_string(),
@@ -461,41 +473,41 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("The repository information in the primary workflow file does not match the `workflow.repo` field."));
+        Ok(())
     }
 
     #[test]
-    fn test_validate_workflow_update_raw_url() {
-        let github_token = read_github_token(&None::<String>).unwrap();
-        let reader = BufReader::new(File::open("./tests/test_config_CWL.yml").unwrap());
-        let mut config: Config = serde_yaml::from_reader(reader).unwrap();
+    fn test_validate_workflow_update_raw_url() -> Result<()> {
+        let github_token = read_github_token(&None::<String>)?;
+        let reader = BufReader::new(File::open("./tests/test_config_CWL.yml")?);
+        let mut config: Config = serde_yaml::from_reader(reader)?;
         config.workflow.files.push(WfFile {
-            url: Url::parse("https://github.com/ddbj/yevis-cli/blob/main/README.md").unwrap(),
+            url: Url::parse("https://github.com/ddbj/yevis-cli/blob/main/README.md")?,
             target: PathBuf::from("README.md"),
             r#type: FileType::Secondary,
         });
         config.workflow.testing[0].files.push(TestFile {
-            url: Url::parse("https://github.com/ddbj/yevis-cli/blob/main/README.md").unwrap(),
+            url: Url::parse("https://github.com/ddbj/yevis-cli/blob/main/README.md")?,
             target: PathBuf::from("README.md"),
             r#type: TestFileType::Other,
         });
 
-        let result = validate_workflow(&github_token, &config.workflow);
-        assert!(result.is_ok());
-        let new_wf = result.unwrap();
+        let new_wf = validate_workflow(&github_token, &config.workflow)?;
         let new_file = new_wf
             .files
             .iter()
             .find(|f| f.target == PathBuf::from("README.md"))
-            .unwrap();
+            .ok_or(anyhow!("File not found"))?;
         assert_eq!(new_file.url.host_str(), Some("raw.githubusercontent.com"));
         let new_test_file = new_wf.testing[0]
             .files
             .iter()
             .find(|f| f.target == PathBuf::from("README.md"))
-            .unwrap();
+            .ok_or(anyhow!("File not found"))?;
         assert_eq!(
             new_test_file.url.host_str(),
             Some("raw.githubusercontent.com")
         );
+        Ok(())
     }
 }

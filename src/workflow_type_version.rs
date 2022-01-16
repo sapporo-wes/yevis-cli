@@ -90,7 +90,10 @@ pub fn inspect_wf_version(wf_content: impl AsRef<str>, wf_type: &LanguageType) -
 fn inspect_cwl_version(wf_content: impl AsRef<str>) -> Result<String> {
     let cwl_docs: BTreeMap<String, serde_yaml::Value> = serde_yaml::from_str(wf_content.as_ref())?;
     match cwl_docs.contains_key("cwlVersion") {
-        true => match cwl_docs.get("cwlVersion").unwrap() {
+        true => match cwl_docs
+            .get("cwlVersion")
+            .ok_or(anyhow!("Failed to parse cwlVersion"))?
+        {
             serde_yaml::Value::String(version) => Ok(version.to_string()),
             _ => Ok("v1.0".to_string()),
         },
@@ -127,9 +130,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_inspect_wf_type_version_cwl() {
+    fn test_inspect_wf_type_version_cwl() -> Result<()> {
         let wf_loc = "https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/CWL/wf/trimming_and_qc.cwl";
-        let wf_type_version = inspect_wf_type_version(wf_loc).unwrap();
+        let wf_type_version = inspect_wf_type_version(wf_loc)?;
         assert_eq!(
             wf_type_version,
             Language {
@@ -137,13 +140,14 @@ mod tests {
                 version: "v1.0".to_string()
             }
         );
+        Ok(())
     }
 
     #[test]
-    fn test_inspect_wf_type_version_wdl() {
+    fn test_inspect_wf_type_version_wdl() -> Result<()> {
         let wf_loc =
             "https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/WDL/wf/dockstore-tool-bamstats.wdl";
-        let wf_type_version = inspect_wf_type_version(wf_loc).unwrap();
+        let wf_type_version = inspect_wf_type_version(wf_loc)?;
         assert_eq!(
             wf_type_version,
             Language {
@@ -151,12 +155,13 @@ mod tests {
                 version: "1.0".to_string()
             }
         );
+        Ok(())
     }
 
     #[test]
-    fn test_inspect_wf_type_version_nfl() {
+    fn test_inspect_wf_type_version_nfl() -> Result<()> {
         let wf_loc = "https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/NFL/wf/file_input.nf";
-        let wf_type_version = inspect_wf_type_version(wf_loc).unwrap();
+        let wf_type_version = inspect_wf_type_version(wf_loc)?;
         assert_eq!(
             wf_type_version,
             Language {
@@ -164,12 +169,13 @@ mod tests {
                 version: "1.0".to_string()
             }
         );
+        Ok(())
     }
 
     #[test]
-    fn test_inspect_wf_type_version_smk() {
+    fn test_inspect_wf_type_version_smk() -> Result<()> {
         let wf_loc = "https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/SMK/wf/Snakefile";
-        let wf_type_version = inspect_wf_type_version(wf_loc).unwrap();
+        let wf_type_version = inspect_wf_type_version(wf_loc)?;
         assert_eq!(
             wf_type_version,
             Language {
@@ -177,10 +183,11 @@ mod tests {
                 version: "1.0".to_string()
             }
         );
+        Ok(())
     }
 
     #[test]
-    fn test_inspect_wf_type() {
+    fn test_inspect_wf_type() -> Result<()> {
         let wf_content = "\
 #!/usr/bin/env cwl-runner
 cwlVersion: v1.2
@@ -192,11 +199,12 @@ inputs:
     inputBinding:
       position: 1
 outputs: []";
-        assert_eq!(inspect_wf_type(wf_content).unwrap(), LanguageType::Cwl);
+        assert_eq!(inspect_wf_type(wf_content)?, LanguageType::Cwl);
+        Ok(())
     }
 
     #[test]
-    fn test_inspect_wf_version() {
+    fn test_inspect_wf_version() -> Result<()> {
         let wf_content = "\
 #!/usr/bin/env cwl-runner
 cwlVersion: v1.2
@@ -209,8 +217,9 @@ inputs:
       position: 1
 outputs: []";
         assert_eq!(
-            inspect_wf_version(wf_content, &LanguageType::Cwl).unwrap(),
+            inspect_wf_version(wf_content, &LanguageType::Cwl)?,
             "v1.2".to_string()
         );
+        Ok(())
     }
 }
