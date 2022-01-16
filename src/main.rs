@@ -139,13 +139,7 @@ fn main() -> Result<()> {
                 }
             };
             info!("{} pull-request", "Running".green());
-            match pull_request(
-                &config,
-                &github_token,
-                &repository,
-                &wes_location,
-                &docker_host,
-            ) {
+            match pull_request(&config, &github_token, &repository) {
                 Ok(_) => info!("{} pull-request successfully", "Finished".green()),
                 Err(e) => {
                     error!("{}: {}", "Error".red(), e);

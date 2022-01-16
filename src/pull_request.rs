@@ -1,43 +1,89 @@
 use crate::{
-    github_api::{get_user, read_github_token},
+    github_api::{get_user, has_forked_repo, post_fork, read_github_token},
     type_config::Config,
 };
-use anyhow::{anyhow, bail, ensure, Result};
+use anyhow::{ensure, Result};
+use log::info;
 use regex::Regex;
+use std::thread;
+use std::time;
 
 pub fn pull_request(
-    config: &Config,
+    _config: &Config,
     arg_github_token: &Option<impl AsRef<str>>,
-    repository: impl AsRef<str>,
-    wes_location: &Option<impl AsRef<str>>,
-    docker_host: impl AsRef<str>,
+    repo: impl AsRef<str>,
 ) -> Result<()> {
     let github_token = read_github_token(&arg_github_token)?;
     ensure!(
         !github_token.is_empty(),
         "GitHub token is empty. Please set it with --github-token option or set GITHUB_TOKEN environment variable."
     );
-    let github_user = get_user(&github_token)?;
-    println!("pull-request");
+
+    let user_name = get_user(&github_token)?.login;
+    let (repo_owner, repo_name) = parse_repo(&repo)?;
+
+    match has_forked_repo(&github_token, &user_name, &repo_owner, &repo_name)? {
+        true => {
+            info!(
+                "Repository {} has already been forked to {}.",
+                repo.as_ref(),
+                &user_name
+            );
+        }
+        false => {
+            info!("Forking {} to {}...", repo.as_ref(), &user_name);
+            post_fork(&github_token, &repo_owner, &repo_name)?;
+            // waiting
+            let mut retry = 0;
+            while retry < 10 {
+                match has_forked_repo(&github_token, &user_name, &repo_owner, &repo_name)? {
+                    true => {
+                        info!(
+                            "Repository {} has been forked to {}.",
+                            repo.as_ref(),
+                            &user_name
+                        );
+                        break;
+                    }
+                    false => {
+                        info!("Waiting for forking...");
+                        thread::sleep(time::Duration::from_secs(6));
+                    }
+                }
+                retry += 1;
+            }
+        }
+    };
+
     Ok(())
 }
 
-fn validate_parse_repo(repo: impl AsRef<str>) -> Result<(String, String)> {
-    let re = Regex::new(r"^\w+\/\w+$")?;
+fn parse_repo(repo: impl AsRef<str>) -> Result<(String, String)> {
+    let re = Regex::new(r"^[\w-]+/[\w-]+$")?;
     ensure!(
         re.is_match(repo.as_ref()),
         "Invalid repository name: {}. It should be in the format of `owner/repo` like `ddbj/yevis-workflows`.",
         repo.as_ref()
     );
     let parts = repo.as_ref().split("/").collect::<Vec<_>>();
+    ensure!(
+        parts.len() == 2,
+        "Invalid repository name: {}. It should be in the format of `owner/repo` like `ddbj/yevis-workflows`.",
+        repo.as_ref()
+    );
     Ok((parts[0].to_string(), parts[1].to_string()))
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_validate_parse_repo() -> Result<()> {
-//     }
-// }
+    #[test]
+    fn test_parse_repo() -> Result<()> {
+        assert_eq!(
+            parse_repo("ddbj/yevis-workflows")?,
+            ("ddbj".to_string(), "yevis-workflows".to_string())
+        );
+        Ok(())
+    }
+}
