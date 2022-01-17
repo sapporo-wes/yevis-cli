@@ -1,8 +1,9 @@
 use crate::make_template::parse_wf_loc;
 use anyhow::{anyhow, bail, ensure, Result};
+use base64::encode;
 use dotenv::dotenv;
 use reqwest;
-use serde_json::Value;
+use serde_json::{json, Value};
 use std::env;
 use std::path::{Path, PathBuf};
 use url::Url;
@@ -457,6 +458,210 @@ pub fn has_forked_repo(
     }
 }
 
+/// https://docs.github.com/en/rest/reference/git#get-a-reference
+pub fn get_ref_sha(
+    github_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    branch: impl AsRef<str>,
+) -> Result<String> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/git/ref/heads/{}",
+        owner.as_ref(),
+        name.as_ref(),
+        branch.as_ref()
+    ))?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(url.as_str())
+        .header(reqwest::header::USER_AGENT, "yevis")
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("token {}", github_token.as_ref()),
+        )
+        .send()?;
+    ensure!(
+        response.status() != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
+        response.status().is_success(),
+        format!(
+            "Failed to get ref from GitHub with status: {:?}",
+            response.status()
+        )
+    );
+    let body = response.json::<Value>()?;
+
+    match body.is_object() {
+        true => match body["object"].is_object() {
+            true => {
+                let sha = body["object"]["sha"]
+                    .as_str()
+                    .ok_or(anyhow!("Failed to parse response when getting ref"))?;
+                Ok(sha.to_string())
+            }
+            false => bail!("Failed to parse response when getting ref"),
+        },
+        false => bail!("Failed to parse response when getting ref"),
+    }
+}
+
+/// https://docs.github.com/en/rest/reference/git#update-a-reference
+pub fn update_ref(
+    github_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    branch: impl AsRef<str>,
+    sha: impl AsRef<str>,
+) -> Result<()> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/git/refs/heads/{}",
+        owner.as_ref(),
+        name.as_ref(),
+        branch.as_ref()
+    ))?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .patch(url.as_str())
+        .header(reqwest::header::USER_AGENT, "yevis")
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("token {}", github_token.as_ref()),
+        )
+        .json(&json!({
+            "sha": sha.as_ref(),
+            "force": true
+        }))
+        .send()?;
+    ensure!(
+        response.status() != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
+        response.status().is_success(),
+        format!(
+            "Failed to update ref to GitHub with status: {:?}",
+            response.status()
+        )
+    );
+
+    Ok(())
+}
+
+/// https://docs.github.com/en/rest/reference/repos#get-repository-content
+fn get_contents_blob_sha(
+    github_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    path: impl AsRef<str>,
+    branch: impl AsRef<str>,
+) -> Result<String> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/contents/{}",
+        owner.as_ref(),
+        name.as_ref(),
+        path.as_ref()
+    ))?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(url.as_str())
+        .query(&[("ref", branch.as_ref())])
+        .header(reqwest::header::USER_AGENT, "yevis")
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("token {}", github_token.as_ref()),
+        )
+        .send()?;
+    ensure!(
+        response.status() != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
+        response.status().is_success(),
+        format!(
+            "Failed to get contents sha from GitHub with status: {:?}",
+            response.status()
+        )
+    );
+    let body = response.json::<Value>()?;
+
+    match body.is_object() {
+        true => Ok(body["sha"]
+            .as_str()
+            .ok_or(anyhow!(
+                "Failed to parse response when getting contents sha"
+            ))?
+            .to_string()),
+        false => bail!("Failed to parse response when getting contents sha"),
+    }
+}
+
+/// https://docs.github.com/en/rest/reference/repos#create-or-update-file-contents
+pub fn create_or_update_file(
+    github_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    path: impl AsRef<str>,
+    message: impl AsRef<str>,
+    content: impl AsRef<str>,
+    branch: impl AsRef<str>,
+) -> Result<()> {
+    let request_body = match get_contents_blob_sha(&github_token, &owner, &name, &path, &branch) {
+        Ok(sha) => json!({
+            "message": message.as_ref(),
+            "content": encode(content.as_ref()),
+            "sha": sha,
+            "branch": branch.as_ref()
+        }),
+        Err(err) => {
+            if err.to_string().contains("404") {
+                json!({
+                    "message": message.as_ref(),
+                    "content": encode(content.as_ref()),
+                    "branch": branch.as_ref()
+                })
+            } else {
+                bail!(err)
+            }
+        }
+    };
+
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/contents/{}",
+        owner.as_ref(),
+        name.as_ref(),
+        path.as_ref()
+    ))?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .put(url.as_str())
+        .header(reqwest::header::USER_AGENT, "yevis")
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("token {}", github_token.as_ref()),
+        )
+        .json(&request_body)
+        .send()?;
+    ensure!(
+        response.status() != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
+        response.status().is_success(),
+        format!(
+            "Failed to create or update file to GitHub with status: {:?}",
+            response.status()
+        )
+    );
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -601,6 +806,67 @@ mod tests {
         let token = read_github_token(&None::<String>)?;
         let response = has_forked_repo(&token, "suecharo", "ddbj", "invalid_name")?;
         assert_eq!(response, false);
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_ref() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        let response = get_ref_sha(&token, "ddbj", "yevis-cli", "main")?;
+        assert!(response.len() > 0);
+        Ok(())
+    }
+
+    #[test]
+    fn test_update_ref() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        let original_ref = get_ref_sha(&token, "ddbj", "yevis-workflows-dev", "main")?;
+        update_ref(
+            &token,
+            "suecharo",
+            "yevis-workflows-dev",
+            "main",
+            &original_ref,
+        )?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_contents_blob_sha() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        let response =
+            get_contents_blob_sha(&token, "ddbj", "yevis-workflows-dev", "README.md", "main")?;
+        assert!(response.len() > 0);
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_contents_blob_sha_invalid_file() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        let result = get_contents_blob_sha(
+            &token,
+            "ddbj",
+            "yevis-workflows-dev",
+            "invalid_file",
+            "main",
+        );
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("404"));
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_or_update_file() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        create_or_update_file(
+            &token,
+            "ddbj",
+            "yevis-workflows-dev",
+            "test.txt",
+            "test commit",
+            "test",
+            "main",
+        )?;
         Ok(())
     }
 }

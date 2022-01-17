@@ -1,5 +1,5 @@
 use crate::{
-    github_api::{get_user, has_forked_repo, post_fork, read_github_token},
+    github_api::{get_repos, get_user, has_forked_repo, post_fork, read_github_token},
     type_config::Config,
 };
 use anyhow::{ensure, Result};
@@ -21,6 +21,7 @@ pub fn pull_request(
 
     let user_name = get_user(&github_token)?.login;
     let (repo_owner, repo_name) = parse_repo(&repo)?;
+    let default_branch = get_repos(&github_token, &repo_owner, &repo_name)?.default_branch;
 
     match has_forked_repo(&github_token, &user_name, &repo_owner, &repo_name)? {
         true => {
