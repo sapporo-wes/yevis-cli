@@ -84,7 +84,10 @@ pub fn start_wes(docker_host: &Url) -> Result<()> {
         "Failed to start the sapporo-service: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    info!("{}", String::from_utf8_lossy(&output.stdout));
+    info!(
+        "Stdout from docker: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
     thread::sleep(time::Duration::from_secs(3));
     Ok(())
 }
@@ -109,7 +112,10 @@ pub fn stop_wes(docker_host: &Url) -> Result<()> {
         "Failed to stop the sapporo-service: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    info!("{}", String::from_utf8_lossy(&output.stdout));
+    info!(
+        "Stdout from docker: {}",
+        String::from_utf8_lossy(&output.stdout)
+    );
     thread::sleep(time::Duration::from_secs(3));
     Ok(())
 }

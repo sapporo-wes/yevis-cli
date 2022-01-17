@@ -508,6 +508,48 @@ pub fn get_ref_sha(
     }
 }
 
+/// https://docs.github.com/en/rest/reference/git#create-a-reference
+pub fn create_ref(
+    github_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    branch: impl AsRef<str>,
+    sha: impl AsRef<str>,
+) -> Result<()> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/git/refs",
+        owner.as_ref(),
+        name.as_ref(),
+    ))?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .post(url.as_str())
+        .header(reqwest::header::USER_AGENT, "yevis")
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("token {}", github_token.as_ref()),
+        )
+        .json(&json!({
+            "sha": sha.as_ref(),
+            "ref": format!("refs/heads/{}", branch.as_ref()),
+        }))
+        .send()?;
+    ensure!(
+        response.status() != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
+        response.status().is_success(),
+        format!(
+            "Failed to update ref to GitHub with status: {:?}",
+            response.status()
+        )
+    );
+
+    Ok(())
+}
+
 /// https://docs.github.com/en/rest/reference/git#update-a-reference
 pub fn update_ref(
     github_token: impl AsRef<str>,
@@ -655,6 +697,53 @@ pub fn create_or_update_file(
         response.status().is_success(),
         format!(
             "Failed to create or update file to GitHub with status: {:?}",
+            response.status()
+        )
+    );
+
+    Ok(())
+}
+
+/// https://docs.github.com/en/rest/reference/pulls#create-a-pull-request
+/// base: the branch to merge into
+/// head: the branch to merge from
+pub fn post_pulls(
+    github_token: impl AsRef<str>,
+    to_owner: impl AsRef<str>,
+    to_name: impl AsRef<str>,
+    title: impl AsRef<str>,
+    head: impl AsRef<str>,
+    base: impl AsRef<str>,
+) -> Result<()> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/pulls",
+        to_owner.as_ref(),
+        to_name.as_ref(),
+    ))?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .post(url.as_str())
+        .header(reqwest::header::USER_AGENT, "yevis")
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("token {}", github_token.as_ref()),
+        )
+        .json(&json!({
+            "title": title.as_ref(),
+            "head": head.as_ref(),
+            "base": base.as_ref(),
+            "maintainer_can_modify": true
+        }))
+        .send()?;
+    ensure!(
+        response.status() != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
+        response.status().is_success(),
+        format!(
+            "Failed to create pull request to GitHub with status: {:?}",
             response.status()
         )
     );
@@ -867,6 +956,32 @@ mod tests {
             "test",
             "main",
         )?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_or_update_file_include_dir() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        create_or_update_file(
+            &token,
+            "ddbj",
+            "yevis-workflows-dev",
+            "test_dir/test.txt",
+            "test commit",
+            "test",
+            "main",
+        )?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_ref() -> Result<()> {
+        let token = read_github_token(&None::<String>)?;
+        let original_ref = get_ref_sha(&token, "ddbj", "yevis-workflows-dev", "main")?;
+        let result = create_ref(&token, "ddbj", "yevis-workflows-dev", "test", &original_ref);
+        if result.is_err() {
+            assert!(result.unwrap_err().to_string().contains("422"));
+        }
         Ok(())
     }
 }
