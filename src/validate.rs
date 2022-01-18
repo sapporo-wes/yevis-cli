@@ -78,13 +78,23 @@ fn validate_version(
         version.as_ref()
     );
     let inputted_version = Version::from_str(version.as_ref())?;
-    let latest_version = find_latest_version(github_token, owner.as_ref(), name.as_ref(), wf_id)?;
-    ensure!(
-        inputted_version > latest_version,
-        "Version {} is less than the latest version {}",
-        inputted_version.to_string(),
-        latest_version.to_string()
-    );
+    match find_latest_version(github_token, owner.as_ref(), name.as_ref(), wf_id) {
+        Ok(latest_version) => {
+            ensure!(
+                inputted_version > latest_version,
+                "Version {} is less than the latest version {}",
+                inputted_version.to_string(),
+                latest_version.to_string()
+            )
+        }
+        Err(err) => {
+            ensure!(
+                inputted_version == Version::from_str("1.0.0")?,
+                "Failed to find latest version. Error: {}",
+                err
+            )
+        }
+    };
     Ok(())
 }
 

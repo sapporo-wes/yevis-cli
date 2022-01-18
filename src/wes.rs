@@ -29,7 +29,14 @@ pub fn default_wes_location() -> String {
 pub fn sapporo_run_dir() -> Result<String> {
     match env::var("SAPPORO_RUN_DIR") {
         Ok(run_dir) => Ok(run_dir),
-        Err(e) => bail!("SAPPORO_RUN_DIR is not set: {}", e),
+        Err(_) => {
+            let cwd = env::current_dir()?;
+            Ok(cwd
+                .join("sapporo_run")
+                .to_str()
+                .ok_or(anyhow!("Invalid path"))?
+                .to_string())
+        }
     }
 }
 

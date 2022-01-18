@@ -18,7 +18,7 @@ As features:
 Use a single binary that is built without any dependencies:
 
 ```bash
-$ curl -fsSL <URL TODO UPDATE> -o ./yevis
+$ curl -fsSL -O https://github.com/ddbj/yevis-cli/releases/latest/download/yevis
 $ chmod +x ./yevis
 $ ./yevis --help
 ```
@@ -32,11 +32,29 @@ $ docker-compose exec app yevis --help
 
 ## Getting started
 
+First of all, `yevis` needs the `GitHub Personal Access Token` for various operations through GitHub REST API.
+Please refer to [GitHub Docs - Creating a personal access token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token) for how to generate the `GitHub Personal Access Token`.
+
+The required scopes are as follows (also see ScreenShot):
+
+- `repo - public_repo`
+- `user - read:user`
+
+![yevis-cli-img-1](https://user-images.githubusercontent.com/26019402/149902689-bfd4707d-9792-41fd-b22f-8a1631489399.png)
+
 ```bash
 yevis --make-template https://github.com/path/to/workflow-file
 ```
 
+Once you have generated the `GitHub Personal Access Token`, you need to pass `yevis` it in one of the following ways:
+
+- env file: write the token to `.env` file like `GITHUB_TOKEN=<paste_your_token>`
+- environment variable: set the `GITHUB_TOKEN` environment variable
+- command line option: use `--github-token <paste_your_token>` option
+
 ## Usage
+
+TODO write usage.
 
 ## Development
 
@@ -46,6 +64,8 @@ Launching the development environment using `docker-compose`:
 $ docker-compose -f docker-compose.dev.yml up -d --build
 $ docker-compose -f docker-compose.dev.yml exec app bash
 ```
+
+If you set the environment variable `YEVIS_DEV=1`, the pull request will be created in the dev environment [`GitHub - ddbj/yevis-workflows-dev`](https://github.com/yevis/yevis-workflows-dev).
 
 ### Build binary
 

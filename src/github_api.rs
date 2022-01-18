@@ -1,8 +1,9 @@
 use crate::make_template::parse_wf_loc;
 use anyhow::{anyhow, bail, ensure, Result};
 use base64::encode;
+use colored::Colorize;
 use dotenv::dotenv;
-use log::debug;
+use log::{debug, info};
 use reqwest;
 use serde_json::{json, Value};
 use std::env;
@@ -385,11 +386,21 @@ pub fn head_request(url: &Url, retry: usize) -> Result<()> {
             thread::sleep(time::Duration::from_millis(500));
             head_request(url, retry + 1)?;
         } else {
-            bail!(
-                "Failed to HEAD request {} to with status: {:?}",
+            info!(
+                "{}: Failed to HEAD request to {} with status: {:?}. So retry using GET request.",
+                "Warning".yellow(),
                 url.as_str(),
                 response.status()
-            )
+            );
+            let get_response = client.get(url.as_str()).send()?;
+            ensure!(
+                get_response.status().is_success(),
+                format!(
+                    "Failed to HEAD and GET request to {} with status: {:?}",
+                    url.as_str(),
+                    get_response.status()
+                )
+            );
         }
     }
     Ok(())
