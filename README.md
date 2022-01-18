@@ -9,7 +9,7 @@ As features:
 - Testing workflows based on registration files
 - Creating the Pull Request to [GitHub - ddbj/yevis-workflows](https://github.com/ddbj/yevis-workflows)
 - Generating DOIs with [Zenodo](https://zenodo.org/)
-- Generating TRS responses ([GA4GH - Tool Registry Service API][https://www.ga4gh.org/news/tool-registry-service-api-enabling-an-interoperable-library-of-genomics-analysis-tools/])
+- Generating TRS responses ([GA4GH - Tool Registry Service API](https://www.ga4gh.org/news/tool-registry-service-api-enabling-an-interoperable-library-of-genomics-analysis-tools/))
 
 ## Installation
 
