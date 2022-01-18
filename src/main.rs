@@ -19,6 +19,7 @@ use lib_test::test;
 use log::{debug, error, info};
 use make_template::make_template;
 use pull_request::pull_request;
+use std::io::Write;
 use std::process::exit;
 use structopt::StructOpt;
 use validate::validate;
@@ -31,13 +32,19 @@ fn main() -> Result<()> {
         Args::MakeTemplate { verbose, .. } => *verbose,
         Args::PullRequest { verbose, .. } => *verbose,
     };
-    env_logger::init_from_env(env_logger::Env::default().filter_or(
+
+    let env = env_logger::Env::default().filter_or(
         env_logger::DEFAULT_FILTER_ENV,
         if verbose { "debug" } else { "info" },
-    ));
+    );
+    let mut builder = env_logger::Builder::from_env(env);
+    if !verbose {
+        builder.format(|buf, record| writeln!(buf, "{}", record.args()));
+    }
+    builder.init();
 
     info!("{} yevis {}", "Start".green(), env!("CARGO_PKG_VERSION"));
-    debug!("args: {:?}", args);
+    debug!("args:\n{:#?}", args);
 
     match &args {
         Args::MakeTemplate {

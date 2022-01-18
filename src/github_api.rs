@@ -707,6 +707,8 @@ pub fn create_or_update_file(
 /// https://docs.github.com/en/rest/reference/pulls#create-a-pull-request
 /// base: the branch to merge into
 /// head: the branch to merge from
+///
+/// return -> pull_request_URL
 pub fn post_pulls(
     github_token: impl AsRef<str>,
     to_owner: impl AsRef<str>,
@@ -714,7 +716,7 @@ pub fn post_pulls(
     title: impl AsRef<str>,
     head: impl AsRef<str>,
     base: impl AsRef<str>,
-) -> Result<()> {
+) -> Result<String> {
     let url = Url::parse(&format!(
         "https://api.github.com/repos/{}/{}/pulls",
         to_owner.as_ref(),
@@ -747,8 +749,17 @@ pub fn post_pulls(
             response.status()
         )
     );
+    let body = response.json::<Value>()?;
 
-    Ok(())
+    match body.is_object() {
+        true => Ok(body["url"]
+            .as_str()
+            .ok_or(anyhow!(
+                "Failed to parse response when posting pull request"
+            ))?
+            .to_string()),
+        false => bail!("Failed to parse response when posting pull request"),
+    }
 }
 
 #[cfg(test)]

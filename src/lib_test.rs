@@ -37,16 +37,17 @@ pub fn test(config: &Config, wes_location: &Option<Url>, docker_host: &Url) -> R
             .is_some(),
         "yevis only supports WES version sapporo-wes-1.0.1"
     );
+
     for test_case in &config.workflow.testing {
         info!("Testing {}", &test_case.id);
         let form = test_case_to_form(&config.workflow, &test_case)?;
-        debug!("form: {:?}", &form);
+        debug!("form:\n{:#?}", &form);
         let run_id = post_run(&wes_location, form)?;
-        debug!("run_id: {}", &run_id);
+        info!("WES run_id: {}", &run_id);
         let mut status = RunStatus::Running;
         while status == RunStatus::Running {
             status = get_run_status(&wes_location, &run_id)?;
-            debug!("status: {:?}", &status);
+            debug!("status: {:#?}", &status);
             thread::sleep(time::Duration::from_secs(5));
         }
         let run_log = get_run_log(&wes_location, &run_id)?;
@@ -54,7 +55,7 @@ pub fn test(config: &Config, wes_location: &Option<Url>, docker_host: &Url) -> R
         match status {
             RunStatus::Complete => {
                 info!("Complete {}", &test_case.id);
-                debug!("result: \n{}", &run_log_str);
+                debug!("result:\n{}", &run_log_str);
             }
             RunStatus::Failed => {
                 bail!("Failed {}. Log is:\n{}", &test_case.id, &run_log_str);

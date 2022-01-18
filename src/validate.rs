@@ -41,7 +41,7 @@ pub fn validate(
             Err(err) => bail!("Failed to parse JSON because it does not conform to the expected schema. Error: {}", err),
         },
     };
-    debug!("config: {:#?}", config);
+    debug!("config:\n{:#?}", &config);
 
     validate_version(&config.version)?;
     validate_license(&config.license)?;

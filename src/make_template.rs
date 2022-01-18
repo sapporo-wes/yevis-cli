@@ -71,7 +71,7 @@ pub fn make_template(
             }],
         },
     };
-    debug!("template_config: {:?}", template_config);
+    debug!("template_config:\n{:#?}", template_config);
 
     let mut output_path_buf = output.as_ref().to_path_buf();
     let template_config_str = match &format {

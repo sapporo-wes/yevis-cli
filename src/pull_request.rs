@@ -110,7 +110,7 @@ fn fork_repository(
         }
         false => {
             info!(
-                "Forking {}/{} to {}...",
+                "Forking {}/{} to {}",
                 repo_owner.as_ref(),
                 repo_owner.as_ref(),
                 user_name.as_ref()
@@ -212,7 +212,7 @@ fn create_pull_request(
         to_repo_owner.as_ref(),
         to_repo_name.as_ref()
     );
-    post_pulls(
+    let pull_request_url = post_pulls(
         &github_token,
         &to_repo_owner,
         &to_repo_name,
@@ -220,6 +220,8 @@ fn create_pull_request(
         &head,
         &branch,
     )?;
+    info!("Pull request URL: {}", &pull_request_url);
+
     Ok(())
 }
 
