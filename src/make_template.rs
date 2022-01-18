@@ -6,6 +6,7 @@ use crate::{
     },
     path_utils::{dir_path, file_stem},
     pull_request::parse_repo,
+    remote::fetch_config,
     type_config::{
         Author, Config, File, FileType, Repo, TestFile, TestFileType, Testing, Workflow,
     },
@@ -39,7 +40,6 @@ pub fn make_template(
         !github_token.is_empty(),
         "GitHub token is empty. Please set it with --github-token option or set GITHUB_TOKEN environment variable."
     );
-    let (repo_owner, repo_name) = parse_repo(&repository)?;
 
     info!(
         "Making template config from workflow location: {}",
@@ -48,35 +48,63 @@ pub fn make_template(
     let wf_repo_info = WfRepoInfo::new(&github_token, &workflow_location)?;
     let github_user = get_user(&github_token)?;
 
-    let wf_loc = raw_url_from_path(&wf_repo_info, &wf_repo_info.file_path)?;
-    let wf_type_version = inspect_wf_type_version(&wf_loc)?;
-    let wf_name = file_stem(&wf_repo_info.file_path)?;
-    let wf_version = generate_latest_version(&github_token, &repo_owner, &repo_name, &update)?;
-    let readme_url = raw_url_from_path(&wf_repo_info, "README.md")?;
-    let files = obtain_wf_files(&github_token, &wf_repo_info)?;
-
-    let template_config = Config {
-        id: Uuid::new_v4(),
-        version: wf_version,
-        license: "CC0-1.0".to_string(),
-        authors: vec![
-            Author::new_from_github_user(&github_user),
-            Author::new_ddbj(),
-        ],
-        workflow: Workflow {
-            name: wf_name,
-            repo: Repo::new(&wf_repo_info),
-            readme: readme_url,
-            language: wf_type_version,
-            files,
-            testing: vec![Testing {
+    let (wf_id, wf_version, wf_name, authors, testing) = match *update {
+        Some(wf_id) => {
+            let (repo_owner, repo_name) = parse_repo(&repository)?;
+            let latest_version =
+                find_latest_version(&github_token, &repo_owner, &repo_name, &wf_id)?;
+            let wf_version = latest_version.get_new_version().to_string();
+            let config = fetch_config(
+                &github_token,
+                &repo_owner,
+                &repo_name,
+                &wf_id.to_string(),
+                &latest_version.to_string(),
+            )?;
+            (
+                wf_id,
+                wf_version,
+                config.workflow.name,
+                config.authors,
+                config.workflow.testing,
+            )
+        }
+        None => {
+            let wf_id = Uuid::new_v4();
+            let wf_version = "1.0.0".to_string();
+            let wf_name = file_stem(&wf_repo_info.file_path)?;
+            let authors = vec![
+                Author::new_from_github_user(&github_user),
+                Author::new_ddbj(),
+            ];
+            let testing = vec![Testing {
                 id: "test_1".to_string(),
                 files: vec![
                     TestFile::new_file_template(TestFileType::WfParams)?,
                     TestFile::new_file_template(TestFileType::WfEngineParams)?,
                     TestFile::new_file_template(TestFileType::Other)?,
                 ],
-            }],
+            }];
+            (wf_id, wf_version, wf_name, authors, testing)
+        }
+    };
+    let wf_loc = raw_url_from_path(&wf_repo_info, &wf_repo_info.file_path)?;
+    let wf_type_version = inspect_wf_type_version(&wf_loc)?;
+    let readme_url = raw_url_from_path(&wf_repo_info, "README.md")?;
+    let files = obtain_wf_files(&github_token, &wf_repo_info)?;
+
+    let template_config = Config {
+        id: wf_id,
+        version: wf_version,
+        license: "CC0-1.0".to_string(),
+        authors,
+        workflow: Workflow {
+            name: wf_name,
+            repo: Repo::new(&wf_repo_info),
+            readme: readme_url,
+            language: wf_type_version,
+            files,
+            testing,
         },
     };
     debug!("template_config:\n{:#?}", template_config);
@@ -332,21 +360,6 @@ pub fn find_latest_version(
         .max()
         .ok_or(anyhow!("Failed to get latest version"))?;
     Ok(latest_version)
-}
-
-fn generate_latest_version(
-    github_token: impl AsRef<str>,
-    owner: impl AsRef<str>,
-    name: impl AsRef<str>,
-    update: &Option<Uuid>,
-) -> Result<String> {
-    match update {
-        Some(wf_id) => {
-            let latest_version = find_latest_version(&github_token, &owner, &name, &wf_id)?;
-            Ok(latest_version.get_new_version().to_string())
-        }
-        None => Ok("1.0.0".to_string()),
-    }
 }
 
 #[cfg(test)]

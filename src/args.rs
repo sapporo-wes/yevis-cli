@@ -1,4 +1,5 @@
 use anyhow::{bail, Error, Result};
+use dotenv::dotenv;
 use std::env;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -25,6 +26,7 @@ impl FromStr for FileFormat {
 }
 
 pub fn default_ddbj_workflows() -> &'static str {
+    dotenv().ok();
     match env::var("YEVIS_DEV") {
         Ok(_) => "ddbj/yevis-workflows-dev",
         Err(_) => "ddbj/yevis-workflows",

@@ -1,4 +1,5 @@
 use anyhow::{anyhow, bail, ensure, Context, Result};
+use dotenv::dotenv;
 use log::info;
 use reqwest;
 use reqwest::blocking::multipart;
@@ -27,6 +28,7 @@ pub fn default_wes_location() -> String {
 }
 
 pub fn sapporo_run_dir() -> Result<String> {
+    dotenv().ok();
     match env::var("SAPPORO_RUN_DIR") {
         Ok(run_dir) => Ok(run_dir),
         Err(_) => {
