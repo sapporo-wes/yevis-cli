@@ -593,6 +593,12 @@ pub fn update_ref(
     Ok(())
 }
 
+#[derive(Debug, PartialEq, Clone)]
+struct BlobResponse {
+    content: String,
+    sha: String,
+}
+
 /// https://docs.github.com/en/rest/reference/repos#get-repository-content
 fn get_contents_blob_sha(
     github_token: impl AsRef<str>,
@@ -600,7 +606,7 @@ fn get_contents_blob_sha(
     name: impl AsRef<str>,
     path: impl AsRef<str>,
     branch: impl AsRef<str>,
-) -> Result<String> {
+) -> Result<BlobResponse> {
     let url = Url::parse(&format!(
         "https://api.github.com/repos/{}/{}/contents/{}",
         owner.as_ref(),
@@ -632,12 +638,20 @@ fn get_contents_blob_sha(
     let body = response.json::<Value>()?;
 
     match body.is_object() {
-        true => Ok(body["sha"]
-            .as_str()
-            .ok_or(anyhow!(
-                "Failed to parse response when getting contents sha"
-            ))?
-            .to_string()),
+        true => Ok(BlobResponse {
+            content: body["content"]
+                .as_str()
+                .ok_or(anyhow!(
+                    "Failed to parse response when getting contents sha"
+                ))?
+                .to_string(),
+            sha: body["sha"]
+                .as_str()
+                .ok_or(anyhow!(
+                    "Failed to parse response when getting contents sha"
+                ))?
+                .to_string(),
+        }),
         false => bail!("Failed to parse response when getting contents sha"),
     }
 }
@@ -652,18 +666,24 @@ pub fn create_or_update_file(
     content: impl AsRef<str>,
     branch: impl AsRef<str>,
 ) -> Result<()> {
+    let encoded_content = encode(content.as_ref());
     let request_body = match get_contents_blob_sha(&github_token, &owner, &name, &path, &branch) {
-        Ok(sha) => json!({
-            "message": message.as_ref(),
-            "content": encode(content.as_ref()),
-            "sha": sha,
-            "branch": branch.as_ref()
-        }),
+        Ok(res) => {
+            if res.content == encoded_content {
+                return Ok(());
+            }
+            json!({
+                "message": message.as_ref(),
+                "content": encode(content.as_ref()),
+                "sha": res.sha,
+                "branch": branch.as_ref()
+            })
+        }
         Err(err) => {
             if err.to_string().contains("404") {
                 json!({
                     "message": message.as_ref(),
-                    "content": encode(content.as_ref()),
+                    "content": encoded_content,
                     "branch": branch.as_ref()
                 })
             } else {
@@ -936,7 +956,7 @@ mod tests {
         let token = read_github_token(&None::<String>)?;
         let response =
             get_contents_blob_sha(&token, "ddbj", "yevis-workflows-dev", "README.md", "main")?;
-        assert!(response.len() > 0);
+        assert!(response.sha.len() > 0);
         Ok(())
     }
 
