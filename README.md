@@ -287,6 +287,9 @@ Launching the development environment using `docker-compose`:
 ```bash
 $ docker-compose -f docker-compose.dev.yml up -d --build
 $ docker-compose -f docker-compose.dev.yml exec app bash
+# cargo run -- --help
+yevis 0.1.0
+...
 ```
 
 If you set the environment variable `YEVIS_DEV=1`, the pull request will be created in the dev environment [`GitHub - ddbj/yevis-workflows-dev`](https://github.com/yevis/yevis-workflows-dev).
