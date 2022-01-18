@@ -53,7 +53,7 @@ Once you have generated the `GitHub Personal Access Token`, you need to pass the
 
 ---
 
-Use the workflow [trimming_and_qc.cwl](https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl) as an example.
+Use the workflow [`trimming_and_qc.cwl`](https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl) as an example.
 
 First, generate a template of the configuration file from the GitHub location of the primary workflow file by:
 
@@ -61,7 +61,7 @@ First, generate a template of the configuration file from the GitHub location of
 $ yevis make-template https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl
 ```
 
-Edit the generated `./yevis_config.yml` as [test_config_CWL.yml](https://github.com/ddbj/yevis-cli/blob/main/tests/test_config_CWL.yml).
+Edit the generated `./yevis_config.yml` as [`test_config_CWL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test_config_CWL.yml).
 
 The main part to edit is below:
 
@@ -178,6 +178,13 @@ An explanation of the validation rules for some fields in the config file:
 - `workflow.language`: `CWL`, `WDL`, `NFL`, and `SMK` are supported.
 - `workflow.files`: The list of files. Files specified as `type: secondary` will be placed in the execution directory with `target` as the path at workflow execution time.
 - `workflow.testing`: The list of tests. Please refer to `test` for how to write tests.
+
+Several example are prepared. Please check:
+
+- [`test_config_CWL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test_config_CWL.yml)
+- [`test_config_WDL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test_config_WDL.yml)
+- [`test_config_NFL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test_config_NFL.yml)
+- [`test_config_SMK.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test_config_SMK.yml)
 
 ### test
 
