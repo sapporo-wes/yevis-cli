@@ -1,6 +1,6 @@
 [package]
-authors = ["DBCLS (Database Center for Life Science)"]
-edition = "2021"
+authors = ["DDBJ(DNA Data Bank of Japan)"]
+edition = "2018"
 license = "Apache-2.0"
 name = "yevis"
 readme = "https://github.com/ddbj/yevis-cli/README.md"
