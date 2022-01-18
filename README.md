@@ -13,9 +13,22 @@ As features:
 
 ## Installation
 
-Dependencies:
+**As a dependency, `yevis` uses Docker to run tests.**
 
-- Docker
+Use a single binary that is built without any dependencies:
+
+```bash
+$ curl -fsSL <URL TODO UPDATE> -o ./yevis
+$ chmod +x ./yevis
+$ ./yevis --help
+```
+
+Or, use Docker environment (also `docker-compose`):
+
+```bash
+$ docker-compose up -d --build
+$ docker-compose exec app yevis --help
+```
 
 ## Getting started
 
@@ -23,7 +36,7 @@ Dependencies:
 yevis --make-template https://github.com/path/to/workflow-file
 ```
 
-## Detailed usage
+## Usage
 
 ## Development
 
@@ -36,7 +49,7 @@ $ docker-compose -f docker-compose.dev.yml exec app bash
 
 ### Build binary
 
-**Recommendation**, build binary using musl ():
+**Recommendation**, build binary using musl:
 
 ```bash
 $ docker run --rm -it -v $PWD:/home/rust/src ekidd/rust-musl-builder cargo build --release
@@ -46,7 +59,7 @@ $ ldd target/x86_64-unknown-linux-musl/release/yevis
 not a dynamic executable
 ```
 
-Build binary using shared object:
+Build binary using native builder:
 
 ```bash
 $ cargo build --release

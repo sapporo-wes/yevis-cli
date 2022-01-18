@@ -4,14 +4,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: yevis-cli-dev
-    container_name: yevis-cli-dev
+    image: yevis-cli
+    container_name: yevis-cli
     volumes:
       - ${PWD}:/app
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - RUST_BACKTRACE=1
-      - YEVIS_DEV=1
       - SAPPORO_RUN_DIR=${PWD}/run
     restart: on-failure
     working_dir: /app

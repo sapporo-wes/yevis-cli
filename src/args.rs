@@ -1,4 +1,5 @@
 use anyhow::{bail, Error, Result};
+use std::env;
 use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::{clap, StructOpt};
@@ -19,6 +20,13 @@ impl FromStr for FileFormat {
             "json" => Ok(FileFormat::Json),
             _ => bail!("Invalid file format `{}`", s),
         }
+    }
+}
+
+fn default_ddbj_workflows() -> &'static str {
+    match env::var("YEVIS_DEV") {
+        Ok(_) => "ddbj/yevis-workflows-dev",
+        Err(_) => "ddbj/yevis-workflows",
     }
 }
 
@@ -102,7 +110,7 @@ pub enum Args {
         github_token: Option<String>,
 
         /// GitHub repository to send pull requests to.
-        #[structopt(short, long, default_value = "ddbj/yevis-workflows")]
+        #[structopt(short, long, default_value = default_ddbj_workflows())]
         repository: String,
 
         /// Location of WES in which to run the test.
@@ -223,7 +231,7 @@ mod tests {
             Args::PullRequest {
                 config_file: PathBuf::from("yevis_config.yml"),
                 github_token: None,
-                repository: "ddbj/yevis-workflows".to_string(),
+                repository: default_ddbj_workflows().to_string(),
                 wes_location: None,
                 docker_host: Url::from_str("unix:///var/run/docker.sock").unwrap(),
                 verbose: false,

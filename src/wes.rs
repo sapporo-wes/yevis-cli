@@ -48,7 +48,7 @@ pub fn start_wes(docker_host: &Url) -> Result<()> {
     let sapporo_run_dir = &sapporo_run_dir()?;
     let arg_run_dir_val = &format!("{}:{}", sapporo_run_dir, sapporo_run_dir);
     let (arg_network, arg_network_val) = if inside_docker_container() {
-        ("--network", "yevis-cli_default")
+        ("--network", "yevis-network")
     } else {
         ("-p", "1122:1122")
     };
