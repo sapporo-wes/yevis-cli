@@ -1,6 +1,7 @@
 # yevis-cli
 
 [![Apache License](https://img.shields.io/badge/license-Apache%202.0-orange.svg?style=flat&color=important)](http://www.apache.org/licenses/LICENSE-2.0)
+[![test](https://github.com/ddbj/yevis-cli/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/ddbj/yevis-cli/actions/workflows/test.yml)
 
 CLI tool for registering workflows to [GitHub - ddbj/yevis-workflows](https://github.com/ddbj/yevis-workflows).
 
