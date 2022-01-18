@@ -96,7 +96,10 @@ pub fn read_github_token(arg_token: &Option<impl AsRef<str>>) -> Result<String> 
         Some(token) => Ok(token.as_ref().to_string()),
         None => {
             dotenv().ok();
-            Ok(env::var("GITHUB_TOKEN")?)
+            match env::var("GITHUB_TOKEN") {
+                Ok(token) => Ok(token),
+                Err(_) => bail!("No GitHub token found in environment variables"),
+            }
         }
     }
 }
