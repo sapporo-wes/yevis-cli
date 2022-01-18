@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use structopt::{clap, StructOpt};
 use url::Url;
+use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum FileFormat {
@@ -23,7 +24,7 @@ impl FromStr for FileFormat {
     }
 }
 
-fn default_ddbj_workflows() -> &'static str {
+pub fn default_ddbj_workflows() -> &'static str {
     match env::var("YEVIS_DEV") {
         Ok(_) => "ddbj/yevis-workflows-dev",
         Err(_) => "ddbj/yevis-workflows",
@@ -47,6 +48,10 @@ pub enum Args {
         #[structopt(short, long)]
         github_token: Option<String>,
 
+        /// GitHub repository to send pull requests to.
+        #[structopt(short, long, default_value = default_ddbj_workflows())]
+        repository: String,
+
         /// Path to the output file.
         #[structopt(short, long, parse(from_os_str), default_value = "yevis_config.yml")]
         output: PathBuf,
@@ -54,6 +59,10 @@ pub enum Args {
         /// Format of the output file (`yaml` or `json`).
         #[structopt(short, long, default_value = "yaml")]
         format: FileFormat,
+
+        /// Update existing workflow.
+        #[structopt(short, long)]
+        update: Option<Uuid>,
 
         /// Verbose mode.
         #[structopt(short, long)]
@@ -70,6 +79,10 @@ pub enum Args {
         #[structopt(short, long)]
         github_token: Option<String>,
 
+        /// GitHub repository to send pull requests to.
+        #[structopt(short, long, default_value = default_ddbj_workflows())]
+        repository: String,
+
         /// Verbose mode.
         #[structopt(short, long)]
         verbose: bool,
@@ -84,6 +97,10 @@ pub enum Args {
         /// GitHub Personal Access Token.
         #[structopt(short, long)]
         github_token: Option<String>,
+
+        /// GitHub repository to send pull requests to.
+        #[structopt(short, long, default_value = default_ddbj_workflows())]
+        repository: String,
 
         /// Location of WES in which to run the test.
         /// If not specified, `sapporo-service` will be started.
@@ -147,8 +164,10 @@ mod tests {
                 )
                 .unwrap(),
                 github_token: None,
+                repository: default_ddbj_workflows().to_string(),
                 output: PathBuf::from("yevis_config.yml"),
                 format: FileFormat::Yaml,
+                update: None::<Uuid>,
                 verbose: false,
             }
         );
@@ -172,8 +191,10 @@ mod tests {
                 )
                 .unwrap(),
                 github_token: None,
+                repository: default_ddbj_workflows().to_string(),
                 output: PathBuf::from("yevis_config.yml"),
                 format: FileFormat::Json,
+                update: None::<Uuid>,
                 verbose: false,
             }
         );
@@ -201,6 +222,7 @@ mod tests {
             Args::Validate {
                 config_file: PathBuf::from("yevis_config.yml"),
                 github_token: None,
+                repository: default_ddbj_workflows().to_string(),
                 verbose: false,
             }
         );
@@ -215,6 +237,7 @@ mod tests {
             Args::Test {
                 config_file: PathBuf::from("yevis_config.yml"),
                 github_token: None,
+                repository: default_ddbj_workflows().to_string(),
                 wes_location: None,
                 docker_host: Url::from_str("unix:///var/run/docker.sock").unwrap(),
                 verbose: false,

@@ -190,13 +190,18 @@ fn wf_attachment(workflow: &Workflow, test_case: &Testing) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::args::default_ddbj_workflows;
     use crate::validate::validate;
     use std::fs::File;
     use std::io::BufReader;
 
     #[test]
     fn test_test_cwl() -> Result<()> {
-        let config = validate("tests/test_config_CWL.yml", &None::<String>)?;
+        let config = validate(
+            "tests/test_config_CWL.yml",
+            &None::<String>,
+            default_ddbj_workflows(),
+        )?;
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
         test(&config, &None::<Url>, &docker_host)?;
         Ok(())
@@ -204,7 +209,11 @@ mod tests {
 
     #[test]
     fn test_test_wdl() -> Result<()> {
-        let config = validate("tests/test_config_WDL.yml", &None::<String>)?;
+        let config = validate(
+            "tests/test_config_WDL.yml",
+            &None::<String>,
+            default_ddbj_workflows(),
+        )?;
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
         test(&config, &None::<Url>, &docker_host)?;
         Ok(())
@@ -212,7 +221,11 @@ mod tests {
 
     #[test]
     fn test_test_nfl() -> Result<()> {
-        let config = validate("tests/test_config_NFL.yml", &None::<String>)?;
+        let config = validate(
+            "tests/test_config_NFL.yml",
+            &None::<String>,
+            default_ddbj_workflows(),
+        )?;
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
         test(&config, &None::<Url>, &docker_host)?;
         Ok(())
@@ -220,7 +233,11 @@ mod tests {
 
     #[test]
     fn test_test_smk() -> Result<()> {
-        let config = validate("tests/test_config_SMK.yml", &None::<String>)?;
+        let config = validate(
+            "tests/test_config_SMK.yml",
+            &None::<String>,
+            default_ddbj_workflows(),
+        )?;
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
         test(&config, &None::<Url>, &docker_host)?;
         Ok(())
@@ -228,7 +245,11 @@ mod tests {
 
     #[test]
     fn test_test_case_to_form() -> Result<()> {
-        let config = validate("tests/test_config_CWL.yml", &None::<String>)?;
+        let config = validate(
+            "tests/test_config_CWL.yml",
+            &None::<String>,
+            default_ddbj_workflows(),
+        )?;
         let result = test_case_to_form(&config.workflow, &config.workflow.testing[0]);
         assert!(result.is_ok());
         Ok(())

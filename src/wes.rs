@@ -290,9 +290,9 @@ pub fn get_run_log(wes_loc: &Url, run_id: impl AsRef<str>) -> Result<Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::args::default_ddbj_workflows;
     use crate::lib_test::test_case_to_form;
     use crate::validate::validate;
-
     #[test]
     fn test_start_wes() -> Result<()> {
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
@@ -347,7 +347,11 @@ mod tests {
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
         start_wes(&docker_host)?;
         let wf_loc = Url::parse(&default_wes_location())?;
-        let config = validate("tests/test_config_CWL.yml", &None::<String>)?;
+        let config = validate(
+            "tests/test_config_CWL.yml",
+            &None::<String>,
+            default_ddbj_workflows(),
+        )?;
         let form = test_case_to_form(&config.workflow, &config.workflow.testing[0])?;
         let run_id = post_run(&wf_loc, form)?;
         assert!(run_id.len() > 0);

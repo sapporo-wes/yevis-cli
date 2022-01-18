@@ -50,12 +50,21 @@ fn main() -> Result<()> {
         Args::MakeTemplate {
             workflow_location,
             github_token,
+            repository,
             output,
             format,
+            update,
             ..
         } => {
             info!("{} make-template", "Running".green());
-            match make_template(&workflow_location, &github_token, &output, &format) {
+            match make_template(
+                &workflow_location,
+                &github_token,
+                &repository,
+                &output,
+                &format,
+                &update,
+            ) {
                 Ok(()) => info!("{} make-template", "Finished".green()),
                 Err(e) => {
                     error!("{}: {}", "Error".red(), e);
@@ -66,10 +75,11 @@ fn main() -> Result<()> {
         Args::Validate {
             config_file,
             github_token,
+            repository,
             ..
         } => {
             info!("{} validate", "Running".green());
-            match validate(&config_file, &github_token) {
+            match validate(&config_file, &github_token, &repository) {
                 Ok(_) => info!("{} validate", "Finished".green()),
                 Err(e) => {
                     error!("{}: {}", "Error".red(), e);
@@ -80,12 +90,13 @@ fn main() -> Result<()> {
         Args::Test {
             config_file,
             github_token,
+            repository,
             wes_location,
             docker_host,
             ..
         } => {
             info!("{} validate", "Running".green());
-            let config = match validate(&config_file, &github_token) {
+            let config = match validate(&config_file, &github_token, &repository) {
                 Ok(config) => {
                     info!("{} validate", "Finished".green());
                     config
@@ -120,7 +131,7 @@ fn main() -> Result<()> {
             ..
         } => {
             info!("{} validate", "Running".green());
-            let config = match validate(&config_file, &github_token) {
+            let config = match validate(&config_file, &github_token, &repository) {
                 Ok(config) => {
                     info!("{} validate", "Finished".green());
                     config

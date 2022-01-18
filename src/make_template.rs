@@ -1,37 +1,45 @@
 use crate::{
     args::FileFormat,
     github_api::{
-        get_file_list_recursive, get_user, raw_url_from_path, read_github_token, WfRepoInfo,
+        get_file_list_recursive, get_latest_commit_hash, get_repos, get_user, raw_url_from_path,
+        read_github_token, WfRepoInfo,
     },
     path_utils::{dir_path, file_stem},
+    pull_request::parse_repo,
     type_config::{
         Author, Config, File, FileType, Repo, TestFile, TestFileType, Testing, Workflow,
     },
     workflow_type_version::inspect_wf_type_version,
 };
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use log::debug;
 use log::info;
 use regex::Regex;
 use serde_json;
 use serde_yaml;
+use std::cmp::{Ord, Ordering, PartialOrd};
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use std::string::ToString;
 use url::Url;
 use uuid::Uuid;
 
 pub fn make_template(
     workflow_location: &Url,
     arg_github_token: &Option<impl AsRef<str>>,
+    repository: impl AsRef<str>,
     output: impl AsRef<Path>,
     format: &FileFormat,
+    update: &Option<Uuid>,
 ) -> Result<()> {
     let github_token = read_github_token(&arg_github_token)?;
     ensure!(
         !github_token.is_empty(),
         "GitHub token is empty. Please set it with --github-token option or set GITHUB_TOKEN environment variable."
     );
+    let (repo_owner, repo_name) = parse_repo(&repository)?;
 
     info!(
         "Making template config from workflow location: {}",
@@ -43,7 +51,7 @@ pub fn make_template(
     let wf_loc = raw_url_from_path(&wf_repo_info, &wf_repo_info.file_path)?;
     let wf_type_version = inspect_wf_type_version(&wf_loc)?;
     let wf_name = file_stem(&wf_repo_info.file_path)?;
-    let wf_version = "1.0.0".to_string(); // TODO update
+    let wf_version = generate_latest_version(&github_token, &repo_owner, &repo_name, &update)?;
     let readme_url = raw_url_from_path(&wf_repo_info, "README.md")?;
     let files = obtain_wf_files(&github_token, &wf_repo_info)?;
 
@@ -206,9 +214,145 @@ fn obtain_wf_files(github_token: impl AsRef<str>, wf_repo_info: &WfRepoInfo) -> 
         .collect::<Result<Vec<File>>>()?)
 }
 
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub struct Version {
+    major: usize,
+    minor: usize,
+    patch: usize,
+}
+
+impl FromStr for Version {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let mut version_parts = s.split('.');
+        let major = version_parts
+            .next()
+            .ok_or(anyhow!("Failed to parse major version"))?
+            .parse()?;
+        let minor = version_parts
+            .next()
+            .ok_or(anyhow!("Failed to parse minor version"))?
+            .parse()?;
+        let patch = version_parts
+            .next()
+            .ok_or(anyhow!("Failed to parse patch version"))?
+            .parse()?;
+        Ok(Version {
+            major,
+            minor,
+            patch,
+        })
+    }
+}
+
+impl Ord for Version {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.major.cmp(&other.major) {
+            Ordering::Equal => match self.minor.cmp(&other.minor) {
+                Ordering::Equal => match self.patch.cmp(&other.patch) {
+                    Ordering::Equal => Ordering::Equal,
+                    ordering => ordering,
+                },
+                ordering => ordering,
+            },
+            ordering => ordering,
+        }
+    }
+}
+
+impl PartialOrd for Version {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl ToString for Version {
+    fn to_string(&self) -> String {
+        format!("{}.{}.{}", self.major, self.minor, self.patch)
+    }
+}
+
+impl Version {
+    fn get_new_version(&self) -> Version {
+        Version {
+            major: self.major,
+            minor: self.minor,
+            patch: self.patch + 1,
+        }
+    }
+}
+
+pub fn find_latest_version(
+    github_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    wf_id: &Uuid,
+) -> Result<Version> {
+    let branch = get_repos(&github_token, &owner, &name)?.default_branch;
+    let commit_hash = get_latest_commit_hash(&github_token, &owner, &name, &branch)?;
+    let file_list = match get_file_list_recursive(
+        &github_token,
+        &owner,
+        &name,
+        &commit_hash,
+        &wf_id.to_string(),
+    ) {
+        Ok(file_list) => file_list,
+        Err(err) => {
+            bail!(
+                "{}. Does Workflow ID: {} exist in repository {}/{}",
+                err,
+                &wf_id,
+                owner.as_ref(),
+                name.as_ref()
+            )
+        }
+    };
+    // file like: yevis_config_1.0.0.yml
+    let versions = file_list
+        .iter()
+        .map(|f| f.file_name().ok_or(anyhow!("Failed to get file name")))
+        .collect::<Result<Vec<_>>>()?
+        .iter()
+        .map(|f| f.to_str().ok_or(anyhow!("Failed to get file name")))
+        .collect::<Result<Vec<_>>>()?
+        .iter()
+        .map(|f| {
+            f.split('_')
+                .nth(2)
+                .ok_or(anyhow!("Failed to get file name"))
+        })
+        .collect::<Result<Vec<_>>>()?
+        .iter()
+        .map(|f| Version::from_str(f))
+        .collect::<Result<Vec<_>>>()?;
+    let latest_version = versions
+        .into_iter()
+        .max()
+        .ok_or(anyhow!("Failed to get latest version"))?;
+    Ok(latest_version)
+}
+
+fn generate_latest_version(
+    github_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    update: &Option<Uuid>,
+) -> Result<String> {
+    match update {
+        Some(wf_id) => {
+            let latest_version = find_latest_version(&github_token, &owner, &name, &wf_id)?;
+            Ok(latest_version.get_new_version().to_string())
+        }
+        None => Ok("1.0.0".to_string()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::args::default_ddbj_workflows;
     use std::env::temp_dir;
 
     #[test]
@@ -220,8 +364,10 @@ mod tests {
                 "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
             )?,
             &None::<String>,
+            default_ddbj_workflows(),
             &temp_file,
             &FileFormat::Yaml,
+            &None::<Uuid>,
         )?;
         Ok(())
     }
@@ -236,8 +382,10 @@ mod tests {
             )
             ?,
             &None::<String>,
+            default_ddbj_workflows(),
             &temp_file,
             &FileFormat::Yaml,
+            &None::<Uuid>
         )?;
         Ok(())
     }
@@ -249,8 +397,10 @@ mod tests {
         make_template(
             &Url::parse("https://github.com/ddbj/yevis-cli/blob/main/tests/NFL/wf/file_input.nf")?,
             &None::<String>,
+            default_ddbj_workflows(),
             &temp_file,
             &FileFormat::Yaml,
+            &None::<Uuid>,
         )?;
         Ok(())
     }
@@ -262,8 +412,10 @@ mod tests {
         make_template(
             &Url::parse("https://github.com/ddbj/yevis-cli/blob/main/tests/SMK/wf/Snakefile")?,
             &None::<String>,
+            default_ddbj_workflows(),
             &temp_file,
             &FileFormat::Yaml,
+            &None::<Uuid>,
         )?;
         Ok(())
     }
@@ -274,8 +426,10 @@ mod tests {
         let result = make_template(
             &wf_loc,
             &None::<String>,
+            default_ddbj_workflows(),
             &PathBuf::from("yevis_config.yml"),
             &FileFormat::Yaml,
+            &None::<Uuid>,
         );
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("yevis-cli is only supported on `github.com` and `raw.githubusercontent.com` as the workflow location."));
@@ -291,8 +445,10 @@ mod tests {
         let result = make_template(
             &wf_loc,
             &arg_github_token,
+            default_ddbj_workflows(),
             &PathBuf::from("yevis_config.yml"),
             &FileFormat::Yaml,
+            &None::<Uuid>,
         );
         assert!(result.is_err());
         assert!(result
@@ -308,8 +464,10 @@ mod tests {
         let result = make_template(
             &wf_loc,
             &None::<String>,
+            default_ddbj_workflows(),
             &PathBuf::from("yevis_config.yml"),
             &FileFormat::Yaml,
+            &None::<Uuid>,
         );
         assert!(result.is_err());
         assert!(result
@@ -394,6 +552,19 @@ mod tests {
             .find(|f| f.target == PathBuf::from("LICENSE"))
             .ok_or(anyhow!("Failed to find LICENSE"))?;
         assert_eq!(license.r#type, FileType::Secondary);
+        Ok(())
+    }
+
+    #[test]
+    fn test_version_cmp() -> Result<()> {
+        let v1 = Version::from_str("1.0.0")?;
+        let v2 = Version::from_str("1.0.1")?;
+        let v3 = Version::from_str("0.1.0")?;
+        assert!(v1 < v2);
+        assert!(v1 > v3);
+        assert!(v2 > v3);
+        let latest_version = vec![v1, v2, v3].into_iter().max().unwrap();
+        assert_eq!(latest_version, Version::from_str("1.0.1")?);
         Ok(())
     }
 }

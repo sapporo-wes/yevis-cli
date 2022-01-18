@@ -58,7 +58,7 @@ pub fn pull_request(
     Ok(())
 }
 
-fn parse_repo(repo: impl AsRef<str>) -> Result<(String, String)> {
+pub fn parse_repo(repo: impl AsRef<str>) -> Result<(String, String)> {
     let re = Regex::new(r"^[\w-]+/[\w-]+$")?;
     ensure!(
         re.is_match(repo.as_ref()),
