@@ -1,16 +1,13 @@
 version: "3.5"
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: yevis-cli
+    image: ghcr.io/ddbj/yevis-cli:0.1.0
     container_name: yevis-cli
     volumes:
-      - ${PWD}:/app
+      - ${PWD}/.env:/app/.env
+      - ${PWD}/sapporo_run:/app/sapporo_run
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - RUST_BACKTRACE=1
       - SAPPORO_RUN_DIR=${PWD}/run
     restart: on-failure
     working_dir: /app
