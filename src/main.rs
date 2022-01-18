@@ -56,7 +56,7 @@ fn main() -> Result<()> {
         } => {
             info!("{} make-template", "Running".green());
             match make_template(&workflow_location, &github_token, &output, &format) {
-                Ok(()) => info!("{} make-template successfully", "Finished".green()),
+                Ok(()) => info!("{} make-template", "Finished".green()),
                 Err(e) => {
                     error!("{}: {}", "Error".red(), e);
                     exit(1);
@@ -70,7 +70,7 @@ fn main() -> Result<()> {
         } => {
             info!("{} validate", "Running".green());
             match validate(&config_file, &github_token) {
-                Ok(_) => info!("{} validate successfully", "Finished".green()),
+                Ok(_) => info!("{} validate", "Finished".green()),
                 Err(e) => {
                     error!("{}: {}", "Error".red(), e);
                     exit(1);
@@ -87,7 +87,7 @@ fn main() -> Result<()> {
             info!("{} validate", "Running".green());
             let config = match validate(&config_file, &github_token) {
                 Ok(config) => {
-                    info!("{} validate successfully", "Finished".green());
+                    info!("{} validate", "Finished".green());
                     config
                 }
                 Err(e) => {
@@ -97,7 +97,7 @@ fn main() -> Result<()> {
             };
             info!("{} test", "Running".green());
             match test(&config, &wes_location, &docker_host) {
-                Ok(_) => info!("{} test successfully", "Finished".green()),
+                Ok(_) => info!("{} test", "Finished".green()),
                 Err(e) => {
                     match stop_wes(&docker_host) {
                         Ok(_) => {}
@@ -122,7 +122,7 @@ fn main() -> Result<()> {
             info!("{} validate", "Running".green());
             let config = match validate(&config_file, &github_token) {
                 Ok(config) => {
-                    info!("{} validate successfully", "Finished".green());
+                    info!("{} validate", "Finished".green());
                     config
                 }
                 Err(e) => {
@@ -132,7 +132,7 @@ fn main() -> Result<()> {
             };
             info!("{} test", "Running".green());
             match test(&config, &wes_location, &docker_host) {
-                Ok(_) => info!("{} test successfully", "Finished".green()),
+                Ok(_) => info!("{} test", "Finished".green()),
                 Err(e) => {
                     match stop_wes(&docker_host) {
                         Ok(_) => {}
@@ -147,7 +147,7 @@ fn main() -> Result<()> {
             };
             info!("{} pull-request", "Running".green());
             match pull_request(&config, &github_token, &repository) {
-                Ok(_) => info!("{} pull-request successfully", "Finished".green()),
+                Ok(_) => info!("{} pull-request", "Finished".green()),
                 Err(e) => {
                     error!("{}: {}", "Error".red(), e);
                     exit(1);

@@ -85,8 +85,8 @@ pub fn start_wes(docker_host: &Url) -> Result<()> {
         String::from_utf8_lossy(&output.stderr)
     );
     info!(
-        "Stdout from docker: {}",
-        String::from_utf8_lossy(&output.stdout)
+        "Stdout from docker:\n{}",
+        String::from_utf8_lossy(&output.stdout).trim()
     );
     thread::sleep(time::Duration::from_secs(3));
     Ok(())
@@ -113,8 +113,8 @@ pub fn stop_wes(docker_host: &Url) -> Result<()> {
         String::from_utf8_lossy(&output.stderr)
     );
     info!(
-        "Stdout from docker: {}",
-        String::from_utf8_lossy(&output.stdout)
+        "Stdout from docker:\n{}",
+        String::from_utf8_lossy(&output.stdout).trim()
     );
     thread::sleep(time::Duration::from_secs(3));
     Ok(())

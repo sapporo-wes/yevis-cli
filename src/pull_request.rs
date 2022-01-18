@@ -156,7 +156,7 @@ fn create_branch(
         &branch,
         &original_repo_ref_sha,
     ) {
-        Ok(_) => info!("Branch {} has been created", branch.as_ref()),
+        Ok(_) => info!("Created branch {}", branch.as_ref()),
         Err(_) => {
             info!("Branch {} already exists", &branch.as_ref());
         }

@@ -2,10 +2,13 @@ use crate::make_template::parse_wf_loc;
 use anyhow::{anyhow, bail, ensure, Result};
 use base64::encode;
 use dotenv::dotenv;
+use log::debug;
 use reqwest;
 use serde_json::{json, Value};
 use std::env;
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::time;
 use url::Url;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -373,19 +376,20 @@ pub fn get_file_list_recursive(
     }
 }
 
-pub fn head_request(url: &Url, retry: Option<()>) -> Result<()> {
+pub fn head_request(url: &Url, retry: usize) -> Result<()> {
     let client = reqwest::blocking::Client::new();
     let response = client.head(url.as_str()).send()?;
     if !response.status().is_success() {
-        match retry {
-            Some(_) => {
-                bail!(
-                    "Failed to head request to {} with status: {:?}",
-                    url.as_str(),
-                    response.status()
-                )
-            }
-            None => head_request(&url, Some(()))?,
+        if retry < 3 {
+            debug!("Retrying head request to {}", url.as_str());
+            thread::sleep(time::Duration::from_millis(500));
+            head_request(url, retry + 1)?;
+        } else {
+            bail!(
+                "Failed to HEAD request {} to with status: {:?}",
+                url.as_str(),
+                response.status()
+            )
         }
     }
     Ok(())
@@ -895,14 +899,14 @@ mod tests {
     #[test]
     fn test_head_request_ok() -> Result<()> {
         let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/tests/CWL/wf/trimming_and_qc.cwl")?;
-        assert!(head_request(&url, None).is_ok());
+        assert!(head_request(&url, 0).is_ok());
         Ok(())
     }
 
     #[test]
     fn test_head_request_error() -> Result<()> {
         let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/36d23db735623e0e87a69a02d23ff08c754e6f13/nothing")?;
-        assert!(head_request(&url, None).is_err());
+        assert!(head_request(&url, 0).is_err());
         Ok(())
     }
 
