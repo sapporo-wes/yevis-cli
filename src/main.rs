@@ -19,6 +19,7 @@ use lib_test::test;
 use log::{debug, error, info};
 use make_template::make_template;
 use pull_request::pull_request;
+use std::env;
 use std::io::Write;
 use std::process::exit;
 use structopt::StructOpt;
@@ -32,6 +33,8 @@ fn main() -> Result<()> {
         Args::MakeTemplate { verbose, .. } => *verbose,
         Args::PullRequest { verbose, .. } => *verbose,
     };
+
+    let in_ci = env::var("GITHUB_ACTIONS").is_ok();
 
     let env = env_logger::Env::default().filter_or(
         env_logger::DEFAULT_FILTER_ENV,
@@ -107,7 +110,7 @@ fn main() -> Result<()> {
                 }
             };
             info!("{} test", "Running".green());
-            match test(&config, &wes_location, &docker_host) {
+            match test(&config, &wes_location, &docker_host, in_ci) {
                 Ok(_) => info!("{} test", "Finished".green()),
                 Err(e) => {
                     match stop_wes(&docker_host) {
@@ -142,7 +145,7 @@ fn main() -> Result<()> {
                 }
             };
             info!("{} test", "Running".green());
-            match test(&config, &wes_location, &docker_host) {
+            match test(&config, &wes_location, &docker_host, in_ci) {
                 Ok(_) => info!("{} test", "Finished".green()),
                 Err(e) => {
                     match stop_wes(&docker_host) {

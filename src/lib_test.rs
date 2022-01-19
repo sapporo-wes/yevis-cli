@@ -11,11 +11,19 @@ use log::{debug, info};
 use reqwest::blocking::multipart;
 use serde::{Deserialize, Serialize};
 use serde_json;
+use std::env;
+use std::fs;
+use std::io::{BufWriter, Write};
 use std::thread;
 use std::time;
 use url::Url;
 
-pub fn test(config: &Config, wes_location: &Option<Url>, docker_host: &Url) -> Result<()> {
+pub fn test(
+    config: &Config,
+    wes_location: &Option<Url>,
+    docker_host: &Url,
+    in_ci: bool,
+) -> Result<()> {
     let default_wes_loc = Url::parse(&default_wes_location())?;
     let wes_location = match &wes_location {
         Some(wes_location) => {
@@ -38,6 +46,7 @@ pub fn test(config: &Config, wes_location: &Option<Url>, docker_host: &Url) -> R
         "yevis only supports WES version sapporo-wes-1.0.1"
     );
 
+    let mut failed_tests = vec![];
     for test_case in &config.workflow.testing {
         info!("Testing {}", &test_case.id);
         let form = test_case_to_form(&config.workflow, &test_case)?;
@@ -52,17 +61,34 @@ pub fn test(config: &Config, wes_location: &Option<Url>, docker_host: &Url) -> R
         }
         let run_log = get_run_log(&wes_location, &run_id)?;
         let run_log_str = serde_json::to_string_pretty(&run_log)?;
+        if in_ci {
+            let test_log_file =
+                env::current_dir()?.join(format!("test-results/{}_log.json", &test_case.id));
+            fs::create_dir_all(&test_log_file)?;
+            let mut buffer = BufWriter::new(fs::File::create(&test_log_file)?);
+            buffer.write(run_log_str.as_bytes())?;
+        }
         match status {
             RunStatus::Complete => {
                 info!("Complete {}", &test_case.id);
-                debug!("result:\n{}", &run_log_str);
+                debug!("Test result is:\n{}", &run_log_str);
             }
             RunStatus::Failed => {
-                bail!("Failed {}. Log is:\n{}", &test_case.id, &run_log_str);
+                if in_ci {
+                    failed_tests.push(&test_case.id);
+                    info!("Failed {}.", &test_case.id);
+                } else {
+                    bail!("Failed {}. Log is:\n{}", &test_case.id, &run_log_str);
+                }
             }
             _ => {}
         }
     }
+
+    if failed_tests.len() > 0 {
+        bail!("Test failed: {:#?}", &failed_tests);
+    }
+
     stop_wes(&docker_host)?;
 
     Ok(())
@@ -203,7 +229,7 @@ mod tests {
             default_ddbj_workflows(),
         )?;
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
-        test(&config, &None::<Url>, &docker_host)?;
+        test(&config, &None::<Url>, &docker_host, false)?;
         Ok(())
     }
 
@@ -215,7 +241,7 @@ mod tests {
             default_ddbj_workflows(),
         )?;
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
-        test(&config, &None::<Url>, &docker_host)?;
+        test(&config, &None::<Url>, &docker_host, false)?;
         Ok(())
     }
 
@@ -227,7 +253,7 @@ mod tests {
             default_ddbj_workflows(),
         )?;
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
-        test(&config, &None::<Url>, &docker_host)?;
+        test(&config, &None::<Url>, &docker_host, false)?;
         Ok(())
     }
 
@@ -239,7 +265,7 @@ mod tests {
             default_ddbj_workflows(),
         )?;
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
-        test(&config, &None::<Url>, &docker_host)?;
+        test(&config, &None::<Url>, &docker_host, false)?;
         Ok(())
     }
 
