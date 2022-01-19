@@ -1,0 +1,30 @@
+name: "Build the musl binary to artifacts"
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "src/**"
+      - "tests/**"
+      - "Cargo.**"
+  workflow_dispatch: {}
+
+jobs:
+  build-yevis:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout ddbj/yevis-cli"
+        uses: actions/checkout@v2
+        with:
+          repository: ddbj/yevis-cli
+          ref: main
+          fetch-depth: 1
+      - name: "Build yevis binary"
+        run: docker run --rm -u root -v `pwd`:/home/rust/src ekidd/rust-musl-builder cargo build --release
+      - name: "Upload yevis binary"
+        uses: actions/upload-artifact@v2
+        with:
+          name: yevis
+          path: target/x86_64-unknown-linux-musl/release/yevis
+          mime-type: application/x-executable
