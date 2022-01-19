@@ -998,7 +998,7 @@ mod tests {
         let token = read_github_token(&None::<String>)?;
         create_or_update_file(
             &token,
-            "ddbj",
+            "suecharo",
             "yevis-workflows-dev",
             "test.txt",
             "test commit",
@@ -1013,7 +1013,7 @@ mod tests {
         let token = read_github_token(&None::<String>)?;
         create_or_update_file(
             &token,
-            "ddbj",
+            "suecharo",
             "yevis-workflows-dev",
             "test_dir/test.txt",
             "test commit",
