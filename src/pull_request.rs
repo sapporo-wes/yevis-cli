@@ -1,7 +1,7 @@
 use crate::{
     github_api::{
         create_or_update_file, create_ref, get_ref_sha, get_repos, get_user, has_forked_repo,
-        post_fork, post_pulls, read_github_token, update_ref,
+        post_fork, post_pulls, read_github_token, synk_fork_from_upstream,
     },
     type_config::Config,
 };
@@ -99,13 +99,7 @@ fn fork_repository(
                     repo_name.as_ref(),
                     default_branch.as_ref()
                 );
-                update_ref(
-                    &github_token,
-                    &user_name,
-                    &repo_name,
-                    &default_branch,
-                    &original_repo_ref_sha,
-                )?;
+                synk_fork_from_upstream(&github_token, &user_name, &repo_name, &default_branch)?;
             }
         }
         false => {

@@ -568,19 +568,17 @@ pub fn create_ref(
     Ok(())
 }
 
-/// https://docs.github.com/en/rest/reference/git#update-a-reference
-pub fn update_ref(
+/// https://docs.github.com/en/rest/reference/branches#sync-a-fork-branch-with-the-upstream-repository
+pub fn synk_fork_from_upstream(
     github_token: impl AsRef<str>,
     owner: impl AsRef<str>,
     name: impl AsRef<str>,
     branch: impl AsRef<str>,
-    sha: impl AsRef<str>,
 ) -> Result<()> {
     let url = Url::parse(&format!(
-        "https://api.github.com/repos/{}/{}/git/refs/heads/{}",
+        "https://api.github.com/repos/{}/{}/merge-upstream",
         owner.as_ref(),
         name.as_ref(),
-        branch.as_ref()
     ))?;
     let client = reqwest::blocking::Client::new();
     let response = client
@@ -592,8 +590,7 @@ pub fn update_ref(
             format!("token {}", github_token.as_ref()),
         )
         .json(&json!({
-            "sha": sha.as_ref(),
-            "force": true
+            "branch": branch.as_ref(),
         }))
         .send()?;
     ensure!(
@@ -603,7 +600,7 @@ pub fn update_ref(
     ensure!(
         response.status().is_success(),
         format!(
-            "Failed to update ref to GitHub with status: {:?}",
+            "Failed to sync fork from upstream with status: {:?}",
             response.status()
         )
     );
@@ -952,20 +949,6 @@ mod tests {
         let token = read_github_token(&None::<String>)?;
         let response = get_ref_sha(&token, "ddbj", "yevis-cli", "main")?;
         assert!(response.len() > 0);
-        Ok(())
-    }
-
-    #[test]
-    fn test_update_ref() -> Result<()> {
-        let token = read_github_token(&None::<String>)?;
-        let original_ref = get_ref_sha(&token, "ddbj", "yevis-workflows-dev", "main")?;
-        update_ref(
-            &token,
-            "suecharo",
-            "yevis-workflows-dev",
-            "main",
-            &original_ref,
-        )?;
         Ok(())
     }
 
