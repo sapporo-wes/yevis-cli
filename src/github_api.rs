@@ -582,7 +582,7 @@ pub fn synk_fork_from_upstream(
     ))?;
     let client = reqwest::blocking::Client::new();
     let response = client
-        .patch(url.as_str())
+        .post(url.as_str())
         .header(reqwest::header::USER_AGENT, "yevis")
         .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
         .header(
