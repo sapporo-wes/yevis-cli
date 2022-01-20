@@ -76,13 +76,15 @@ jobs:
 
   create_release:
     needs: [build_binary]
-    - name: "Download yevis binary"
-      uses: actions/download-artifact@v2
-      with:
-        name: yevis
-        path: yevis
-    - name: "Release"
-      run: gh release --repo ${{ github.repository }} create --title ${{ github.ref_name }} --target ${{ github.sha }} --generate-notes yevis
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Download yevis binary"
+        uses: actions/download-artifact@v2
+        with:
+          name: yevis
+          path: yevis
+      - name: "Release"
+        run: gh release --repo ${{ github.repository }} create --title ${{ github.ref_name }} --target ${{ github.sha }} --generate-notes yevis
 
   deploy_ghcr:
     needs: [create_release]
