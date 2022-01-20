@@ -63,8 +63,12 @@ pub fn test(
         let run_log_str = serde_json::to_string_pretty(&run_log)?;
         if in_ci {
             let test_log_file =
-                env::current_dir()?.join(format!("test-results/{}_log.json", &test_case.id));
-            fs::create_dir_all(&test_log_file)?;
+                env::current_dir()?.join(format!("test-logs/{}_log.json", &test_case.id));
+            fs::create_dir_all(
+                &test_log_file
+                    .parent()
+                    .ok_or(anyhow!("Failed to create dir"))?,
+            )?;
             let mut buffer = BufWriter::new(fs::File::create(&test_log_file)?);
             buffer.write(run_log_str.as_bytes())?;
         }
