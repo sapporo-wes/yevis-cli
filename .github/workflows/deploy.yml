@@ -86,7 +86,7 @@ jobs:
           name: yevis
           path: yevis
       - name: "Release"
-        run: gh release --repo ${{ github.repository }} create --title ${{ github.ref_name }} --target ${{ github.sha }} --generate-notes yevis
+        run: gh release --repo ${{ github.repository }} create ${{ github_ref_name }} --title ${{ github.ref_name }} --generate-notes yevis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
