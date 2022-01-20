@@ -91,6 +91,7 @@ jobs:
       - name: "Checkout ddbj/yevis-cli"
         uses: actions/checkout@v2
         with:
+          ref: main
           fetch-depth: 1
       - name: "Set up Docker Buildx"
         uses: docker/setup-buildx-action@v1
