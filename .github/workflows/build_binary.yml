@@ -1,4 +1,4 @@
-name: "Build the musl binary to artifacts"
+name: build_binary
 
 on:
   push:
@@ -20,11 +20,33 @@ jobs:
           repository: ddbj/yevis-cli
           ref: main
           fetch-depth: 1
+      - name: "Cache builder image"
+        id: cache-builder-image
+        uses: actions/cache@v2
+        with:
+          path: musl-builder-image
+          key: musl-builder-image
+      - name: "Pull and save builder image"
+        if: steps.cache-builder-image.outputs.cache-hit != 'true'
+        run: |
+          docker pull ekidd/rust-musl-builder:stable
+          docker save ekidd/rust-musl-builder:stable -o musl-builder-image
+      - name: "Load builder image"
+        run: docker load -i musl-builder-image
+      - name: "Cache Rust"
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: "Build yevis binary"
-        run: docker run --rm -u root -v `pwd`:/home/rust/src ekidd/rust-musl-builder cargo build --release
+        run: docker run --rm -u root -v `pwd`:/home/rust/src ekidd/rust-musl-builder:stable cargo build --release
       - name: "Upload yevis binary"
         uses: actions/upload-artifact@v2
         with:
           name: yevis
           path: target/x86_64-unknown-linux-musl/release/yevis
-          mime-type: application/x-executable
