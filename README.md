@@ -332,6 +332,12 @@ $ cargo test -- --test-threads=1 --nocapture
 
 Several test workflows are prepared. Check [tests/README.md](https://github.com/ddbj/yevis-cli/blob/main/tests/README.md).
 
+### Download artifacts from build GitHub Actions
+
+```bash
+$ gh run --repo ddbj/yevis-cli list --workflow build_binary --json databaseId --jq .[0].databaseId | xargs -I {} gh run --repo ddbj/yevis-cli download {} -n yevis
+```
+
 ## License
 
 [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0). See the [LICENSE](https://github.com/ddbj/yevis-cli/blob/main/LICENSE).
