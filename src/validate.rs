@@ -33,21 +33,7 @@ pub fn validate(
     let (repo_owner, repo_name) = parse_repo(&repository)?;
 
     info!("Reading config file: {}", config_file.as_ref().display());
-    let file_format = file_format(&config_file)?;
-    let reader = BufReader::new(File::open(&config_file).context(format!(
-        "Failed to open inputted config file: {}",
-        config_file.as_ref().display()
-    ))?);
-    let mut config: Config = match file_format {
-        FileFormat::Yaml => match serde_yaml::from_reader(reader) {
-            Ok(config) => config,
-            Err(err) => bail!("Failed to parse YAML because it does not conform to the expected schema. Error: {}", err),
-        },
-        FileFormat::Json => match serde_json::from_reader(reader) {
-            Ok(config) => config,
-            Err(err) => bail!("Failed to parse JSON because it does not conform to the expected schema. Error: {}", err),
-        },
-    };
+    let mut config = read_config(&config_file)?;
     debug!("config:\n{:#?}", &config);
 
     validate_version(
@@ -61,6 +47,25 @@ pub fn validate(
     validate_authors(&config.authors)?;
     config.workflow = validate_workflow(&github_token, &config.workflow)?;
 
+    Ok(config)
+}
+
+pub fn read_config(config_file: impl AsRef<Path>) -> Result<Config> {
+    let file_format = file_format(&config_file)?;
+    let reader = BufReader::new(File::open(&config_file).context(format!(
+        "Failed to open inputted config file: {}",
+        config_file.as_ref().display()
+    ))?);
+    let config: Config = match file_format {
+        FileFormat::Yaml => match serde_yaml::from_reader(reader) {
+            Ok(config) => config,
+            Err(err) => bail!("Failed to parse YAML because it does not conform to the expected schema. Error: {}", err),
+        },
+        FileFormat::Json => match serde_json::from_reader(reader) {
+            Ok(config) => config,
+            Err(err) => bail!("Failed to parse JSON because it does not conform to the expected schema. Error: {}", err),
+        },
+    };
     Ok(config)
 }
 

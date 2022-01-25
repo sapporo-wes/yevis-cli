@@ -9,8 +9,8 @@ mod type_config;
 mod validate;
 mod wes;
 mod workflow_type_version;
+mod zenodo;
 
-use crate::wes::stop_wes;
 use anyhow::Result;
 use args::Args;
 use colored::Colorize;
@@ -24,14 +24,17 @@ use std::io::Write;
 use std::process::exit;
 use structopt::StructOpt;
 use validate::validate;
+use wes::stop_wes;
+use zenodo::zenodo_upload;
 
 fn main() -> Result<()> {
     let args = Args::from_args();
-    let verbose = match &args {
-        Args::Test { verbose, .. } => *verbose,
-        Args::Validate { verbose, .. } => *verbose,
-        Args::MakeTemplate { verbose, .. } => *verbose,
-        Args::PullRequest { verbose, .. } => *verbose,
+    let verbose = match args {
+        Args::Test { verbose, .. } => verbose,
+        Args::Validate { verbose, .. } => verbose,
+        Args::MakeTemplate { verbose, .. } => verbose,
+        Args::PullRequest { verbose, .. } => verbose,
+        Args::ZenodoUpload { verbose, .. } => verbose,
     };
 
     let in_ci = env::var("GITHUB_ACTIONS").is_ok();
@@ -162,6 +165,28 @@ fn main() -> Result<()> {
             info!("{} pull-request", "Running".green());
             match pull_request(&config, &github_token, &repository) {
                 Ok(_) => info!("{} pull-request", "Finished".green()),
+                Err(e) => {
+                    error!("{}: {}", "Error".red(), e);
+                    exit(1);
+                }
+            };
+        }
+        Args::ZenodoUpload {
+            config_file,
+            github_token,
+            repository,
+            ..
+        } => {
+            if !in_ci {
+                error!(
+                    "{}: Zenodo upload can only be run in a CI environment",
+                    "Error".red()
+                );
+                exit(1);
+            }
+            info!("{} zenodo-upload", "Running".green());
+            match zenodo_upload(&config_file, &github_token, &repository) {
+                Ok(_) => info!("{} zenodo-upload", "Finished".green()),
                 Err(e) => {
                     error!("{}: {}", "Error".red(), e);
                     exit(1);
