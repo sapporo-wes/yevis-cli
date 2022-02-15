@@ -14,7 +14,7 @@
 /target
 
 .env
-yevis_config.yml
-yevis_config.json
+yevis-config.yml
+yevis-config.json
 sapporo_run
 test-logs

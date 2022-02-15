@@ -36,12 +36,12 @@ pub fn test(
 
     for config in configs {
         info!(
-            "Testing workflow_id: {}, version: {}",
+            "Test workflow_id: {}, version: {}",
             config.id, config.version
         );
         let mut test_results = vec![];
         for test_case in &config.workflow.testing {
-            info!("Testing test_id: {}", test_case.id);
+            info!("Testing test case: {}", test_case.id);
 
             let form = gh_trs::wes::test_case_to_form(&config.workflow, test_case)?;
             debug!("Form:\n{:#?}", &form);
@@ -62,12 +62,12 @@ pub fn test(
             }
             match status {
                 gh_trs::wes::RunStatus::Complete => {
-                    info!("Complete test_id: {}", test_case.id);
+                    info!("Complete test case: {}", test_case.id);
                     debug!("Run log:\n{}", run_log);
                 }
                 gh_trs::wes::RunStatus::Failed => {
                     info!(
-                        "Failed test_id: {} with run_log:\n{}",
+                        "Failed test case: {} with run_log:\n{}",
                         test_case.id, run_log
                     );
                 }
@@ -82,7 +82,7 @@ pub fn test(
         }
         match check_test_results(test_results) {
             Ok(()) => info!(
-                "Passed all tests in workflow_id: {}, version: {}",
+                "Passed all test cases in workflow_id: {}, version: {}",
                 config.id, config.version
             ),
             Err(e) => bail!(e),

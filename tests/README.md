@@ -19,3 +19,57 @@ $ cargo run -- make-template https://github.com/ddbj/yevis-cli/blob/main/tests/N
 $ cargo run -- make-template https://github.com/ddbj/yevis-cli/blob/main/tests/SMK/wf/Snakefile \
     --output ./tests/test_config_SMK.yml
 ```
+
+## validate
+
+```bash
+# All
+$ cargo run -- validate ./tests/test_config_*
+
+# CWL
+$ cargo run -- validate ./tests/test_config_CWL.yml
+
+# WDL
+$ cargo run -- validate ./tests/test_config_WDL.yml
+
+# NFL
+$ cargo run -- validate ./tests/test_config_NFL.yml
+
+# SMK
+$ cargo run -- validate ./tests/test_config_SMK.yml
+```
+
+## test
+
+```bash
+# All
+$ cargo run -- test ./tests/test_config_*
+
+# CWL
+$ cargo run -- test ./tests/test_config_CWL.yml
+
+# WDL
+$ cargo run -- test ./tests/test_config_WDL.yml
+
+# NFL
+$ cargo run -- test ./tests/test_config_NFL.yml
+
+# SMK
+$ cargo run -- test ./tests/test_config_SMK.yml
+```
+
+## pull-request
+
+```bash
+# CWL
+$ cargo run -- pull-request ./tests/test_config_CWL.yml
+
+# WDL
+$ cargo run -- publish --repo ddbj/yevis-cli --with-test ./tests/test_config_WDL.yml
+
+# NFL
+$ cargo run -- publish --repo ddbj/yevis-cli --with-test ./tests/test_config_NFL.yml
+
+# SMK
+$ cargo run -- publish --repo ddbj/yevis-cli --with-test ./tests/test_config_SMK.yml
+```

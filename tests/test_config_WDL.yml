@@ -1,28 +1,23 @@
 ---
-id: 245be3be-cc62-4073-84ac-de3a7b683920
+id: fb506579-8b71-4cfe-8642-7b3f3798bbdc
 version: 1.0.0
 license: CC0-1.0
 authors:
+  - github_account: ddbj
+    name: ddbj-workflows
+    affiliation: DNA Data Bank of Japan
   - github_account: suecharo
     name: Example Name
     affiliation: "Example Affiliation"
     orcid: "0000-0003-2765-0049"
-  - github_account: ddbj
-    name: ddbj-workflow
-    affiliation: DNA Data Bank of Japan
-    orcid: DO NOT ENTER
 workflow:
   name: WDL_dockstore-tool-bamstats
-  repo:
-    owner: ddbj
-    name: yevis-cli
-    commit: 645a193826bdb3f0731421d4ff1468d0736b4a06
-  readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/README.md"
+  readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/README.md"
   language:
     type: WDL
     version: "1.0"
   files:
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/WDL/wf/dockstore-tool-bamstats.wdl"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/WDL/wf/dockstore-tool-bamstats.wdl"
       target: dockstore-tool-bamstats.wdl
       type: primary
   testing:

@@ -1,61 +1,56 @@
 ---
-id: 4d167669-018c-40fb-a5be-04473103f850
+id: 69f7a657-33ed-4566-9326-d82ea0a5fd39
 version: 1.0.0
 license: CC0-1.0
 authors:
+  - github_account: ddbj
+    name: ddbj-workflows
+    affiliation: DNA Data Bank of Japan
   - github_account: suecharo
     name: Example Name
     affiliation: "Example Affiliation"
     orcid: "0000-0003-2765-0049"
-  - github_account: ddbj
-    name: ddbj-workflow
-    affiliation: DNA Data Bank of Japan
-    orcid: DO NOT ENTER
 workflow:
   name: SMK_tutorial
-  repo:
-    owner: ddbj
-    name: yevis-cli
-    commit: 645a193826bdb3f0731421d4ff1468d0736b4a06
-  readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/README.md"
+  readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/README.md"
   language:
     type: SMK
     version: "1.0"
   files:
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/Snakefile"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/Snakefile"
       target: Snakefile
       type: primary
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/data/genome.fa"
       target: data/genome.fa
       type: secondary
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.amb"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/data/genome.fa.amb"
       target: data/genome.fa.amb
       type: secondary
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.ann"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/data/genome.fa.ann"
       target: data/genome.fa.ann
       type: secondary
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.bwt"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/data/genome.fa.bwt"
       target: data/genome.fa.bwt
       type: secondary
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.fai"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/data/genome.fa.fai"
       target: data/genome.fa.fai
       type: secondary
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.pac"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/data/genome.fa.pac"
       target: data/genome.fa.pac
       type: secondary
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/genome.fa.sa"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/data/genome.fa.sa"
       target: data/genome.fa.sa
       type: secondary
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/samples/A.fastq"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/data/samples/A.fastq"
       target: data/samples/A.fastq
       type: secondary
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/data/samples/B.fastq"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/data/samples/B.fastq"
       target: data/samples/B.fastq
       type: secondary
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/envs/calling.yaml"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/envs/calling.yaml"
       target: envs/calling.yaml
       type: secondary
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/645a193826bdb3f0731421d4ff1468d0736b4a06/tests/SMK/wf/envs/mapping.yaml"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/SMK/wf/envs/mapping.yaml"
       target: envs/mapping.yaml
       type: secondary
   testing:

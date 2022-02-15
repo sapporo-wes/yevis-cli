@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 use base64;
 use gh_trs;
 use log::info;
@@ -71,7 +71,7 @@ fn fork_repository(
             info!(
                 "Forking {}/{} to {}",
                 ori_repo_owner.as_ref(),
-                ori_repo_owner.as_ref(),
+                ori_repo_name.as_ref(),
                 user.as_ref()
             );
             create_fork(&gh_token, &ori_repo_owner, &ori_repo_name)?;
@@ -95,6 +95,13 @@ fn fork_repository(
                 }
                 retry += 1;
             }
+            ensure!(
+                retry < 10,
+                "Failed to fork repository {}/{} to {}",
+                ori_repo_owner.as_ref(),
+                ori_repo_name.as_ref(),
+                user.as_ref()
+            );
         }
     };
     Ok(())
@@ -118,12 +125,16 @@ fn parse_fork_response(res: Value) -> Result<Fork> {
         .as_bool()
         .ok_or(anyhow!(err_msg))?;
     let fork_parent = res
-        .get("fork_parent")
+        .get("parent")
         .ok_or(anyhow!(err_msg))?
         .as_object()
         .ok_or(anyhow!(err_msg))?;
     let fork_parent_owner = fork_parent
         .get("owner")
+        .ok_or(anyhow!(err_msg))?
+        .as_object()
+        .ok_or(anyhow!(err_msg))?
+        .get("login")
         .ok_or(anyhow!(err_msg))?
         .as_str()
         .ok_or(anyhow!(err_msg))?;
@@ -251,7 +262,7 @@ pub fn create_or_update_file(
         }
         Err(e) => {
             // If the file does not exist, create it
-            if e.to_string().contains("404") {
+            if e.to_string().contains("Not Found") {
                 json!({
                     "message": message.as_ref(),
                     "content": encoded_content,
@@ -269,8 +280,38 @@ pub fn create_or_update_file(
         name.as_ref(),
         path.as_ref().display(),
     ))?;
-    gh_trs::github_api::post_request(&gh_token, &url, &body)?;
+    put_request(&gh_token, &url, &body)?;
     Ok(())
+}
+
+fn put_request(gh_token: impl AsRef<str>, url: &Url, body: &Value) -> Result<Value> {
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .put(url.as_str())
+        .header(reqwest::header::USER_AGENT, "gh-trs")
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("token {}", gh_token.as_ref()),
+        )
+        .json(body)
+        .send()?;
+    let status = response.status();
+    let res_body = response.json::<Value>()?;
+    ensure!(
+        status != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
+        status.is_success(),
+        "Failed to patch request to {}. Response: {}",
+        url,
+        match res_body.get("message") {
+            Some(message) => message.as_str().unwrap_or_else(|| status.as_str()),
+            None => status.as_str(),
+        }
+    );
+    Ok(res_body)
 }
 
 struct Blob {
