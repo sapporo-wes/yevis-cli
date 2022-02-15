@@ -1,6 +1,7 @@
 mod args;
 mod env;
 mod make_template;
+mod publish;
 mod pull_request;
 mod test;
 mod validate;
@@ -19,6 +20,7 @@ fn main() -> Result<()> {
         args::Args::Validate { verbose, .. } => verbose,
         args::Args::Test { verbose, .. } => verbose,
         args::Args::PullRequest { verbose, .. } => verbose,
+        args::Args::Publish { verbose, .. } => verbose,
     };
     gh_trs::logger::init_logger(verbose);
 
@@ -128,6 +130,80 @@ fn main() -> Result<()> {
                 Ok(()) => info!("{} pull-request", "Success".green()),
                 Err(e) => {
                     error!("{} to pull-request with error: {}", "Failed".red(), e);
+                    exit(1);
+                }
+            };
+        }
+        args::Args::Publish {
+            config_locations,
+            github_token,
+            repository,
+            branch,
+            with_test,
+            wes_location,
+            docker_host,
+            from_trs,
+            ..
+        } => {
+            if !gh_trs::env::in_ci() {
+                info!("Yevis publish is only available in the CI environment (GitHub Actions). Aborting.");
+                exit(1);
+            }
+
+            let config_locations = if from_trs {
+                info!("Run yevis publish in from_trs mode");
+                info!("TRS endpoint: {}", config_locations[0]);
+                match gh_trs::config::io::find_config_loc_recursively_from_trs(&config_locations[0])
+                {
+                    Ok(config_locations) => config_locations,
+                    Err(e) => {
+                        error!(
+                            "{} to find config locations from TRS endpoint with error: {}",
+                            "Failed".red(),
+                            e
+                        );
+                        exit(1);
+                    }
+                }
+            } else {
+                config_locations
+            };
+
+            info!("{} validate", "Running".green());
+            let configs = match validate::validate(config_locations, &github_token, &repository) {
+                Ok(configs) => {
+                    info!("{} validate", "Success".green());
+                    configs
+                }
+                Err(e) => {
+                    error!("{} to validate with error: {}", "Failed".red(), e);
+                    exit(1);
+                }
+            };
+
+            let verified = if with_test {
+                info!("{} test", "Running".green());
+                match test::test(&configs, &wes_location, &docker_host) {
+                    Ok(()) => info!("{} test", "Success".green()),
+                    Err(e) => {
+                        match gh_trs::wes::stop_wes(&docker_host) {
+                            Ok(_) => {}
+                            Err(e) => error!("{} to stop WES with error: {}", "Failed".red(), e),
+                        }
+                        error!("{} to test with error: {}", "Failed".red(), e);
+                        exit(1);
+                    }
+                }
+                true
+            } else {
+                false
+            };
+
+            info!("{} publish", "Running".green());
+            match publish::publish(&configs, &github_token, &repository, &branch, verified) {
+                Ok(()) => info!("{} publish", "Success".green()),
+                Err(e) => {
+                    error!("{} to publish with error: {}", "Failed".red(), e);
                     exit(1);
                 }
             };

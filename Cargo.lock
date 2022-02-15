@@ -391,9 +391,9 @@ dependencies = [
 
 [[package]]
 name = "gh-trs"
-version = "1.1.2"
+version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d26f723014fe56b1ad5ff6cc5057a470411ebf7d93abf710eb9189a614af61a3"
+checksum = "907111fa5fc78620d1b5cf1efa8521021cd733d8277a95a76a86a92394cc6398"
 dependencies = [
  "anyhow",
  "base64",

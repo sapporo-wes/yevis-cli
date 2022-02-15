@@ -357,7 +357,7 @@ fn commit_config(
     ));
     let config_content = serde_yaml::to_string(&config)?;
     let commit_message = format!(
-        "Add workflow, id: {} version: {}",
+        "Add a workflow, id: {} version: {}",
         &config.id, &config.version
     );
     create_or_update_file(

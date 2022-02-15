@@ -54,7 +54,7 @@ pub enum Args {
         verbose: bool,
     },
 
-    /// Test workflows based on the yevis configuration file.
+    /// Test the workflow based on the yevis configuration file.
     Test {
         /// Location of the yevis configuration files (local file path or remote URL).
         #[structopt(default_value = "yevis-config.yml")]
@@ -104,6 +104,48 @@ pub enum Args {
         /// Location of the docker host.
         #[structopt(short, long, default_value = "unix:///var/run/docker.sock")]
         docker_host: Url,
+
+        /// Verbose mode.
+        #[structopt(short, long)]
+        verbose: bool,
+    },
+
+    /// Publish the TRS response to GitHub. (Basically used in a CI environment (GITHUB_ACTIONS=1))
+    Publish {
+        /// Location of the yevis configuration files (local file path or remote URL).
+        #[structopt(default_value = "yevis-config.yml")]
+        config_locations: Vec<String>,
+
+        /// GitHub Personal Access Token.
+        #[structopt(long = "gh-token")]
+        github_token: Option<String>,
+
+        /// GitHub repository to publish the TRS response to. (format: <owner>/<repo>)
+        #[structopt(short, long, default_value = env::default_pr_repo())]
+        repository: String,
+
+        /// GitHub branch to publish the TRS response to.
+        #[structopt(short, long, default_value = "gh-pages")]
+        branch: String,
+
+        /// Test before publishing.
+        #[structopt(long)]
+        with_test: bool,
+
+        /// Location of WES in which to run the test.
+        /// If not specified, `sapporo-service` will be started.
+        #[structopt(short, long)]
+        wes_location: Option<Url>,
+
+        /// Location of the docker host.
+        #[structopt(short, long, default_value = "unix:///var/run/docker.sock")]
+        docker_host: Url,
+
+        /// Recursively get the yevis configuration files from the TRS endpoint and publish them.
+        /// This option is used to test and publish all workflows in a CI environment.
+        /// If you use this option, specify the TRS endpoint for `config_locations`.
+        #[structopt(long)]
+        from_trs: bool,
 
         /// Verbose mode.
         #[structopt(short, long)]
