@@ -25,8 +25,8 @@ pub enum Args {
         #[structopt(short, long, parse(from_os_str), default_value = "yevis-config.yml")]
         output: PathBuf,
 
-        /// Make a template from update.
-        /// When using this option, specify the TRS URL (e.g., https://<trs-endpoint>/tools/<wf_id>) as the workflow location.
+        /// Make a template from an existing workflow.
+        /// When using this option, specify the TRS ToolVersion URL (e.g., https://<trs-endpoint>/tools/<wf_id>) as the `workflow_location`.
         #[structopt(short, long)]
         update: bool,
 
@@ -45,7 +45,7 @@ pub enum Args {
         #[structopt(long = "gh-token")]
         github_token: Option<String>,
 
-        /// GitHub repository to send pull requests to. (format: <owner>/<repo>)
+        /// GitHub repository to send the pull requests to. (format: <owner>/<repo>)
         #[structopt(short, long, default_value = env::default_pr_repo())]
         repository: String,
 
@@ -64,7 +64,7 @@ pub enum Args {
         #[structopt(long = "gh-token")]
         github_token: Option<String>,
 
-        /// GitHub repository to send pull requests to. (format: <owner>/<repo>)
+        /// GitHub repository to send the pull requests to. (format: <owner>/<repo>)
         #[structopt(short, long, default_value = env::default_pr_repo())]
         repository: String,
 
@@ -76,6 +76,12 @@ pub enum Args {
         /// Location of the docker host.
         #[structopt(short, long, default_value = "unix:///var/run/docker.sock")]
         docker_host: Url,
+
+        /// Get the modified files from the GitHub PR files.
+        /// This option is used in the pull request event in a CI environment.
+        /// When using this option, specify the GitHub PR URL (e.g., ${{ github.event.pull_request._links.html.href }}) as the `config_locations`.
+        #[structopt(long)]
+        from_pr: bool,
 
         /// Verbose mode.
         #[structopt(short, long)]
@@ -92,7 +98,7 @@ pub enum Args {
         #[structopt(long = "gh-token")]
         github_token: Option<String>,
 
-        /// GitHub repository to send pull requests to. (format: <owner>/<repo>)
+        /// GitHub repository to send the pull requests to. (format: <owner>/<repo>)
         #[structopt(short, long, default_value = env::default_pr_repo())]
         repository: String,
 
@@ -110,7 +116,7 @@ pub enum Args {
         verbose: bool,
     },
 
-    /// Publish the TRS response to GitHub. (Basically used in a CI environment (GITHUB_ACTIONS=1))
+    /// Publish the TRS response to GitHub. (Basically used in a CI environment (`CI=true`))
     Publish {
         /// Location of the yevis configuration files (local file path or remote URL).
         #[structopt(default_value = "yevis-config.yml")]
@@ -142,10 +148,16 @@ pub enum Args {
         docker_host: Url,
 
         /// Recursively get the yevis configuration files from the TRS endpoint and publish them.
-        /// This option is used to test and publish all workflows in a CI environment.
-        /// If you use this option, specify the TRS endpoint for `config_locations`.
+        /// This option is used in a CI environment.
+        /// When using this option, specify the TRS endpoint (e.g., https://ddbj.github.io/) as the `config_locations`.
         #[structopt(long)]
         from_trs: bool,
+
+        /// Get the modified files from the GitHub PR files.
+        /// This option is used in the pull request event in a CI environment.
+        /// When using this option, specify the GitHub PR URL (e.g., ${{ github.event.pull_request._links.html.href }}) as the `config_locations`.
+        #[structopt(long)]
+        from_pr: bool,
 
         /// Verbose mode.
         #[structopt(short, long)]

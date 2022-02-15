@@ -1,6 +1,7 @@
 mod args;
 mod env;
 mod make_template;
+mod pr;
 mod publish;
 mod pull_request;
 mod test;
@@ -65,8 +66,27 @@ fn main() -> Result<()> {
             repository,
             wes_location,
             docker_host,
+            from_pr,
             ..
         } => {
+            let config_locations = if from_pr {
+                info!("Run yevis test in from_pr mode");
+                info!("GitHub PR URL: {}", config_locations[0]);
+                match pr::list_modified_files(&github_token, &config_locations[0]) {
+                    Ok(files) => files,
+                    Err(e) => {
+                        error!(
+                            "{} to get modified files from GitHub PR URL with error: {}",
+                            "Failed".red(),
+                            e
+                        );
+                        exit(1);
+                    }
+                }
+            } else {
+                config_locations
+            };
+
             info!("{} validate", "Running".green());
             let configs = match validate::validate(config_locations, &github_token, &repository) {
                 Ok(configs) => {
@@ -143,12 +163,31 @@ fn main() -> Result<()> {
             wes_location,
             docker_host,
             from_trs,
+            from_pr,
             ..
         } => {
             if !gh_trs::env::in_ci() {
                 info!("Yevis publish is only available in the CI environment (GitHub Actions). Aborting.");
                 exit(1);
             }
+
+            let config_locations = if from_pr {
+                info!("Run yevis test in from_pr mode");
+                info!("GitHub PR URL: {}", config_locations[0]);
+                match pr::list_modified_files(&github_token, &config_locations[0]) {
+                    Ok(files) => files,
+                    Err(e) => {
+                        error!(
+                            "{} to get modified files from GitHub PR URL with error: {}",
+                            "Failed".red(),
+                            e
+                        );
+                        exit(1);
+                    }
+                }
+            } else {
+                config_locations
+            };
 
             let config_locations = if from_trs {
                 info!("Run yevis publish in from_trs mode");
