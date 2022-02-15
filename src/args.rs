@@ -26,7 +26,7 @@ pub enum Args {
         output: PathBuf,
 
         /// Make a template from an existing workflow.
-        /// When using this option, specify the TRS ToolVersion URL (e.g., https://<trs-endpoint>/tools/<wf_id>) as the `workflow_location`.
+        /// When using this option, specify the TRS ToolVersion URL (e.g., https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>) as the `workflow_location`.
         #[structopt(short, long)]
         update: bool,
 
@@ -149,7 +149,7 @@ pub enum Args {
 
         /// Recursively get the yevis configuration files from the TRS endpoint and publish them.
         /// This option is used in a CI environment.
-        /// When using this option, specify the TRS endpoint (e.g., https://ddbj.github.io/) as the `config_locations`.
+        /// When using this option, specify the TRS endpoint (e.g., https://ddbj.github.io/yevis-workflows/) as the `config_locations`.
         #[structopt(long)]
         from_trs: bool,
 

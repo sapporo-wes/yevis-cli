@@ -6,6 +6,7 @@ mod publish;
 mod pull_request;
 mod test;
 mod validate;
+mod version;
 
 use anyhow::Result;
 use colored::Colorize;

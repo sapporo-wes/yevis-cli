@@ -1,8 +1,10 @@
-use anyhow::{bail, ensure, Result};
+use crate::version;
+use anyhow::{bail, ensure, Context, Result};
 use gh_trs;
 use log::{debug, info};
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
 
 pub fn validate(
     config_locs: Vec<impl AsRef<str>>,
@@ -30,8 +32,38 @@ pub fn validate(
     Ok(configs)
 }
 
-fn validate_version(_config: &gh_trs::config::types::Config, _repo: impl AsRef<str>) -> Result<()> {
-    // TODO
+fn validate_version(config: &gh_trs::config::types::Config, repo: impl AsRef<str>) -> Result<()> {
+    let version =
+        version::Version::from_str(&config.version).context("Invalid version, must be x.y.z")?;
+
+    let (owner, name) = gh_trs::github_api::parse_repo(&repo)?;
+    let trs_endpoint = gh_trs::trs::api::TrsEndpoint::new_gh_pages(&owner, &name)?;
+    match trs_endpoint.is_valid() {
+        Ok(_) => {
+            match trs_endpoint.all_versions(&config.id.to_string()) {
+                Ok(versions) => {
+                    let versions = versions
+                        .iter()
+                        .map(|v| version::Version::from_str(v))
+                        .collect::<Result<Vec<version::Version>>>();
+                    if versions.is_err() {
+                        // versions is an error, so nothing to do
+                    } else {
+                        let versions = versions.unwrap();
+                        let latest_version = versions.into_iter().max().unwrap();
+                        ensure!(
+                            version > latest_version,
+                            "Version {} is less than the latest version {}",
+                            version.to_string(),
+                            latest_version.to_string()
+                        );
+                    }
+                }
+                Err(_) => {} // Assume that it has not been published yet.
+            }
+        }
+        Err(_) => {} // Assume that it has not been published yet.
+    };
     Ok(())
 }
 
