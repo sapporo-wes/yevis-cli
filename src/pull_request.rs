@@ -1,125 +1,90 @@
-use crate::{
-    github_api::{
-        create_or_update_file, create_ref, get_ref_sha, get_repos, get_user, has_forked_repo,
-        post_fork, post_pulls, read_github_token, synk_fork_from_upstream,
-    },
-    type_config::Config,
-};
-use anyhow::{ensure, Result};
+use anyhow::{anyhow, bail, Result};
+use base64;
+use gh_trs;
 use log::info;
-use regex::Regex;
+use serde_json::{json, Value};
 use serde_yaml;
+use std::path::{Path, PathBuf};
 use std::thread;
 use std::time;
+use url::Url;
 
 pub fn pull_request(
-    config: &Config,
-    arg_github_token: &Option<impl AsRef<str>>,
+    configs: &Vec<gh_trs::config::types::Config>,
+    gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
 ) -> Result<()> {
-    let github_token = read_github_token(&arg_github_token)?;
-    ensure!(
-        !github_token.is_empty(),
-        "GitHub token is empty. Please set it with --github-token option or set GITHUB_TOKEN environment variable."
-    );
+    let gh_token = gh_trs::env::github_token(gh_token)?;
 
-    let user_name = get_user(&github_token)?.login;
-    let (repo_owner, repo_name) = parse_repo(&repo)?;
-    let default_branch = get_repos(&github_token, &repo_owner, &repo_name)?.default_branch;
-    let original_repo_ref_sha =
-        get_ref_sha(&github_token, &repo_owner, &repo_name, &default_branch)?;
-    let new_branch = config.id.to_string();
+    let (user, _, _) = gh_trs::github_api::get_author_info(&gh_token)?;
+    let (repo_owner, repo_name) = gh_trs::github_api::parse_repo(&repo)?;
+    let default_branch =
+        gh_trs::github_api::get_default_branch(&gh_token, &repo_owner, &repo_name, None)?;
 
-    fork_repository(
-        &github_token,
-        &user_name,
-        &repo_owner,
-        &repo_name,
-        &default_branch,
-        &original_repo_ref_sha,
-    )?;
-    create_branch(
-        &github_token,
-        &user_name,
-        &repo_name,
-        &new_branch,
-        &original_repo_ref_sha,
-    )?;
-    commit_config(&github_token, &user_name, &repo_name, &new_branch, &config)?;
-    create_pull_request(
-        &github_token,
-        &repo_owner,
-        &repo_name,
-        &default_branch,
-        &user_name,
-        &config,
-    )?;
-
+    fork_repository(&gh_token, &user, &repo_owner, &repo_name, &default_branch)?;
+    let default_branch_sha =
+        gh_trs::github_api::get_branch_sha(&gh_token, &repo_owner, &repo_name, &default_branch)?;
+    for config in configs {
+        info!(
+            "Creating a pull request based on workflow_id: {}, version: {}",
+            config.id, config.version
+        );
+        create_branch(
+            &gh_token,
+            &user,
+            &repo_name,
+            &config.id.to_string(),
+            &default_branch_sha,
+        )?;
+        commit_config(&gh_token, &user, &repo_name, &config)?;
+        create_pull_request(
+            &gh_token,
+            &user,
+            &repo_owner,
+            &repo_name,
+            &default_branch,
+            &config,
+        )?;
+    }
     Ok(())
 }
 
-pub fn parse_repo(repo: impl AsRef<str>) -> Result<(String, String)> {
-    let re = Regex::new(r"^[\w-]+/[\w-]+$")?;
-    ensure!(
-        re.is_match(repo.as_ref()),
-        "Invalid repository name: {}. It should be in the format of `owner/repo` like `ddbj/yevis-workflows`.",
-        repo.as_ref()
-    );
-    let parts = repo.as_ref().split("/").collect::<Vec<_>>();
-    ensure!(
-        parts.len() == 2,
-        "Invalid repository name: {}. It should be in the format of `owner/repo` like `ddbj/yevis-workflows`.",
-        repo.as_ref()
-    );
-    Ok((parts[0].to_string(), parts[1].to_string()))
-}
-
 fn fork_repository(
-    github_token: impl AsRef<str>,
-    user_name: impl AsRef<str>,
-    repo_owner: impl AsRef<str>,
-    repo_name: impl AsRef<str>,
-    default_branch: impl AsRef<str>,
-    original_repo_ref_sha: impl AsRef<str>,
+    gh_token: impl AsRef<str>,
+    user: impl AsRef<str>,
+    ori_repo_owner: impl AsRef<str>,
+    ori_repo_name: impl AsRef<str>,
+    ori_default_branch: impl AsRef<str>,
 ) -> Result<()> {
-    match has_forked_repo(&github_token, &user_name, &repo_owner, &repo_name)? {
+    match has_forked_repo(&gh_token, &user, &ori_repo_owner, &ori_repo_name) {
         true => {
             info!(
                 "Repository {}/{} has already been forked to {}",
-                repo_owner.as_ref(),
-                repo_name.as_ref(),
-                user_name.as_ref()
+                ori_repo_owner.as_ref(),
+                ori_repo_name.as_ref(),
+                user.as_ref()
             );
-            let fork_repo_ref_sha =
-                get_ref_sha(&github_token, &user_name, &repo_name, &default_branch)?;
-            if original_repo_ref_sha.as_ref() != fork_repo_ref_sha {
-                info!(
-                    "Repository {}/{} branch {} has been updated. Pulling changes.",
-                    repo_owner.as_ref(),
-                    repo_name.as_ref(),
-                    default_branch.as_ref()
-                );
-                synk_fork_from_upstream(&github_token, &user_name, &repo_name, &default_branch)?;
-            }
+            info!("Sync the forked repository with the original repository");
+            synk_fork_from_upstream(&gh_token, &user, &ori_repo_name, &ori_default_branch)?;
         }
         false => {
             info!(
                 "Forking {}/{} to {}",
-                repo_owner.as_ref(),
-                repo_owner.as_ref(),
-                user_name.as_ref()
+                ori_repo_owner.as_ref(),
+                ori_repo_owner.as_ref(),
+                user.as_ref()
             );
-            post_fork(&github_token, &repo_owner, &repo_name)?;
+            create_fork(&gh_token, &ori_repo_owner, &ori_repo_name)?;
             // waiting
             let mut retry = 0;
             while retry < 10 {
-                match has_forked_repo(&github_token, &user_name, &repo_owner, &repo_name)? {
+                match has_forked_repo(&gh_token, &user, &ori_repo_owner, &ori_repo_name) {
                     true => {
                         info!(
                             "Repository {}/{} has been forked to {}",
-                            repo_owner.as_ref(),
-                            repo_name.as_ref(),
-                            user_name.as_ref()
+                            ori_repo_owner.as_ref(),
+                            ori_repo_name.as_ref(),
+                            user.as_ref()
                         );
                         break;
                     }
@@ -135,100 +100,290 @@ fn fork_repository(
     Ok(())
 }
 
-fn create_branch(
-    github_token: impl AsRef<str>,
-    repo_owner: impl AsRef<str>,
-    repo_name: impl AsRef<str>,
+struct Fork {
+    pub fork: bool,
+    pub fork_parent: ForkParent,
+}
+
+struct ForkParent {
+    pub owner: String,
+    pub name: String,
+}
+
+fn parse_fork_response(res: Value) -> Result<Fork> {
+    let err_msg = "Failed to parse the response when getting repo info";
+    let fork = res
+        .get("fork")
+        .ok_or(anyhow!(err_msg))?
+        .as_bool()
+        .ok_or(anyhow!(err_msg))?;
+    let fork_parent = res
+        .get("fork_parent")
+        .ok_or(anyhow!(err_msg))?
+        .as_object()
+        .ok_or(anyhow!(err_msg))?;
+    let fork_parent_owner = fork_parent
+        .get("owner")
+        .ok_or(anyhow!(err_msg))?
+        .as_str()
+        .ok_or(anyhow!(err_msg))?;
+    let fork_parent_name = fork_parent
+        .get("name")
+        .ok_or(anyhow!(err_msg))?
+        .as_str()
+        .ok_or(anyhow!(err_msg))?;
+    Ok(Fork {
+        fork,
+        fork_parent: ForkParent {
+            owner: fork_parent_owner.to_string(),
+            name: fork_parent_name.to_string(),
+        },
+    })
+}
+
+fn has_forked_repo(
+    gh_token: impl AsRef<str>,
+    user: impl AsRef<str>,
+    ori_repo_owner: impl AsRef<str>,
+    ori_repo_name: impl AsRef<str>,
+) -> bool {
+    let res = match gh_trs::github_api::get_repos(&gh_token, &user, &ori_repo_name) {
+        Ok(res) => res,
+        Err(_) => return false,
+    };
+    match parse_fork_response(res) {
+        Ok(fork) => match fork.fork {
+            true => {
+                if fork.fork_parent.owner.as_str() == ori_repo_owner.as_ref()
+                    && fork.fork_parent.name.as_str() == ori_repo_name.as_ref()
+                {
+                    true
+                } else {
+                    false
+                }
+            }
+            false => false,
+        },
+        Err(_) => false,
+    }
+}
+
+/// https://docs.github.com/en/rest/reference/branches#sync-a-fork-branch-with-the-upstream-repository
+fn synk_fork_from_upstream(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
     branch: impl AsRef<str>,
-    original_repo_ref_sha: impl AsRef<str>,
+) -> Result<()> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/merge-upstream",
+        owner.as_ref(),
+        name.as_ref(),
+    ))?;
+    let body = json!({
+        "branch": branch.as_ref(),
+    });
+    gh_trs::github_api::post_request(gh_token, &url, &body)?;
+    Ok(())
+}
+
+/// https://docs.github.com/en/rest/reference/repos#create-a-fork
+fn create_fork(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+) -> Result<()> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/forks",
+        owner.as_ref(),
+        name.as_ref(),
+    ))?;
+    let body = json!({});
+    gh_trs::github_api::post_request(gh_token, &url, &body)?;
+    Ok(())
+}
+
+fn create_branch(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    branch: impl AsRef<str>,
+    default_branch_sha: impl AsRef<str>,
 ) -> Result<()> {
     info!("Creating branch {}", branch.as_ref());
-    match create_ref(
-        &github_token,
-        &repo_owner,
-        &repo_name,
-        &branch,
-        &original_repo_ref_sha,
+    match gh_trs::github_api::create_ref(
+        &gh_token,
+        &owner,
+        &name,
+        format!("refs/heads/{}", branch.as_ref()),
+        &default_branch_sha,
     ) {
-        Ok(_) => info!("Created branch {}", branch.as_ref()),
-        Err(_) => {
-            info!("Branch {} already exists", &branch.as_ref());
-        }
+        Ok(_) => info!("Branch {} has been created", branch.as_ref()),
+        Err(_) => info!("Branch {} already exists", branch.as_ref()),
     };
     Ok(())
 }
 
-fn commit_config(
-    github_token: impl AsRef<str>,
-    repo_owner: impl AsRef<str>,
-    repo_name: impl AsRef<str>,
+/// https://docs.github.com/en/rest/reference/repos#create-or-update-file-contents
+pub fn create_or_update_file(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    path: impl AsRef<Path>,
+    message: impl AsRef<str>,
+    content: impl AsRef<str>,
     branch: impl AsRef<str>,
-    config: &Config,
 ) -> Result<()> {
-    let config_file_path = format!(
-        "{}/yevis_config_{}.yml",
-        &config.id.to_string(),
-        &config.version
-    );
+    let encoded_content = base64::encode(content.as_ref());
+    let body = match get_contents_blob_sha(&gh_token, &owner, &name, &path, &branch) {
+        Ok(blob) => {
+            // If the file already exists, update it
+            if blob.content == encoded_content {
+                // If the file already exists and the content is the same, do nothing
+                return Ok(());
+            }
+            json!({
+                "message": message.as_ref(),
+                "content": encoded_content,
+                "sha": blob.sha,
+                "branch": branch.as_ref()
+            })
+        }
+        Err(e) => {
+            // If the file does not exist, create it
+            if e.to_string().contains("404") {
+                json!({
+                    "message": message.as_ref(),
+                    "content": encoded_content,
+                    "branch": branch.as_ref()
+                })
+            } else {
+                bail!(e)
+            }
+        }
+    };
+
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/contents/{}",
+        owner.as_ref(),
+        name.as_ref(),
+        path.as_ref().display(),
+    ))?;
+    gh_trs::github_api::post_request(&gh_token, &url, &body)?;
+    Ok(())
+}
+
+struct Blob {
+    pub content: String,
+    pub sha: String,
+}
+
+/// https://docs.github.com/en/rest/reference/repos#get-repository-content
+fn get_contents_blob_sha(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    path: impl AsRef<Path>,
+    branch: impl AsRef<str>,
+) -> Result<Blob> {
+    let res = gh_trs::github_api::get_contents(&gh_token, &owner, &name, &path, &branch)?;
+    let err_msg = "Failed to parse the response when getting contents";
+    let content = res
+        .get("content")
+        .ok_or(anyhow!(err_msg))?
+        .as_str()
+        .ok_or(anyhow!(err_msg))?;
+    let sha = res
+        .get("sha")
+        .ok_or(anyhow!(err_msg))?
+        .as_str()
+        .ok_or(anyhow!(err_msg))?;
+    Ok(Blob {
+        content: content.to_string(),
+        sha: sha.to_string(),
+    })
+}
+
+fn commit_config(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    config: &gh_trs::config::types::Config,
+) -> Result<()> {
+    let config_path = PathBuf::from(format!(
+        "{}/yevis-config-{}.yml",
+        &config.id, &config.version
+    ));
     let config_content = serde_yaml::to_string(&config)?;
     let commit_message = format!(
         "Add workflow, id: {} version: {}",
         &config.id, &config.version
     );
-    info!("Committing config file {}", &config_file_path);
     create_or_update_file(
-        &github_token,
-        &repo_owner,
-        &repo_name,
-        &config_file_path,
+        &gh_token,
+        &owner,
+        &name,
+        &config_path,
         &commit_message,
         &config_content,
-        &branch,
+        &config.id.to_string(),
     )?;
     Ok(())
 }
 
 fn create_pull_request(
-    github_token: impl AsRef<str>,
-    to_repo_owner: impl AsRef<str>,
-    to_repo_name: impl AsRef<str>,
+    gh_token: impl AsRef<str>,
+    user: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
     branch: impl AsRef<str>,
-    user_name: impl AsRef<str>,
-    config: &Config,
+    config: &gh_trs::config::types::Config,
 ) -> Result<()> {
     let title = format!(
         "Add workflow, id: {} version: {}",
         &config.id, &config.version
     );
-    let head = format!("{}:{}", user_name.as_ref(), &config.id);
+    let head = format!("{}:{}", user.as_ref(), &config.id);
     info!(
         "Creating pull request to {}/{}",
-        to_repo_owner.as_ref(),
-        to_repo_name.as_ref()
+        owner.as_ref(),
+        name.as_ref()
     );
-    let pull_request_url = post_pulls(
-        &github_token,
-        &to_repo_owner,
-        &to_repo_name,
-        &title,
-        &head,
-        &branch,
-    )?;
+    let pull_request_url = post_pulls(&gh_token, &owner, &name, &title, &head, &branch)?;
     info!("Pull request URL: {}", &pull_request_url);
-
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_parse_repo() -> Result<()> {
-        assert_eq!(
-            parse_repo("ddbj/yevis-workflows")?,
-            ("ddbj".to_string(), "yevis-workflows".to_string())
-        );
-        Ok(())
-    }
+/// https://docs.github.com/en/rest/reference/pulls#create-a-pull-request
+/// head: the branch to merge from
+/// base: the branch to merge into
+///
+/// return -> pull_request_url
+pub fn post_pulls(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    title: impl AsRef<str>,
+    head: impl AsRef<str>,
+    base: impl AsRef<str>,
+) -> Result<String> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/pulls",
+        owner.as_ref(),
+        name.as_ref(),
+    ))?;
+    let body = json!({
+        "title": title.as_ref(),
+        "head": head.as_ref(),
+        "base": base.as_ref(),
+        "maintainer_can_modify": true
+    });
+    let res = gh_trs::github_api::post_request(gh_token, &url, &body)?;
+    let err_msg = "Failed to parse the response when positing pull request";
+    Ok(res
+        .get("url")
+        .ok_or(anyhow!(err_msg))?
+        .as_str()
+        .ok_or(anyhow!(err_msg))?
+        .to_string())
 }

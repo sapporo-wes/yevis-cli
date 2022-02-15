@@ -73,7 +73,6 @@ pub fn zenodo_upload(
     info!("Publishing deposition: {}", deposition_id);
     let doi = publish_deposition(&zenodo_host, &zenodo_token, &deposition_id)?;
     info!("DOI: {}", doi);
-
     Ok(())
 }
 
@@ -244,7 +243,6 @@ fn update_deposition(
             response.status()
         )
     );
-
     Ok(())
 }
 
@@ -378,7 +376,7 @@ fn find_exist_deposition(
         Ok(deposition_id) => return Ok(Some(deposition_id)),
         Err(err) => {
             if !err.to_string().contains("No deposition found.") {
-                bail!("{}", err);
+                bail!(err);
             }
         }
     };
@@ -397,7 +395,7 @@ fn find_exist_deposition(
         }
         Err(err) => {
             if !err.to_string().contains("No deposition found.") {
-                bail!("{}", err);
+                bail!(err);
             }
         }
     };
@@ -551,7 +549,6 @@ fn get_files_list(
             checksum: checksum.to_string(),
         });
     }
-
     Ok(files)
 }
 
@@ -585,7 +582,6 @@ fn file_url_to_upload_file(file_url: &Url) -> Result<UploadFile> {
     let mut md5 = Md5::new();
     md5.input_str(&content);
     let checksum = md5.result_str();
-
     Ok(UploadFile {
         url: file_url.clone(),
         file_path,
@@ -606,7 +602,6 @@ fn config_to_upload_files(config: &Config) -> Result<Vec<UploadFile>> {
             upload_files.push(file_url_to_upload_file(&file.url)?);
         }
     }
-
     Ok(upload_files)
 }
 
@@ -737,7 +732,6 @@ fn create_deposition_file(
             response.status()
         )
     );
-
     Ok(())
 }
 
@@ -772,7 +766,6 @@ fn delete_deposition_file(
             response.status()
         )
     );
-
     Ok(())
 }
 
