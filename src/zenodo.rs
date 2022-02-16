@@ -246,7 +246,7 @@ fn list_depositions(
         host.as_ref()
     ))?;
     url.query_pairs_mut()
-        .append_pair("q", &format!("DDBJ workflow: {}", wf_id.as_ref()))
+        .append_pair("q", wf_id.as_ref())
         .append_pair("status", &status.to_string());
     let res = get_request(&token, &url, &[])?;
     let err_msg = "Failed to parse the response when listing depositions";
@@ -759,7 +759,7 @@ mod tests {
             &host,
             &token,
             &config.id.to_string(),
-            DepositionStatus::Draft,
+            DepositionStatus::Published,
         )?;
         dbg!(&ids);
         Ok(())
