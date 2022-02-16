@@ -808,21 +808,6 @@ fn retrieve_deposition(
     ))
 }
 
-/// https://developers.zenodo.org/?shell#edit
-fn edit_deposition(
-    host: impl AsRef<str>,
-    token: impl AsRef<str>,
-    deposition_id: &u64,
-) -> Result<()> {
-    let url = Url::parse(&format!(
-        "https://{}/api/deposit/depositions/{}/actions/edit",
-        host.as_ref(),
-        deposition_id
-    ))?;
-    post_request(&token, &url, &json!({}))?;
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1030,25 +1015,6 @@ mod tests {
             let (zenodo, version) = retrieve_deposition(&host, &token, &id)?;
             dbg!(&zenodo);
             dbg!(&version);
-        }
-        Ok(())
-    }
-
-    #[test]
-    #[ignore]
-    fn test_edit_deposition() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
-        let ids = list_depositions(
-            &host,
-            &token,
-            &config.id.to_string(),
-            DepositionStatus::Published,
-        )?;
-        if ids.len() > 0 {
-            let id = ids[0];
-            edit_deposition(&host, &token, &id)?;
         }
         Ok(())
     }
