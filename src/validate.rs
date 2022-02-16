@@ -100,8 +100,8 @@ fn validate_authors(config: &gh_trs::config::types::Config) -> Result<()> {
 
         if author.github_account.as_str() == "ddbj" {
             ensure!(
-                author.name.as_ref().unwrap() == "ddbj-workflows",
-                "The ddbj author `name` is not `ddbj-workflows`",
+                author.name.as_ref().unwrap() == "ddbj-workflow",
+                "The ddbj author `name` is not `ddbj-workflow`",
             );
             ensure!(
                 author.affiliation.as_ref().unwrap() == "DNA Data Bank of Japan",

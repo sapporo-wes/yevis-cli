@@ -391,9 +391,9 @@ dependencies = [
 
 [[package]]
 name = "gh-trs"
-version = "1.1.6"
+version = "1.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1089d5f48ba5aa6c7f2c7213f586a3427dac7aefc6ef02d8288435637a7aeb1a"
+checksum = "e24b367545a3c1d6efa15d8d5f28633d7fe6f29c7fe91adc7bfe1a0b7021062c"
 dependencies = [
  "anyhow",
  "base64",
@@ -1575,6 +1575,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "structopt",
+ "tempfile",
  "url",
  "uuid",
 ]

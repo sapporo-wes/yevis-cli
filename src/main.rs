@@ -7,6 +7,7 @@ mod pull_request;
 mod test;
 mod validate;
 mod version;
+mod zenodo;
 
 use anyhow::Result;
 use colored::Colorize;
@@ -165,6 +166,7 @@ fn main() -> Result<()> {
             docker_host,
             from_trs,
             from_pr,
+            zenodo_upload,
             ..
         } => {
             if !gh_trs::env::in_ci() {
@@ -210,7 +212,8 @@ fn main() -> Result<()> {
             };
 
             info!("{} validate", "Running".green());
-            let configs = match validate::validate(config_locations, &github_token, &repository) {
+            let mut configs = match validate::validate(config_locations, &github_token, &repository)
+            {
                 Ok(configs) => {
                     info!("{} validate", "Success".green());
                     configs
@@ -220,6 +223,17 @@ fn main() -> Result<()> {
                     exit(1);
                 }
             };
+
+            if zenodo_upload {
+                info!("{} zenodo-upload", "Running".green());
+                match zenodo::zenodo_upload_and_commit(&mut configs, &github_token, &repository) {
+                    Ok(()) => info!("{} zenodo-upload", "Success".green()),
+                    Err(e) => {
+                        error!("{} to zenodo-upload with error: {}", "Failed".red(), e);
+                        exit(1);
+                    }
+                }
+            }
 
             let verified = if with_test {
                 info!("{} test", "Running".green());

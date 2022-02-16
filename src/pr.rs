@@ -47,14 +47,15 @@ pub fn list_modified_files(
     Ok(raw_urls)
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_list_modified_files() -> Result<()> {
-//         let pr_url = Url::parse("https://github.com/ddbj/yevis-workflows-dev/pull/15")?;
-//         list_modified_files(&None::<String>, &pr_url)?;
-//         Ok(())
-//     }
-// }
+    #[test]
+    #[ignore]
+    fn test_list_modified_files() -> Result<()> {
+        let pr_url = Url::parse("https://github.com/ddbj/yevis-workflows-dev/pull/15")?;
+        list_modified_files(&None::<String>, &pr_url)?;
+        Ok(())
+    }
+}

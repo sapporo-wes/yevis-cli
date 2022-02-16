@@ -65,6 +65,7 @@ pub fn make_template(
             version,
             license: Some("CC0-1.0".to_string()),
             authors,
+            zenodo: None,
             workflow: gh_trs::config::types::Workflow {
                 name: wf_name,
                 readme,
@@ -84,7 +85,7 @@ pub fn make_template(
 fn ddbj_author() -> gh_trs::config::types::Author {
     gh_trs::config::types::Author {
         github_account: "ddbj".to_string(),
-        name: Some("ddbj-workflows".to_string()),
+        name: Some("ddbj-workflow".to_string()),
         affiliation: Some("DNA Data Bank of Japan".to_string()),
         orcid: None,
     }

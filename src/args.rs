@@ -159,6 +159,10 @@ pub enum Args {
         #[structopt(long)]
         from_pr: bool,
 
+        /// Upload the dataset to Zenodo.
+        #[structopt(long)]
+        zenodo_upload: bool,
+
         /// Verbose mode.
         #[structopt(short, long)]
         verbose: bool,
