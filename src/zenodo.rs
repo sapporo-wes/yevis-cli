@@ -469,11 +469,11 @@ struct DepositionFile {
 }
 
 impl DepositionFile {
-    fn download_url(&self, host: impl AsRef<str>, id: impl AsRef<str>) -> Result<Url> {
+    fn download_url(&self, host: impl AsRef<str>, id: &u64) -> Result<Url> {
         Ok(Url::parse(&format!(
             "https://{}/record/{}/files/{}",
             host.as_ref(),
-            id.as_ref(),
+            id,
             self.filename
         ))?)
     }
@@ -727,19 +727,19 @@ fn update_config_files(
     config.workflow.readme = files_map
         .get(&PathBuf::from("README.md"))
         .ok_or(anyhow!(err_msg))?
-        .download_url(&host, &config.id.to_string())?;
+        .download_url(&host, &deposition_id)?;
     for file in &mut config.workflow.files {
         file.url = files_map
             .get(&PathBuf::from(file.target.as_ref().unwrap())) // already validated
             .ok_or(anyhow!(err_msg))?
-            .download_url(&host, &config.id.to_string())?;
+            .download_url(&host, &deposition_id)?;
     }
     for testing in &mut config.workflow.testing {
         for file in &mut testing.files {
             file.url = files_map
                 .get(&PathBuf::from(file.target.as_ref().unwrap())) // already validated
                 .ok_or(anyhow!(err_msg))?
-                .download_url(&host, &config.id.to_string())?;
+                .download_url(&host, &deposition_id)?;
         }
     }
     Ok(())
