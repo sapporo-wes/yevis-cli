@@ -87,8 +87,15 @@ fn upload_zenodo(
     } else {
         // new version deposition
         let prev_id = published_deposition_ids[0];
-        info!("Creating new version deposition from {}", prev_id);
-        let new_id = new_version_deposition(&host, &token, &prev_id)?;
+        let (zenodo, version) = retrieve_deposition(&host, &token, &prev_id)?;
+        let new_id = if version == config.version {
+            info!("Already exist deposition with same version. So skipping.");
+            config.zenodo = Some(zenodo);
+            return Ok(());
+        } else {
+            info!("Creating new version deposition from {}", prev_id);
+            new_version_deposition(&host, &token, &prev_id)?
+        };
         update_deposition(&host, &token, &new_id, &config)?;
         new_id
     };
@@ -508,7 +515,12 @@ impl ConfigFile {
         let mut buffer = BufWriter::new(file);
         let content = gh_trs::remote::fetch_raw_content(&file_url)?;
         io::copy(&mut content.as_bytes(), &mut buffer)?;
-        let filename = target.as_ref().to_string_lossy().to_string();
+        let filename = target
+            .as_ref()
+            .iter()
+            .map(|x| x.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join("_");
         let mut md5 = Md5::new();
         md5.input_str(&content);
         let checksum = md5.result_str();
@@ -745,6 +757,72 @@ fn update_config_files(
     Ok(())
 }
 
+/// https://developers.zenodo.org/?shell#retrieve
+fn retrieve_deposition(
+    host: impl AsRef<str>,
+    token: impl AsRef<str>,
+    deposition_id: &u64,
+) -> Result<(gh_trs::config::types::Zenodo, String)> {
+    let url = Url::parse(&format!(
+        "https://{}/api/deposit/depositions/{}",
+        host.as_ref(),
+        deposition_id
+    ))?;
+    let res = get_request(&token, &url, &[])?;
+    let err_msg = "Failed to parse the response when retrieving a deposition";
+    let res_obj = res.as_object().ok_or(anyhow!(err_msg))?;
+    let id = res_obj
+        .get("id")
+        .ok_or(anyhow!(err_msg))?
+        .as_u64()
+        .ok_or(anyhow!(err_msg))?;
+    let doi = res_obj
+        .get("doi")
+        .ok_or(anyhow!(err_msg))?
+        .as_str()
+        .ok_or(anyhow!(err_msg))?;
+    let concept_doi = res_obj
+        .get("conceptdoi")
+        .ok_or(anyhow!(err_msg))?
+        .as_str()
+        .ok_or(anyhow!(err_msg))?;
+    let url = Url::parse(&format!("https://{}/record/{}", host.as_ref(), &id))?;
+    let version = res_obj
+        .get("metadata")
+        .ok_or(anyhow!(err_msg))?
+        .as_object()
+        .ok_or(anyhow!(err_msg))?
+        .get("version")
+        .ok_or(anyhow!(err_msg))?
+        .as_str()
+        .ok_or(anyhow!(err_msg))?;
+
+    Ok((
+        gh_trs::config::types::Zenodo {
+            url,
+            id,
+            doi: doi.to_string(),
+            concept_doi: concept_doi.to_string(),
+        },
+        version.to_string(),
+    ))
+}
+
+/// https://developers.zenodo.org/?shell#edit
+fn edit_deposition(
+    host: impl AsRef<str>,
+    token: impl AsRef<str>,
+    deposition_id: &u64,
+) -> Result<()> {
+    let url = Url::parse(&format!(
+        "https://{}/api/deposit/depositions/{}/actions/edit",
+        host.as_ref(),
+        deposition_id
+    ))?;
+    post_request(&token, &url, &json!({}))?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -931,8 +1009,47 @@ mod tests {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
         let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
-        config.version = "1.0.2".to_string();
         upload_zenodo(&host, &token, &mut config)?;
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn test_retrieve_deposition() -> Result<()> {
+        let host = env::zenodo_host();
+        let token = env::zenodo_token()?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let ids = list_depositions(
+            &host,
+            &token,
+            &config.id.to_string(),
+            DepositionStatus::Published,
+        )?;
+        if ids.len() > 0 {
+            let id = ids[0];
+            let (zenodo, version) = retrieve_deposition(&host, &token, &id)?;
+            dbg!(&zenodo);
+            dbg!(&version);
+        }
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn test_edit_deposition() -> Result<()> {
+        let host = env::zenodo_host();
+        let token = env::zenodo_token()?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let ids = list_depositions(
+            &host,
+            &token,
+            &config.id.to_string(),
+            DepositionStatus::Published,
+        )?;
+        if ids.len() > 0 {
+            let id = ids[0];
+            edit_deposition(&host, &token, &id)?;
+        }
         Ok(())
     }
 }
