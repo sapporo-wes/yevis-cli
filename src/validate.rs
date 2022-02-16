@@ -5,6 +5,7 @@ use log::{debug, info};
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
+use url::Url;
 
 pub fn validate(
     config_locs: Vec<impl AsRef<str>>,
@@ -143,6 +144,13 @@ fn validate_language(config: &gh_trs::config::types::Config) -> Result<()> {
     Ok(())
 }
 
+/// is true
+/// https://zenodo.org/record/1015875/files/README.md
+/// https://sandbox.zenodo.org/record/1015875/files/README.md
+fn is_zenodo_url(url: &Url) -> bool {
+    url.host_str() == Some("zenodo.org") || url.host_str() == Some("sandbox.zenodo.org")
+}
+
 fn validate_and_update_workflow(
     config: &mut gh_trs::config::types::Config,
     gh_token: impl AsRef<str>,
@@ -150,17 +158,19 @@ fn validate_and_update_workflow(
     let mut branch_memo = HashMap::new();
     let mut commit_memo = HashMap::new();
 
-    config.workflow.readme = match gh_trs::raw_url::RawUrl::new(
-        &gh_token,
-        &config.workflow.readme,
-        Some(&mut branch_memo),
-        Some(&mut commit_memo),
-    ) {
-        Ok(raw_url) => raw_url.to_url()?,
-        Err(e) => {
-            bail!("The `workflow.readme` is not valid with error: {}", e);
-        }
-    };
+    if !is_zenodo_url(&config.workflow.readme) {
+        config.workflow.readme = match gh_trs::raw_url::RawUrl::new(
+            &gh_token,
+            &config.workflow.readme,
+            Some(&mut branch_memo),
+            Some(&mut commit_memo),
+        ) {
+            Ok(raw_url) => raw_url.to_url()?,
+            Err(e) => {
+                bail!("The `workflow.readme` is not valid with error: {}", e);
+            }
+        };
+    }
 
     ensure!(
         config.workflow.primary_wf().is_ok(),
@@ -168,10 +178,12 @@ fn validate_and_update_workflow(
     );
 
     for file in &mut config.workflow.files {
-        match file.update_url(&gh_token, Some(&mut branch_memo), Some(&mut commit_memo)) {
-            Ok(()) => {}
-            Err(e) => bail!("The `workflow.files[].url` is not valid with error: {}", e),
-        };
+        if !is_zenodo_url(&file.url) {
+            match file.update_url(&gh_token, Some(&mut branch_memo), Some(&mut commit_memo)) {
+                Ok(()) => {}
+                Err(e) => bail!("The `workflow.files[].url` is not valid with error: {}", e),
+            }
+        }
         file.complement_target()?;
     }
 
@@ -185,13 +197,14 @@ fn validate_and_update_workflow(
         test_id_set.insert(testing.id.as_str());
 
         for file in &mut testing.files {
-            match file.update_url(&gh_token, Some(&mut branch_memo), Some(&mut commit_memo)) {
-                Ok(()) => {}
-                Err(e) => bail!(
-                    "The `workflow.testing[].files[].url` is not valid with error: {}",
-                    e
-                ),
-            };
+            if !is_zenodo_url(&file.url) {
+                match file.update_url(&gh_token, Some(&mut branch_memo), Some(&mut commit_memo)) {
+                    Ok(()) => {}
+                    Err(_) => {
+                        // do nothing (only test file)
+                    }
+                }
+            }
             file.complement_target()?;
         }
     }

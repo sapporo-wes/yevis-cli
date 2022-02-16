@@ -256,6 +256,7 @@ fn list_depositions(
         .append_pair("q", wf_id.as_ref())
         .append_pair("status", &status.to_string());
     let res = get_request(&token, &url, &[])?;
+    dbg!(&res);
     let err_msg = "Failed to parse the response when listing depositions";
     let ids = res
         .as_array()
@@ -822,7 +823,7 @@ mod tests {
             &host,
             &token,
             &config.id.to_string(),
-            DepositionStatus::Published,
+            DepositionStatus::Draft,
         )?;
         dbg!(&ids);
         Ok(())
