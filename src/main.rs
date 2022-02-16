@@ -166,7 +166,7 @@ fn main() -> Result<()> {
             docker_host,
             from_trs,
             from_pr,
-            zenodo_upload,
+            upload_zenodo,
             ..
         } => {
             if !gh_trs::env::in_ci() {
@@ -224,12 +224,12 @@ fn main() -> Result<()> {
                 }
             };
 
-            if zenodo_upload {
-                info!("{} zenodo-upload", "Running".green());
-                match zenodo::zenodo_upload_and_commit(&mut configs, &github_token, &repository) {
-                    Ok(()) => info!("{} zenodo-upload", "Success".green()),
+            if upload_zenodo {
+                info!("{} upload_zenodo", "Running".green());
+                match zenodo::upload_and_commit_zenodo(&mut configs, &github_token, &repository) {
+                    Ok(()) => info!("{} upload_zenodo", "Success".green()),
                     Err(e) => {
-                        error!("{} to zenodo-upload with error: {}", "Failed".red(), e);
+                        error!("{} to upload_zenodo with error: {}", "Failed".red(), e);
                         exit(1);
                     }
                 }

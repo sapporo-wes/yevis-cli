@@ -161,7 +161,7 @@ pub enum Args {
 
         /// Upload the dataset to Zenodo.
         #[structopt(long)]
-        zenodo_upload: bool,
+        upload_zenodo: bool,
 
         /// Verbose mode.
         #[structopt(short, long)]

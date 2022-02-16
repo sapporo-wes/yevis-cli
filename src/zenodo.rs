@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use tempfile;
 use url::Url;
 
-pub fn zenodo_upload_and_commit(
+pub fn upload_and_commit_zenodo(
     configs: &mut Vec<gh_trs::config::types::Config>,
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
@@ -25,7 +25,7 @@ pub fn zenodo_upload_and_commit(
     let token = env::zenodo_token()?;
 
     for config in configs {
-        zenodo_upload(&host, &token, config)?;
+        upload_zenodo(&host, &token, config)?;
         // update config with zenodo url
         info!("Updating config with Zenodo URL");
         update_config_files(&host, &token, config)?;
@@ -58,7 +58,7 @@ pub fn zenodo_upload_and_commit(
     Ok(())
 }
 
-fn zenodo_upload(
+fn upload_zenodo(
     host: impl AsRef<str>,
     token: impl AsRef<str>,
     config: &mut gh_trs::config::types::Config,
@@ -927,12 +927,12 @@ mod tests {
 
     #[test]
     #[ignore]
-    fn test_zenodo_upload() -> Result<()> {
+    fn test_upload_zenodo() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
         let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
         config.version = "1.0.2".to_string();
-        zenodo_upload(&host, &token, &mut config)?;
+        upload_zenodo(&host, &token, &mut config)?;
         Ok(())
     }
 }
