@@ -8,8 +8,8 @@ authors:
     affiliation: DNA Data Bank of Japan
   - github_account: suecharo
     name: Example Name
-    affiliation: "Example Affiliation"
-    orcid: "0000-0003-2765-0049"
+    affiliation: Example Affiliation
+    orcid: 0000-0003-2765-0049
 workflow:
   name: CWL_trimming_and_qc
   readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/README.md"
@@ -29,12 +29,12 @@ workflow:
   testing:
     - id: test_1
       files:
-        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/test/wf_params.json"
+        - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/83b2c7fec46fcaae22dba92bceaa3b88f6f3a6fe/tests/CWL/test/wf_params.json"
           target: wf_params.json
           type: wf_params
-        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/test/ERR034597_1.small.fq.gz"
+        - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/83b2c7fec46fcaae22dba92bceaa3b88f6f3a6fe/tests/CWL/test/ERR034597_1.small.fq.gz"
           target: ERR034597_1.small.fq.gz
           type: other
-        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/test/ERR034597_2.small.fq.gz"
+        - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/83b2c7fec46fcaae22dba92bceaa3b88f6f3a6fe/tests/CWL/test/ERR034597_2.small.fq.gz"
           target: ERR034597_2.small.fq.gz
           type: other
