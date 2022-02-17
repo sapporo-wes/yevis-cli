@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt;
-use std::io::{self, BufWriter};
+use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use tempfile;
 use url::Url;
@@ -256,7 +256,6 @@ fn list_depositions(
         .append_pair("q", wf_id.as_ref())
         .append_pair("status", &status.to_string());
     let res = get_request(&token, &url, &[])?;
-    dbg!(&res);
     let err_msg = "Failed to parse the response when listing depositions";
     let ids = res
         .as_array()
@@ -512,36 +511,52 @@ struct ConfigFile {
 
 impl ConfigFile {
     fn new(file_url: &Url, target: impl AsRef<Path>) -> Result<Self> {
-        let (file, file_path) = tempfile::NamedTempFile::new()?.keep()?;
-        let mut buffer = BufWriter::new(file);
-        let content = gh_trs::remote::fetch_raw_content(&file_url)?;
-        io::copy(&mut content.as_bytes(), &mut buffer)?;
-        let filename = target
-            .as_ref()
-            .iter()
-            .map(|x| x.to_string_lossy())
-            .collect::<Vec<_>>()
-            .join("_");
+        let res = reqwest::blocking::get(file_url.as_str())?;
+        let status = res.status();
+        let res_bytes = res.bytes()?;
+        ensure!(
+            status.is_success(),
+            "Failed to download file from {} with status: {}",
+            file_url.as_str(),
+            status
+        );
+
+        let (mut file, file_path) = tempfile::NamedTempFile::new()?.keep()?;
+        file.write_all(&res_bytes)?;
+
         let mut md5 = Md5::new();
-        md5.input_str(&content);
+        md5.input(&res_bytes);
         let checksum = md5.result_str();
+
         Ok(Self {
-            filename,
+            filename: target
+                .as_ref()
+                .iter()
+                .map(|x| x.to_string_lossy())
+                .collect::<Vec<_>>()
+                .join("_"),
             file_path,
             checksum,
         })
     }
 
     fn new_from_str(content: impl AsRef<str>, target: impl AsRef<Path>) -> Result<Self> {
-        let (file, file_path) = tempfile::NamedTempFile::new()?.keep()?;
-        let mut buffer = BufWriter::new(file);
-        io::copy(&mut content.as_ref().as_bytes(), &mut buffer)?;
-        let filename = target.as_ref().to_string_lossy().to_string();
+        let content_bytes = content.as_ref().as_bytes();
+
+        let (mut file, file_path) = tempfile::NamedTempFile::new()?.keep()?;
+        file.write_all(content_bytes)?;
+
         let mut md5 = Md5::new();
-        md5.input_str(content.as_ref());
+        md5.input(&content_bytes);
         let checksum = md5.result_str();
+
         Ok(Self {
-            filename,
+            filename: target
+                .as_ref()
+                .iter()
+                .map(|x| x.to_string_lossy())
+                .collect::<Vec<_>>()
+                .join("_"),
             file_path,
             checksum,
         })
@@ -818,7 +833,7 @@ mod tests {
     fn test_list_depositions() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -832,7 +847,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_new_deposition() -> Result<()> {
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         Deposition::new(&config)?;
         Ok(())
     }
@@ -842,7 +857,7 @@ mod tests {
     fn test_create_deposition() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         create_deposition(&host, &token, &config)?;
         Ok(())
     }
@@ -852,7 +867,7 @@ mod tests {
     fn test_delete_draft_deposition() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -871,7 +886,7 @@ mod tests {
     fn test_update_deposition() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -890,7 +905,7 @@ mod tests {
     fn test_update_deposition_new_version() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         config.version = "1.0.1".to_string();
         let id = 1015788;
         update_deposition(&host, &token, &id, &config)?;
@@ -900,8 +915,9 @@ mod tests {
     #[test]
     #[ignore]
     fn test_config_to_files() -> Result<()> {
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
-        config_to_files(&config)?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let files = config_to_files(&config)?;
+        dbg!(&files);
         Ok(())
     }
 
@@ -910,9 +926,8 @@ mod tests {
     fn test_update_deposition_files() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
-        let mut config_files = config_to_files(&config)?;
-        config_files.pop();
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config_files = config_to_files(&config)?;
         // let config_files = vec![];
         let ids = list_depositions(
             &host,
@@ -921,10 +936,9 @@ mod tests {
             DepositionStatus::Draft,
         )?;
         if ids.len() > 0 {
-            // let id = ids[0];
-            let id = 1015788;
-            let deposition_files = get_files_list(&host, &token, &id)?;
-            // let deposition_files = vec![];
+            let id = ids[0];
+            // let deposition_files = get_files_list(&host, &token, &id)?;
+            let deposition_files = vec![];
             update_deposition_files(&host, &token, &id, deposition_files, config_files)?;
         }
         Ok(())
@@ -935,7 +949,7 @@ mod tests {
     fn test_get_files_list() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -955,7 +969,7 @@ mod tests {
     fn test_publish_deposition() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -963,8 +977,7 @@ mod tests {
             DepositionStatus::Draft,
         )?;
         if ids.len() > 0 {
-            // let id = ids[0];
-            let id = 1015788;
+            let id = ids[0];
             publish_deposition(&host, &token, &id)?;
         }
         Ok(())
@@ -975,7 +988,7 @@ mod tests {
     fn test_new_version_deposition() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -994,7 +1007,7 @@ mod tests {
     fn test_upload_zenodo() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         upload_zenodo(&host, &token, &mut config)?;
         Ok(())
     }
@@ -1004,7 +1017,7 @@ mod tests {
     fn test_retrieve_deposition() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
