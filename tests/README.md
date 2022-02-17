@@ -65,11 +65,11 @@ $ cargo run -- test ./tests/test_config_SMK.yml
 $ cargo run -- pull-request ./tests/test_config_CWL.yml
 
 # WDL
-$ cargo run -- publish --repo ddbj/yevis-cli --with-test ./tests/test_config_WDL.yml
+$ cargo run -- pull-request ./tests/test_config_WDL.yml
 
 # NFL
-$ cargo run -- publish --repo ddbj/yevis-cli --with-test ./tests/test_config_NFL.yml
+$ cargo run -- pull-request ./tests/test_config_NFL.yml
 
 # SMK
-$ cargo run -- publish --repo ddbj/yevis-cli --with-test ./tests/test_config_SMK.yml
+$ cargo run -- pull-request ./tests/test_config_SMK.yml
 ```
