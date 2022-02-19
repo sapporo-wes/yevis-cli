@@ -746,26 +746,44 @@ fn update_config_files(
         .ok_or(anyhow!("No Zenodo deposition ID"))?
         .id;
     let deposition_files = get_files_list(&host, &token, &deposition_id)?;
-    let files_map: HashMap<PathBuf, DepositionFile> = deposition_files
+    let files_map: HashMap<String, DepositionFile> = deposition_files
         .into_iter()
-        .map(|f| (PathBuf::from(f.filename.clone()), f))
+        .map(|f| (f.filename.clone(), f))
         .collect();
 
     let err_msg = "Failed to update config files.";
     config.workflow.readme = files_map
-        .get(&PathBuf::from("README.md"))
+        .get("README.md")
         .ok_or(anyhow!(err_msg))?
         .download_url(&host, &deposition_id)?;
     for file in &mut config.workflow.files {
         file.url = files_map
-            .get(&PathBuf::from(file.target.as_ref().unwrap())) // already validated
+            .get(
+                &file
+                    .target
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .map(|x| x.to_string_lossy())
+                    .collect::<Vec<_>>()
+                    .join("_"),
+            )
             .ok_or(anyhow!(err_msg))?
             .download_url(&host, &deposition_id)?;
     }
     for testing in &mut config.workflow.testing {
         for file in &mut testing.files {
             file.url = files_map
-                .get(&PathBuf::from(file.target.as_ref().unwrap())) // already validated
+                .get(
+                    &file
+                        .target
+                        .as_ref()
+                        .unwrap()
+                        .iter()
+                        .map(|x| x.to_string_lossy())
+                        .collect::<Vec<_>>()
+                        .join("_"),
+                )
                 .ok_or(anyhow!(err_msg))?
                 .download_url(&host, &deposition_id)?;
         }
@@ -827,6 +845,7 @@ fn retrieve_deposition(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::validate;
 
     #[test]
     #[ignore]
@@ -1030,6 +1049,28 @@ mod tests {
             dbg!(&zenodo);
             dbg!(&version);
         }
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn test_update_config_files() -> Result<()> {
+        let host = env::zenodo_host();
+        let token = env::zenodo_token()?;
+        let mut config = validate::validate(
+            vec!["./tests/test_config_SMK.yml"],
+            &None::<String>,
+            "ddbj/yevis-worksflows-dev",
+        )?[0]
+            .clone();
+        let zenodo = gh_trs::config::types::Zenodo {
+            concept_doi: "10.5072/zenodo.1018220".to_string(),
+            doi: "10.5072/zenodo.1018220".to_string(),
+            id: 1018220,
+            url: Url::parse("https://sandbox.zenodo.org/record/1018220")?,
+        };
+        config.zenodo = Some(zenodo);
+        update_config_files(&host, &token, &mut config)?;
         Ok(())
     }
 }
