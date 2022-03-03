@@ -47,7 +47,7 @@ echo "Merge main branch to develop branch."
 git checkout develop
 git merge main
 git push origin develop
-git ckeckour main
+git checkout main
 
 echo "Done."
 
