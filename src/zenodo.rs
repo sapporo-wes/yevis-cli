@@ -87,7 +87,7 @@ fn upload_zenodo(
     } else {
         // new version deposition
         let prev_id = published_deposition_ids[0];
-        let (zenodo, version) = retrieve_deposition(&host, &token, &prev_id)?;
+        let (zenodo, version) = retrieve_record(&host, &token, &prev_id)?;
         let new_id = if version == config.version {
             info!("Already exist deposition with same version. So skipping.");
             config.zenodo = Some(zenodo);
@@ -475,17 +475,6 @@ struct DepositionFile {
     checksum: String,
 }
 
-impl DepositionFile {
-    fn download_url(&self, host: impl AsRef<str>, id: &u64) -> Result<Url> {
-        Ok(Url::parse(&format!(
-            "https://{}/record/{}/files/{}",
-            host.as_ref(),
-            id,
-            self.filename
-        ))?)
-    }
-}
-
 /// https://developers.zenodo.org/?shell#list23
 fn get_files_list(
     host: impl AsRef<str>,
@@ -745,17 +734,10 @@ fn update_config_files(
         .as_ref()
         .ok_or(anyhow!("No Zenodo deposition ID"))?
         .id;
-    let deposition_files = get_files_list(&host, &token, &deposition_id)?;
-    let files_map: HashMap<String, DepositionFile> = deposition_files
-        .into_iter()
-        .map(|f| (f.filename.clone(), f))
-        .collect();
+    let files_map: HashMap<String, Url> = get_files_download_urls(&host, &token, &deposition_id)?;
 
     let err_msg = "Failed to update config files.";
-    config.workflow.readme = files_map
-        .get("README.md")
-        .ok_or(anyhow!(err_msg))?
-        .download_url(&host, &deposition_id)?;
+    config.workflow.readme = files_map.get("README.md").ok_or(anyhow!(err_msg))?.clone();
     for file in &mut config.workflow.files {
         file.url = files_map
             .get(
@@ -769,7 +751,7 @@ fn update_config_files(
                     .join("_"),
             )
             .ok_or(anyhow!(err_msg))?
-            .download_url(&host, &deposition_id)?;
+            .clone();
     }
     for testing in &mut config.workflow.testing {
         for file in &mut testing.files {
@@ -785,22 +767,22 @@ fn update_config_files(
                         .join("_"),
                 )
                 .ok_or(anyhow!(err_msg))?
-                .download_url(&host, &deposition_id)?;
+                .clone();
         }
     }
     Ok(())
 }
 
 /// https://developers.zenodo.org/?shell#retrieve
-fn retrieve_deposition(
+fn retrieve_record(
     host: impl AsRef<str>,
     token: impl AsRef<str>,
-    deposition_id: &u64,
+    record_id: &u64,
 ) -> Result<(gh_trs::config::types::Zenodo, String)> {
     let url = Url::parse(&format!(
-        "https://{}/api/deposit/depositions/{}",
+        "https://{}/api/records/{}",
         host.as_ref(),
-        deposition_id
+        record_id
     ))?;
     let res = get_request(&token, &url, &[])?;
     let err_msg = "Failed to parse the response when retrieving a deposition";
@@ -842,10 +824,57 @@ fn retrieve_deposition(
     ))
 }
 
+/// https://github.com/zenodo/zenodo/issues/2246
+fn get_files_download_urls(
+    host: impl AsRef<str>,
+    token: impl AsRef<str>,
+    record_id: &u64,
+) -> Result<HashMap<String, Url>> {
+    let url = Url::parse(&format!(
+        "https://{}/api/records/{}",
+        host.as_ref(),
+        record_id
+    ))?;
+    let res = get_request(&token, &url, &[])?;
+    let err_msg = "Failed to parse the response when retrieving a deposition";
+    let files_arr = res
+        .as_object()
+        .ok_or(anyhow!(err_msg))?
+        .get("files")
+        .ok_or(anyhow!(err_msg))?
+        .as_array()
+        .ok_or(anyhow!(err_msg))?;
+    let mut files_map: HashMap<String, Url> = HashMap::new();
+    for file_obj in files_arr {
+        let filename = file_obj
+            .as_object()
+            .ok_or(anyhow!(err_msg))?
+            .get("key")
+            .ok_or(anyhow!(err_msg))?
+            .as_str()
+            .ok_or(anyhow!(err_msg))?;
+        let download_url = file_obj
+            .as_object()
+            .ok_or(anyhow!(err_msg))?
+            .get("links")
+            .ok_or(anyhow!(err_msg))?
+            .as_object()
+            .ok_or(anyhow!(err_msg))?
+            .get("self")
+            .ok_or(anyhow!(err_msg))?
+            .as_str()
+            .ok_or(anyhow!(err_msg))?;
+        files_map.insert(filename.to_string(), Url::parse(download_url)?);
+    }
+
+    Ok(files_map)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::validate;
+    // use uuid::Uuid;
 
     #[test]
     #[ignore]
@@ -926,7 +955,7 @@ mod tests {
         let token = env::zenodo_token()?;
         let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         config.version = "1.0.1".to_string();
-        let id = 1015788;
+        let id = 1018767;
         update_deposition(&host, &token, &id, &config)?;
         Ok(())
     }
@@ -976,7 +1005,8 @@ mod tests {
             DepositionStatus::Published,
         )?;
         if ids.len() > 0 {
-            let id = ids[0];
+            // let id = ids[0];
+            let id = 1018767;
             let list = get_files_list(&host, &token, &id)?;
             dbg!(&list);
         }
@@ -1027,13 +1057,16 @@ mod tests {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
         let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        // config.id = Uuid::new_v4();
         upload_zenodo(&host, &token, &mut config)?;
+        // update_config_files(&host, &token, &mut config)?;
+        // println!("{}", serde_yaml::to_string(&config)?);
         Ok(())
     }
 
     #[test]
     #[ignore]
-    fn test_retrieve_deposition() -> Result<()> {
+    fn test_retrieve_record() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
         let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
@@ -1045,7 +1078,7 @@ mod tests {
         )?;
         if ids.len() > 0 {
             let id = ids[0];
-            let (zenodo, version) = retrieve_deposition(&host, &token, &id)?;
+            let (zenodo, version) = retrieve_record(&host, &token, &id)?;
             dbg!(&zenodo);
             dbg!(&version);
         }
@@ -1060,7 +1093,7 @@ mod tests {
         let mut config = validate::validate(
             vec!["./tests/test_config_SMK.yml"],
             &None::<String>,
-            "ddbj/yevis-worksflows-dev",
+            "ddbj/yevis-workflows-dev",
         )?[0]
             .clone();
         let zenodo = gh_trs::config::types::Zenodo {
@@ -1071,6 +1104,26 @@ mod tests {
         };
         config.zenodo = Some(zenodo);
         update_config_files(&host, &token, &mut config)?;
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
+    fn test_get_files_download_urls() -> Result<()> {
+        let host = env::zenodo_host();
+        let token = env::zenodo_token()?;
+        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let ids = list_depositions(
+            &host,
+            &token,
+            &config.id.to_string(),
+            DepositionStatus::Published,
+        )?;
+        if ids.len() > 0 {
+            let id = ids[0];
+            let files_map = get_files_download_urls(&host, &token, &id)?;
+            dbg!(&files_map);
+        }
         Ok(())
     }
 }
