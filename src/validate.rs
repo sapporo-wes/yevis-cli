@@ -1,8 +1,9 @@
 use crate::version;
-use anyhow::{bail, ensure, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use gh_trs;
 use log::{debug, info};
 use regex::Regex;
+use reqwest;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use url::Url;
@@ -21,7 +22,7 @@ pub fn validate(
         let mut config = gh_trs::config::io::read_config(config_loc.as_ref())?;
 
         validate_version(&config, &repo)?;
-        validate_license(&config)?;
+        validate_license(&mut config, &gh_token)?;
         validate_authors(&config)?;
         validate_language(&config)?;
         validate_and_update_workflow(&mut config, &gh_token)?;
@@ -68,10 +69,21 @@ fn validate_version(config: &gh_trs::config::types::Config, repo: impl AsRef<str
     Ok(())
 }
 
-fn validate_license(config: &gh_trs::config::types::Config) -> Result<()> {
+/// Validate the license of the config.
+/// Contact the GitHub API and Zenodo API to confirm.
+/// Change the license to `spdx_id`
+/// e.g., `apache-2.0` -> `Apache-2.0`
+fn validate_license(
+    config: &mut gh_trs::config::types::Config,
+    gh_token: impl AsRef<str>,
+) -> Result<()> {
     match &config.license {
-        Some(license) => ensure!(license == "CC0-1.0", "The `license` is not `CC0-1.0`"),
-        None => bail!("The `license` is not specified. In yevis, the `license` must be `CC0-1.0`"),
+        Some(license) => {
+            let spdx_id = validate_with_github_license_api(gh_token, license)?;
+            validate_with_zenodo_license_api(&spdx_id)?;
+            config.license = Some(spdx_id);
+        },
+        None => bail!("The `license` is not specified. In yevis, the `license` must be a distributable license such as `CC0-1.0` or `MIT`"),
     };
     Ok(())
 }
@@ -209,4 +221,73 @@ fn validate_and_update_workflow(
         }
     }
     Ok(())
+}
+
+/// https://docs.github.com/ja/rest/reference/licenses#get-a-license
+/// Ensure that `distribution` is included in `permissions` field.
+fn validate_with_github_license_api(
+    gh_token: impl AsRef<str>,
+    license: impl AsRef<str>,
+) -> Result<String> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/licenses/{}",
+        license.as_ref()
+    ))?;
+    let res = gh_trs::github_api::get_request(gh_token, &url, &[])?;
+    let err_msg = "The `license` is not valid from GitHub license API";
+    let permissions = res
+        .get("permissions")
+        .ok_or(anyhow!(err_msg))?
+        .as_array()
+        .ok_or(anyhow!(err_msg))?
+        .iter()
+        .map(|v| v.as_str().ok_or(anyhow!(err_msg)))
+        .collect::<Result<Vec<_>>>()?;
+    ensure!(permissions.contains(&"distribution"), err_msg);
+    let spdx_id = res
+        .get("spdx_id")
+        .ok_or(anyhow!(err_msg))?
+        .as_str()
+        .ok_or(anyhow!(err_msg))?;
+    Ok(spdx_id.to_string())
+}
+
+/// https://developers.zenodo.org/?shell#retrieve41
+fn validate_with_zenodo_license_api(license: impl AsRef<str>) -> Result<()> {
+    let url = Url::parse(&format!(
+        "https://zenodo.org/api/licenses/{}",
+        license.as_ref()
+    ))?;
+    // Return the path for this URL, as a percent-encoded ASCII string
+    let response = reqwest::blocking::get(url.as_str())?;
+    let status = response.status();
+    ensure!(
+        status.is_success(),
+        "The `license` is not valid from Zenodo license API"
+    );
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_with_github_license_api() -> Result<()> {
+        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        validate_with_github_license_api(&gh_token, "cc0-1.0")?;
+        validate_with_github_license_api(&gh_token, "mit")?;
+        validate_with_github_license_api(&gh_token, "MIT")?;
+        validate_with_github_license_api(&gh_token, "apache-2.0")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_validate_with_zenodo_license_api() -> Result<()> {
+        validate_with_zenodo_license_api("cc0-1.0")?;
+        validate_with_zenodo_license_api("mit")?;
+        validate_with_zenodo_license_api("MIT")?;
+        validate_with_zenodo_license_api("apache-2.0")?;
+        Ok(())
+    }
 }

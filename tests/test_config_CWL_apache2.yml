@@ -1,0 +1,40 @@
+---
+id: 3e95d6e0-0a79-409e-883b-2a4104c4e6fe
+version: 1.0.0
+license: Apache-2.0
+authors:
+  - github_account: ddbj
+    name: ddbj-workflow
+    affiliation: DNA Data Bank of Japan
+  - github_account: suecharo
+    name: Example Name
+    affiliation: "Example Affiliation"
+    orcid: "0000-0003-2765-0049"
+workflow:
+  name: apache20-workflow
+  readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/README.md"
+  language:
+    type: CWL
+    version: v1.0
+  files:
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/CWL/wf/fastqc.cwl"
+      target: fastqc.cwl
+      type: secondary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/CWL/wf/trimming_and_qc.cwl"
+      target: trimming_and_qc.cwl
+      type: primary
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/CWL/wf/trimmomatic_pe.cwl"
+      target: trimmomatic_pe.cwl
+      type: secondary
+  testing:
+    - id: test_1
+      files:
+        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/test/wf_params.json"
+          target: wf_params.json
+          type: wf_params
+        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/test/ERR034597_1.small.fq.gz"
+          target: ERR034597_1.small.fq.gz
+          type: other
+        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/test/ERR034597_2.small.fq.gz"
+          target: ERR034597_2.small.fq.gz
+          type: other
