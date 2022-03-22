@@ -20,7 +20,7 @@ pub fn make_template(
     info!("Making a template from {}", wf_loc);
 
     let config = if update {
-        // the TRS ToolVersion URL (e.g., https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>) as the `workflow_location`.
+        // the TRS ToolVersion URL (e.g., https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>) as `workflow_location`.
         let trs_endpoint = gh_trs::trs::api::TrsEndpoint::new_from_tool_version_url(&wf_loc)?;
         trs_endpoint.is_valid()?;
         let (id, version) = parse_trs_tool_version_url(&wf_loc)?;

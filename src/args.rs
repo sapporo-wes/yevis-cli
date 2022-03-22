@@ -21,12 +21,12 @@ pub enum Args {
         #[structopt(long = "gh-token")]
         github_token: Option<String>,
 
-        /// Path to the output file.
+        /// Path to output file.
         #[structopt(short, long, parse(from_os_str), default_value = "yevis-config.yml")]
         output: PathBuf,
 
         /// Make a template from an existing workflow.
-        /// When using this option, specify the TRS ToolVersion URL (e.g., https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>) as the `workflow_location`.
+        /// When using this option, specify the TRS ToolVersion URL (e.g., https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>) as `workflow_location`.
         #[structopt(short, long)]
         update: bool,
 
@@ -68,7 +68,7 @@ pub enum Args {
         #[structopt(short, long, default_value = env::default_pr_repo())]
         repository: String,
 
-        /// Location of WES in which to run the test.
+        /// WES location where the test will be run.
         /// If not specified, `sapporo-service` will be started.
         #[structopt(short, long)]
         wes_location: Option<Url>,
@@ -78,8 +78,8 @@ pub enum Args {
         docker_host: Url,
 
         /// Get the modified files from the GitHub PR files.
-        /// This option is used in the pull request event in a CI environment.
-        /// When using this option, specify the GitHub PR URL (e.g., ${{ github.event.pull_request._links.html.href }}) as the `config_locations`.
+        /// This option is used for the pull request event in a CI environment.
+        /// When using this option, specify the GitHub PR URL (e.g., ${{ github.event.pull_request._links.html.href }}) as `config_locations`.
         #[structopt(long)]
         from_pr: bool,
 
@@ -88,7 +88,7 @@ pub enum Args {
         verbose: bool,
     },
 
-    /// Create a pull request based on the yevis configuration file (after validating and testing.)
+    /// Create a pull request based on the yevis configuration file (after validation and testing)
     PullRequest {
         /// Location of the yevis configuration files (local file path or remote URL).
         #[structopt(default_value = "yevis-config.yml")]
@@ -102,7 +102,7 @@ pub enum Args {
         #[structopt(short, long, default_value = env::default_pr_repo())]
         repository: String,
 
-        /// Location of WES in which to run the test.
+        /// WES location where the test will be run.
         /// If not specified, `sapporo-service` will be started.
         #[structopt(short, long)]
         wes_location: Option<Url>,
@@ -116,7 +116,7 @@ pub enum Args {
         verbose: bool,
     },
 
-    /// Publish the TRS response to GitHub. (Basically used in a CI environment (`CI=true`))
+    /// Generate TRS response and host on GitHub Pages. (Basically used in a CI environment (`CI=true`))
     Publish {
         /// Location of the yevis configuration files (local file path or remote URL).
         #[structopt(default_value = "yevis-config.yml")]
@@ -138,7 +138,7 @@ pub enum Args {
         #[structopt(long)]
         with_test: bool,
 
-        /// Location of WES in which to run the test.
+        /// WES location where the test will be run.
         /// If not specified, `sapporo-service` will be started.
         #[structopt(short, long)]
         wes_location: Option<Url>,
@@ -149,13 +149,13 @@ pub enum Args {
 
         /// Recursively get the yevis configuration files from the TRS endpoint and publish them.
         /// This option is used in a CI environment.
-        /// When using this option, specify the TRS endpoint (e.g., https://ddbj.github.io/yevis-workflows/) as the `config_locations`.
+        /// When using this option, specify the TRS endpoint (e.g., https://ddbj.github.io/yevis-workflows/) as `config_locations`.
         #[structopt(long)]
         from_trs: bool,
 
         /// Get the modified files from the GitHub PR files.
-        /// This option is used in the pull request event in a CI environment.
-        /// When using this option, specify the GitHub PR URL (e.g., ${{ github.event.pull_request._links.html.href }}) as the `config_locations`.
+        /// This option is used for the pull request event in a CI environment.
+        /// When using this option, specify the GitHub PR URL (e.g., ${{ github.event.pull_request._links.html.href }}) as `config_locations`.
         #[structopt(long)]
         from_pr: bool,
 
