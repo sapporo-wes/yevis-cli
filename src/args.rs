@@ -30,6 +30,10 @@ pub enum Args {
         #[structopt(short, long)]
         update: bool,
 
+        /// Use branch instead of commit_hash in the generated GitHub raw URL
+        #[structopt(long)]
+        use_branch_url: bool,
+
         /// Verbose mode.
         #[structopt(short, long)]
         verbose: bool,

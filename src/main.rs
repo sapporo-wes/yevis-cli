@@ -36,10 +36,20 @@ fn main() -> Result<()> {
             github_token,
             output,
             update,
+            use_branch_url,
             ..
         } => {
             info!("{} make-template", "Running".green());
-            match make_template::make_template(&workflow_location, &github_token, &output, update) {
+            match make_template::make_template(
+                &workflow_location,
+                &github_token,
+                &output,
+                update,
+                match use_branch_url {
+                    true => gh_trs::raw_url::UrlType::Branch,
+                    false => gh_trs::raw_url::UrlType::Commit,
+                },
+            ) {
                 Ok(()) => info!("{} make-template", "Success".green()),
                 Err(e) => {
                     error!("{} to make-template with error: {}", "Failed".red(), e);

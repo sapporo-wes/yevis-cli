@@ -173,7 +173,7 @@ fn validate_and_update_workflow(
             Some(&mut branch_memo),
             Some(&mut commit_memo),
         ) {
-            Ok(raw_url) => raw_url.to_url()?,
+            Ok(raw_url) => raw_url.to_url(&gh_trs::raw_url::UrlType::Commit)?,
             Err(e) => {
                 bail!("The `workflow.readme` is not valid with error: {}", e);
             }

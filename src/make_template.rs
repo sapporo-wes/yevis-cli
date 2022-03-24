@@ -14,6 +14,7 @@ pub fn make_template(
     gh_token: &Option<impl AsRef<str>>,
     output: impl AsRef<Path>,
     update: bool,
+    url_type: gh_trs::raw_url::UrlType,
 ) -> Result<()> {
     let gh_token = gh_trs::env::github_token(gh_token)?;
 
@@ -55,9 +56,10 @@ pub fn make_template(
             None,
             None,
         )?
-        .to_url()?;
-        let language = gh_trs::inspect::inspect_wf_type_version(&primary_wf.to_url()?)?;
-        let files = gh_trs::command::make_template::obtain_wf_files(&gh_token, &primary_wf)?;
+        .to_url(&url_type)?;
+        let language = gh_trs::inspect::inspect_wf_type_version(&primary_wf.to_url(&url_type)?)?;
+        let files =
+            gh_trs::command::make_template::obtain_wf_files(&gh_token, &primary_wf, &url_type)?;
         let testing = vec![gh_trs::config::types::Testing::default()];
 
         gh_trs::config::types::Config {
