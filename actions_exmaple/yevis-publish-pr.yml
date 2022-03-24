@@ -33,6 +33,7 @@ jobs:
         run: |
           curl -fsSL -O https://github.com/ddbj/yevis-cli/releases/latest/download/yevis
           chmod +x ./yevis
+
       - name: "Run publish"
         id: publish
         run: |
