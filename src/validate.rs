@@ -97,10 +97,6 @@ fn validate_authors(config: &gh_trs::config::types::Config) -> Result<()> {
             author.name.is_some(),
             "The `authors[].name` is not specified",
         );
-        ensure!(
-            author.affiliation.is_some(),
-            "The `authors[].affiliation` is not specified"
-        );
         match &author.orcid {
             Some(orcid) => {
                 ensure!(
