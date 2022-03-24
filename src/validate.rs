@@ -25,6 +25,7 @@ pub fn validate(
         validate_license(&mut config, &gh_token)?;
         validate_authors(&config)?;
         validate_language(&config)?;
+        gh_trs::command::validate::validate_wf_name(&config.workflow.name)?;
         validate_and_update_workflow(&mut config, &gh_token)?;
 
         debug!("updated config: {:?}", config);

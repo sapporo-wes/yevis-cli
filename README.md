@@ -176,7 +176,7 @@ Explanation of validation rules for some fields in the configuration file:
   - `name`: Name the author in the format Family name, Given names (e.g., "Doe, John").
   - `affiliation`: Affiliation of the author (optional).
   - `orcid`: ORCID identifier of the author (optional).
-- `workflow.name`: Give it any name you like.
+- `workflow.name`: Please fill freely. Allowed characters are `a-z`, `A-Z`, `0-9`, `~!@#$%^&*()_+-={}[]|:;,.<>?`, and space.
 - `workflow.readme`: It is used to describe the workflow. Specify the location of the README file.
 - `workflow.language`: `CWL`, `WDL`, `NFL`, and `SMK` are supported.
 - `workflow.files`: A list of files; files specified as `type: secondary` will be placed in the execution directory with `target` as a path when the workflow is executed.

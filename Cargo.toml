@@ -12,7 +12,7 @@ anyhow = {version = "1.0.52", features = ["backtrace"]}
 base64 = "0.13.0"
 colored = "2.0.0"
 dotenv = "0.15.0"
-gh-trs = "1.1.10"
+gh-trs = "1.1.11"
 log = "0.4.14"
 regex = "1.5.4"
 reqwest = {version = "0.11.8", features = ["blocking", "json", "multipart"]}
