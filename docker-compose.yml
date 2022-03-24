@@ -1,7 +1,7 @@
 version: "3.5"
 services:
   app:
-    image: ghcr.io/ddbj/yevis-cli:0.1.5
+    image: ghcr.io/ddbj/yevis-cli:0.1.6
     container_name: yevis-cli
     volumes:
       - ${PWD}/.env:/app/.env
