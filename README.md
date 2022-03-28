@@ -361,6 +361,7 @@ Two actions are provided as examples:
 
 - [`yevis-test-pr.yml`](https://github.com/ddbj/yevis-cli/blob/main/actions_example/yevis-test-pr.yml): Action to automatically validate and test pull requests
 - [`yevis-publish-pr.yml`](https://github.com/ddbj/yevis-cli/blob/main/actions_example/yevis-publish-pr.yml): Action to upload to Zenodo and publish TRS response when pull requests are merged
+  - `ZENODO_TOKEN` must be set as GitHub secrets.
 
 Examples of `yevis` commands executed within each action are as follows:
 
