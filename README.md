@@ -12,6 +12,12 @@ Features include:
 - Upload workflow-related files to [Zenodo](https://zenodo.org/) and obtain DOIs
 - Generate TRS response ([GA4GH - Tool Registry Service API](https://www.ga4gh.org/news/tool-registry-service-api-enabling-an-interoperable-library-of-genomics-analysis-tools/)) and host on GitHub Pages
 
+---
+
+[`ddbj/yevis-workflows`](https://github.com/ddbj/yevis-workflows) is a workflow collection published by [DDBJ](https://www.ddbj.nig.ac.jp/) using `yevis-cli`.
+
+A web application [`ddbj/yevis-web`](https://github.com/ddbj/yevis-web) is also available to browse the published workflow collections.
+
 ## Installation
 
 **As a dependency, `yevis` uses Docker to run tests.**
@@ -277,7 +283,7 @@ OPTIONS:
     -d, --docker-host <docker-host>      Location of the docker host [default: unix:///var/run/docker.sock]
         --gh-token <github-token>        GitHub Personal Access Token
     -r, --repository <repository>        GitHub repository to send the pull requests to. (format: <owner>/<repo>)
-                                         [default: ddbj/yevis-workflows-dev]
+                                         [default: ddbj/yevis-workflows]
     -w, --wes-location <wes-location>    WES location where the test will be run. If not specified, `sapporo-service`
                                          will be started
 
@@ -293,6 +299,9 @@ The typical flow when this command is executed is as follows:
 2. Create a new branch (named `workflow_id`) for the new workflow
 3. Commit the configuration file to the new branch
 4. Create a new pull request
+
+The default for the `--repository` option is `ddbj/yevis-workflows`, so the Pull Request will be created in the [GitHub - ddbj/yevis-workflows](https://github.com/ddbj/yevis-workflows).
+If the environment variable `YEVIS_DEV=1` is set, the default is `ddbj/yevis-workflows-dev`.
 
 ### publish
 
