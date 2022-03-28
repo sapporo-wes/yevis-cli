@@ -16,7 +16,7 @@ Features include:
 
 [`ddbj/yevis-workflows`](https://github.com/ddbj/yevis-workflows) is a workflow collection published by [DDBJ](https://www.ddbj.nig.ac.jp/) using `yevis-cli`.
 
-A web application [`ddbj/yevis-web`](https://github.com/ddbj/yevis-web) is also available to browse the published workflow collections.
+A web application [`ddbj/yevis-web`](https://github.com/ddbj/yevis-web) is also available to browse the published workflows.
 
 ## Installation
 
