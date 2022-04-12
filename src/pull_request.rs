@@ -17,10 +17,12 @@ pub fn pull_request(
     let (repo_owner, repo_name) = gh_trs::github_api::parse_repo(&repo)?;
     let default_branch =
         gh_trs::github_api::get_default_branch(&gh_token, &repo_owner, &repo_name, None)?;
-
-    fork_repository(&gh_token, &user, &repo_owner, &repo_name, &default_branch)?;
     let default_branch_sha =
         gh_trs::github_api::get_branch_sha(&gh_token, &repo_owner, &repo_name, &default_branch)?;
+    if user != repo_owner {
+        fork_repository(&gh_token, &user, &repo_owner, &repo_name, &default_branch)?;
+    }
+
     for config in configs {
         info!(
             "Creating a pull request based on workflow_id: {}, version: {}",
@@ -104,6 +106,28 @@ fn fork_repository(
     Ok(())
 }
 
+fn has_forked_repo(
+    gh_token: impl AsRef<str>,
+    user: impl AsRef<str>,
+    ori_repo_owner: impl AsRef<str>,
+    ori_repo_name: impl AsRef<str>,
+) -> bool {
+    let res = match gh_trs::github_api::get_repos(&gh_token, &user, &ori_repo_name) {
+        Ok(res) => res,
+        Err(_) => return false,
+    };
+    match parse_fork_response(res) {
+        Ok(fork) => match fork.fork {
+            true => {
+                fork.fork_parent.owner.as_str() == ori_repo_owner.as_ref()
+                    && fork.fork_parent.name.as_str() == ori_repo_name.as_ref()
+            }
+            false => false,
+        },
+        Err(_) => false,
+    }
+}
+
 struct Fork {
     pub fork: bool,
     pub fork_parent: ForkParent,
@@ -147,28 +171,6 @@ fn parse_fork_response(res: Value) -> Result<Fork> {
             name: fork_parent_name.to_string(),
         },
     })
-}
-
-fn has_forked_repo(
-    gh_token: impl AsRef<str>,
-    user: impl AsRef<str>,
-    ori_repo_owner: impl AsRef<str>,
-    ori_repo_name: impl AsRef<str>,
-) -> bool {
-    let res = match gh_trs::github_api::get_repos(&gh_token, &user, &ori_repo_name) {
-        Ok(res) => res,
-        Err(_) => return false,
-    };
-    match parse_fork_response(res) {
-        Ok(fork) => match fork.fork {
-            true => {
-                fork.fork_parent.owner.as_str() == ori_repo_owner.as_ref()
-                    && fork.fork_parent.name.as_str() == ori_repo_name.as_ref()
-            }
-            false => false,
-        },
-        Err(_) => false,
-    }
 }
 
 /// https://docs.github.com/en/rest/reference/branches#sync-a-fork-branch-with-the-upstream-repository
@@ -349,7 +351,7 @@ fn commit_config(
     ));
     let config_content = serde_yaml::to_string(&config)?;
     let commit_message = format!(
-        "Add a workflow, id: {} version: {}",
+        "Add workflow, id: {} version: {}",
         &config.id, &config.version
     );
     create_or_update_file(
@@ -372,10 +374,7 @@ fn create_pull_request(
     branch: impl AsRef<str>,
     config: &gh_trs::config::types::Config,
 ) -> Result<()> {
-    let title = format!(
-        "Add workflow, id: {} version: {}",
-        &config.id, &config.version
-    );
+    let title = format!("Add workflow: {}", config.workflow.name);
     let head = format!("{}:{}", user.as_ref(), &config.id);
     info!(
         "Creating pull request to {}/{}",
@@ -383,7 +382,7 @@ fn create_pull_request(
         name.as_ref()
     );
     let pull_request_url = post_pulls(&gh_token, &owner, &name, &title, &head, &branch)?;
-    info!("Pull request URL: {}", &pull_request_url);
+    info!("Pull Request URL: {}", &pull_request_url);
     Ok(())
 }
 

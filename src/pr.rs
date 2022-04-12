@@ -7,21 +7,18 @@ pub fn list_modified_files(
     pr_url: impl AsRef<str>,
 ) -> Result<Vec<String>> {
     let pr_url = Url::parse(pr_url.as_ref())?;
+    let err_msg = "Failed to parse Pull Request URL";
     let path_segments = pr_url
         .path_segments()
-        .ok_or_else(|| anyhow!("Failed to get PR number"))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .collect::<Vec<_>>();
-    let repo_owner = path_segments
-        .get(0)
-        .ok_or_else(|| anyhow!("Failed to get repo owner from PR URL"))?;
-    let repo_name = path_segments
-        .get(1)
-        .ok_or_else(|| anyhow!("Failed to get repo name from PR URL"))?;
+    let repo_owner = path_segments.get(0).ok_or_else(|| anyhow!(err_msg))?;
+    let repo_name = path_segments.get(1).ok_or_else(|| anyhow!(err_msg))?;
     let pr_number = path_segments
         .get(3)
-        .ok_or_else(|| anyhow!("Failed to get PR number from PR URL"))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .parse::<u64>()
-        .map_err(|_| anyhow!("Failed to parse PR number from PR URL"))?;
+        .map_err(|_| anyhow!(err_msg))?;
 
     let gh_token = gh_trs::env::github_token(gh_token)?;
     let url = Url::parse(&format!(
