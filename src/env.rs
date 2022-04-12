@@ -7,13 +7,6 @@ pub fn yevis_dev() -> bool {
     env::var("YEVIS_DEV").is_ok()
 }
 
-pub fn default_pr_repo() -> &'static str {
-    match yevis_dev() {
-        true => "ddbj/yevis-workflows-dev",
-        false => "ddbj/yevis-workflows",
-    }
-}
-
 pub fn zenodo_token() -> Result<String> {
     dotenv().ok();
     match env::var("ZENODO_TOKEN") {

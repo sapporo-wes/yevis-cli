@@ -1,5 +1,3 @@
-use crate::env;
-
 use std::path::PathBuf;
 use structopt::{clap, StructOpt};
 use url::Url;
@@ -73,7 +71,7 @@ pub enum Args {
         github_token: Option<String>,
 
         /// GitHub repository to which the pull request will be sent (format: <owner>/<repo>).
-        #[structopt(short, long, default_value = env::default_pr_repo())]
+        #[structopt(short, long)]
         repository: String,
 
         /// WES location where the test will be run.
@@ -108,7 +106,7 @@ pub enum Args {
         github_token: Option<String>,
 
         /// GitHub repository to which the pull request will be sent (format: <owner>/<repo>).
-        #[structopt(short, long, default_value = env::default_pr_repo())]
+        #[structopt(short, long)]
         repository: String,
 
         /// Location of a WES where the test will be run.
