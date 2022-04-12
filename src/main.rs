@@ -175,21 +175,22 @@ fn main() -> Result<()> {
             from_trs,
             from_pr,
             upload_zenodo,
+            zenodo_community,
             ..
         } => {
             if !gh_trs::env::in_ci() {
-                info!("Yevis publish is only available in the CI environment (GitHub Actions). Aborting.");
+                info!("yevis-cli publish is only available in the CI environment (GitHub Actions). Aborting.");
                 exit(1);
             }
 
             let config_locations = if from_pr {
-                info!("Run yevis test in from_pr mode");
-                info!("GitHub PR URL: {}", config_locations[0]);
+                info!("Run yevis-cli test in from_pr mode");
+                info!("GitHub Pull Request URL: {}", config_locations[0]);
                 match pr::list_modified_files(&github_token, &config_locations[0]) {
                     Ok(files) => files,
                     Err(e) => {
                         error!(
-                            "{} to get modified files from GitHub PR URL with error: {}",
+                            "{} to get modified files from GitHub Pull Request URL with error: {}",
                             "Failed".red(),
                             e
                         );
@@ -201,7 +202,7 @@ fn main() -> Result<()> {
             };
 
             let config_locations = if from_trs {
-                info!("Run yevis publish in from_trs mode");
+                info!("Run yevis-cli publish in from_trs mode");
                 info!("TRS endpoint: {}", config_locations[0]);
                 match gh_trs::config::io::find_config_loc_recursively_from_trs(&config_locations[0])
                 {
@@ -234,7 +235,12 @@ fn main() -> Result<()> {
 
             if upload_zenodo {
                 info!("{} upload_zenodo", "Running".green());
-                match zenodo::upload_and_commit_zenodo(&mut configs, &github_token, &repository) {
+                match zenodo::upload_and_commit_zenodo(
+                    &mut configs,
+                    &github_token,
+                    &repository,
+                    &zenodo_community,
+                ) {
                     Ok(()) => info!("{} upload_zenodo", "Success".green()),
                     Err(e) => {
                         error!("{} to upload_zenodo with error: {}", "Failed".red(), e);

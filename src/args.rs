@@ -167,6 +167,10 @@ pub enum Args {
         #[structopt(long)]
         upload_zenodo: bool,
 
+        /// Community set in Zenodo deposition.
+        #[structopt(long)]
+        zenodo_community: Option<String>,
+
         /// Verbose mode.
         #[structopt(short, long)]
         verbose: bool,

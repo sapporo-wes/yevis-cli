@@ -18,14 +18,14 @@ pub fn upload_and_commit_zenodo(
     configs: &mut Vec<gh_trs::config::types::Config>,
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
+    zenodo_community: &Option<impl AsRef<str>>,
 ) -> Result<()> {
     let host = env::zenodo_host();
     let token = env::zenodo_token()?;
 
     for config in configs {
-        upload_zenodo(&host, &token, config)?;
-        // update config with zenodo url
-        info!("Updating config with Zenodo URL");
+        upload_zenodo(&host, &token, config, &repo, zenodo_community)?;
+        info!("Updating config to Zenodo URL");
         update_config_files(&host, &token, config)?;
 
         // push modified config to GitHub default branch
@@ -40,7 +40,7 @@ pub fn upload_and_commit_zenodo(
         ));
         let config_content = serde_yaml::to_string(&config)?;
         let commit_message = format!(
-            "Update a workflow with Zenodo URL, id: {} version: {}",
+            "Update workflow after uploading to Zenodo, id: {} version: {}",
             &config.id, &config.version
         );
         pull_request::create_or_update_file(
@@ -60,6 +60,8 @@ fn upload_zenodo(
     host: impl AsRef<str>,
     token: impl AsRef<str>,
     config: &mut gh_trs::config::types::Config,
+    repo: impl AsRef<str>,
+    zenodo_community: &Option<impl AsRef<str>>,
 ) -> Result<()> {
     info!(
         "Uploading wf_id: {}, version: {} to Zenodo",
@@ -81,7 +83,7 @@ fn upload_zenodo(
     let deposition_id = if published_deposition_ids.is_empty() {
         // create new deposition
         info!("Creating new deposition");
-        create_deposition(&host, &token, config)?
+        create_deposition(&host, &token, config, repo, zenodo_community)?
     } else {
         // new version deposition
         let prev_id = published_deposition_ids[0];
@@ -94,7 +96,7 @@ fn upload_zenodo(
             info!("Creating new version deposition from {}", prev_id);
             new_version_deposition(&host, &token, &prev_id)?
         };
-        update_deposition(&host, &token, &new_id, config)?;
+        update_deposition(&host, &token, &new_id, config, repo, zenodo_community)?;
         new_id
     };
     info!("Created draft deposition: {}", deposition_id);
@@ -109,10 +111,10 @@ fn upload_zenodo(
         config_files,
     )?;
 
-    info!("Publishing deposition: {}", deposition_id);
+    info!("Publishing deposition {}", deposition_id);
     let zenodo = publish_deposition(&host, &token, &deposition_id)?;
     info!(
-        "Published deposition: {} as DOI: {}",
+        "Published deposition {} as DOI {}",
         deposition_id, zenodo.doi
     );
 
@@ -283,22 +285,33 @@ struct Deposition {
 }
 
 impl Deposition {
-    fn new(config: &gh_trs::config::types::Config) -> Result<Self> {
+    fn new(
+        config: &gh_trs::config::types::Config,
+        repo: impl AsRef<str>,
+        zenodo_community: &Option<impl AsRef<str>>,
+    ) -> Result<Self> {
+        let communities = match zenodo_community {
+            Some(zenodo_community) => vec![Community {
+                identifier: zenodo_community.as_ref().to_string(),
+            }],
+            None => vec![],
+        };
         Ok(Self {
             upload_type: "dataset".to_string(),
-            title: format!("DDBJ workflow: {}", config.id),
-            creators: config
-                .authors
-                .iter()
-                .map(Creator::new)
-                .collect(),
-            description: r#"This dataset was created by the <a href="https://github.com/ddbj/yevis-cli">GitHub - ddbj/yevis-cli</a>."#.to_string(),
+            title: config.id.to_string(),
+            creators: config.authors.iter().map(Creator::new).collect(),
+            description: format!(
+                r#"These data sets are one of the workflows of <a href="https://github.com/{}">{}</a>."#,
+                repo.as_ref(),
+                repo.as_ref()
+            ),
             access_right: "open".to_string(),
-            license: "cc-zero".to_string(),
-            keywords: vec!["ddbj-workflow".to_string()],
-            communities: vec![Community {
-                identifier: "ddbj-workflow".to_string(),
-            }],
+            license: config
+                .license
+                .clone()
+                .unwrap_or_else(|| "cc0-1.0".to_string()),
+            keywords: vec!["yevis-workflow".to_string()],
+            communities,
             version: config.version.clone(),
         })
     }
@@ -338,12 +351,14 @@ fn create_deposition(
     host: impl AsRef<str>,
     token: impl AsRef<str>,
     config: &gh_trs::config::types::Config,
+    repo: impl AsRef<str>,
+    zenodo_community: &Option<impl AsRef<str>>,
 ) -> Result<u64> {
     let url = Url::parse(&format!(
         "https://{}/api/deposit/depositions",
         host.as_ref()
     ))?;
-    let deposition = Deposition::new(config)?;
+    let deposition = Deposition::new(config, repo, zenodo_community)?;
     let body = json!({
         "metadata": deposition,
     });
@@ -365,13 +380,15 @@ fn update_deposition(
     token: impl AsRef<str>,
     deposition_id: &u64,
     config: &gh_trs::config::types::Config,
+    repo: impl AsRef<str>,
+    zenodo_community: &Option<impl AsRef<str>>,
 ) -> Result<()> {
     let url = Url::parse(&format!(
         "https://{}/api/deposit/depositions/{}",
         host.as_ref(),
         deposition_id
     ))?;
-    let deposition = Deposition::new(config)?;
+    let deposition = Deposition::new(config, repo, zenodo_community)?;
     let body = json!({
         "metadata": deposition,
     });
@@ -897,7 +914,7 @@ mod tests {
     #[ignore]
     fn test_new_deposition() -> Result<()> {
         let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
-        Deposition::new(&config)?;
+        Deposition::new(&config, "ddbj/workflow-registry-dev", &None::<String>)?;
         Ok(())
     }
 
@@ -907,7 +924,13 @@ mod tests {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
         let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
-        create_deposition(&host, &token, &config)?;
+        create_deposition(
+            &host,
+            &token,
+            &config,
+            "ddbj/workflow-registry-dev",
+            &None::<String>,
+        )?;
         Ok(())
     }
 
@@ -944,7 +967,14 @@ mod tests {
         )?;
         if !ids.is_empty() {
             let id = ids[0];
-            update_deposition(&host, &token, &id, &config)?;
+            update_deposition(
+                &host,
+                &token,
+                &id,
+                &config,
+                "ddbj/workflow-registry-dev",
+                &None::<String>,
+            )?;
         }
         Ok(())
     }
@@ -957,7 +987,14 @@ mod tests {
         let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         config.version = "1.0.1".to_string();
         let id = 1018767;
-        update_deposition(&host, &token, &id, &config)?;
+        update_deposition(
+            &host,
+            &token,
+            &id,
+            &config,
+            "ddbj/workflow-registry-dev",
+            &None::<String>,
+        )?;
         Ok(())
     }
 
@@ -1059,7 +1096,13 @@ mod tests {
         let token = env::zenodo_token()?;
         let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
         // config.id = Uuid::new_v4();
-        upload_zenodo(&host, &token, &mut config)?;
+        upload_zenodo(
+            &host,
+            &token,
+            &mut config,
+            "ddbj/workflow-registry-dev",
+            &None::<String>,
+        )?;
         // update_config_files(&host, &token, &mut config)?;
         // println!("{}", serde_yaml::to_string(&config)?);
         Ok(())
