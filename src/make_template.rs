@@ -1,8 +1,7 @@
 use crate::version;
 
-use anyhow::{anyhow, Result};
-use colored::Colorize;
-use log::{debug, info, warn};
+use anyhow::{anyhow, bail, Result};
+use log::{debug, info};
 use std::path::Path;
 use std::str::FromStr;
 use url::Url;
@@ -15,66 +14,17 @@ pub fn make_template(
     update: bool,
     url_type: gh_trs::raw_url::UrlType,
 ) -> Result<()> {
-    let gh_token = gh_trs::env::github_token(gh_token)?;
-
     info!("Making a template from {}", wf_loc);
 
     let config = if update {
-        // the TRS ToolVersion URL (e.g., https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>) as `workflow_location`.
-        let trs_endpoint = gh_trs::trs::api::TrsEndpoint::new_from_tool_version_url(wf_loc)?;
-        trs_endpoint.is_valid()?;
-        let (id, version) = parse_trs_tool_version_url(wf_loc)?;
-        let config_loc = trs_endpoint.to_config_url(&id.to_string(), &version)?;
+        // Retrieve config from API because wf_loc is TRS ToolVersion URL
+        let config_loc = tool_version_url_to_config_url(wf_loc)?;
         let mut config = gh_trs::config::io::read_config(&config_loc)?;
-        let prev_version = version::Version::from_str(&version)?;
+        let prev_version = version::Version::from_str(&config.version)?;
         config.version = prev_version.increment_patch().to_string();
-
         config
     } else {
-        let primary_wf = gh_trs::raw_url::RawUrl::new(&gh_token, wf_loc, None, None)?;
-
-        let id = Uuid::new_v4();
-        let version = "1.0.0".to_string();
-        let mut authors = vec![ddbj_author()];
-        match author_from_gh_api(&gh_token) {
-            Ok(author) => {
-                authors.push(author);
-            }
-            Err(e) => {
-                warn!(
-                    "{}: Failed to get GitHub user with error: {}",
-                    "Warning".yellow(),
-                    e
-                );
-            }
-        };
-        let wf_name = primary_wf.file_stem()?;
-        let readme = gh_trs::raw_url::RawUrl::new(
-            &gh_token,
-            &gh_trs::github_api::get_readme_url(&gh_token, &primary_wf.owner, &primary_wf.name)?,
-            None,
-            None,
-        )?
-        .to_url(&url_type)?;
-        let language = gh_trs::inspect::inspect_wf_type_version(&primary_wf.to_url(&url_type)?)?;
-        let files =
-            gh_trs::command::make_template::obtain_wf_files(&gh_token, &primary_wf, &url_type)?;
-        let testing = vec![gh_trs::config::types::Testing::default()];
-
-        gh_trs::config::types::Config {
-            id,
-            version,
-            license: Some("CC0-1.0".to_string()),
-            authors,
-            zenodo: None,
-            workflow: gh_trs::config::types::Workflow {
-                name: wf_name,
-                readme,
-                language,
-                files,
-                testing,
-            },
-        }
+        generate_config(wf_loc, gh_token, url_type)?
     };
     debug!("template config: {:?}", config);
 
@@ -83,40 +33,92 @@ pub fn make_template(
     Ok(())
 }
 
-fn ddbj_author() -> gh_trs::config::types::Author {
-    gh_trs::config::types::Author {
-        github_account: "ddbj".to_string(),
-        name: Some("ddbj-workflow".to_string()),
-        affiliation: Some("DNA Data Bank of Japan".to_string()),
-        orcid: None,
-    }
+/// TRS ToolVersion URL: https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>
+/// config URL: https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>/gh-trs-config.json
+fn tool_version_url_to_config_url(wf_loc: &Url) -> Result<Url> {
+    let tool_version_url_re = regex::Regex::new(r"^https?://.+/tools/([^/]+)/versions/([^/]+)$")?;
+    let (id, version) = match tool_version_url_re.captures(wf_loc.as_str()) {
+        Some(caps) => (caps.get(1).unwrap().as_str(), caps.get(2).unwrap().as_str()),
+        None => bail!("Invalid TRS ToolVersion URL: {}", wf_loc),
+    };
+    let trs_endpoint = gh_trs::trs::api::TrsEndpoint::new_from_tool_version_url(wf_loc)?;
+    trs_endpoint.is_valid()?;
+    let config_loc = trs_endpoint.to_config_url(id, version)?;
+    Ok(config_loc)
+}
+
+fn generate_config(
+    wf_loc: &Url,
+    gh_token: &Option<impl AsRef<str>>,
+    url_type: gh_trs::raw_url::UrlType,
+) -> Result<gh_trs::config::types::Config> {
+    let gh_token = gh_trs::env::github_token(gh_token)?;
+    let primary_wf = gh_trs::raw_url::RawUrl::new(&gh_token, wf_loc, None, None)?;
+
+    Ok(gh_trs::config::types::Config {
+        id: Uuid::new_v4(),
+        version: "1.0.0".to_string(),
+        license: Some("CC0-1.0".to_string()),
+        authors: vec![author_from_gh_api(&gh_token)?],
+        zenodo: None,
+        workflow: gh_trs::config::types::Workflow {
+            name: primary_wf.file_stem()?,
+            readme: gh_trs::raw_url::RawUrl::new(
+                &gh_token,
+                &gh_trs::github_api::get_readme_url(
+                    &gh_token,
+                    &primary_wf.owner,
+                    &primary_wf.name,
+                )?,
+                None,
+                None,
+            )?
+            .to_url(&url_type)?,
+            language: gh_trs::inspect::inspect_wf_type_version(&primary_wf.to_url(&url_type)?)?,
+            files: gh_trs::command::make_template::obtain_wf_files(
+                &gh_token,
+                &primary_wf,
+                &url_type,
+            )?,
+            testing: vec![gh_trs::config::types::Testing::default()],
+        },
+    })
 }
 
 fn author_from_gh_api(gh_token: impl AsRef<str>) -> Result<gh_trs::config::types::Author> {
     match gh_trs::config::types::Author::new_from_api(&gh_token) {
         Ok(mut author) => {
-            author.orcid = Some("".to_string());
+            author.orcid = Some("PUT YOUR ORCID OR REMOVE THIS LINE".to_string());
             Ok(author)
         }
-        Err(e) => Err(e),
+        Err(e) => Err(anyhow!("Failed to get GitHub user with error: {}", e)),
     }
 }
 
-/// from: https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>
-/// to: (<wf_id>, <wf_version>)
-fn parse_trs_tool_version_url(url: &Url) -> Result<(Uuid, String)> {
-    let mut segments = url
-        .path_segments()
-        .ok_or_else(|| anyhow!("Invalid url: {}", url))?;
-    let wf_version = segments
-        .next_back()
-        .ok_or_else(|| anyhow!("Invalid url: {}", url))?
-        .to_string();
-    segments.next_back();
-    let wf_id = Uuid::parse_str(
-        segments
-            .next_back()
-            .ok_or_else(|| anyhow!("Invalid url: {}", url))?,
-    )?;
-    Ok((wf_id, wf_version))
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tool_version_url_to_config_url() {
+        let url = Url::parse(
+            "https://ddbj.github.io/workflow-registry-dev/tools/9df2332c-f51d-4752-b2bf-d4a4ed4e6760/versions/1.0.0",
+        )
+        .unwrap();
+        let config_url = tool_version_url_to_config_url(&url).unwrap();
+        assert_eq!(
+            config_url,
+            Url::parse(
+                "https://ddbj.github.io/workflow-registry-dev/tools/9df2332c-f51d-4752-b2bf-d4a4ed4e6760/versions/1.0.0/gh-trs-config.json"
+            )
+            .unwrap()
+        );
+    }
+
+    #[test]
+    fn test_tool_version_url_to_config_url_invalid() {
+        let url = Url::parse("https://example.com/tools/1.0.0").unwrap();
+        let config_url = tool_version_url_to_config_url(&url);
+        assert!(config_url.is_err());
+    }
 }

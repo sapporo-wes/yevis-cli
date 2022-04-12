@@ -1094,7 +1094,7 @@ mod tests {
         let mut config = validate::validate(
             vec!["./tests/test_config_SMK.yml"],
             &None::<String>,
-            "ddbj/yevis-workflows-dev",
+            "ddbj/workflow-registry-dev",
         )?[0]
             .clone();
         let zenodo = gh_trs::config::types::Zenodo {

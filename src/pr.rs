@@ -53,7 +53,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_list_modified_files() -> Result<()> {
-        let pr_url = Url::parse("https://github.com/ddbj/yevis-workflows-dev/pull/15")?;
+        let pr_url = Url::parse("https://github.com/ddbj/workflow-registry-dev/pull/15")?;
         list_modified_files(&None::<String>, &pr_url)?;
         Ok(())
     }

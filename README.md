@@ -165,7 +165,7 @@ FLAGS:
 OPTIONS:
         --gh-token <github-token>    GitHub Personal Access Token
     -r, --repository <repository>    GitHub repository to send the pull requests to. (format: <owner>/<repo>) [default:
-                                     ddbj/yevis-workflows-dev]
+                                     ddbj/workflow-registry-dev]
 
 ARGS:
     <config-locations>...    Location of the yevis configuration files (local file path or remote URL) [default:
@@ -219,7 +219,7 @@ OPTIONS:
     -d, --docker-host <docker-host>      Location of the docker host [default: unix:///var/run/docker.sock]
         --gh-token <github-token>        GitHub Personal Access Token
     -r, --repository <repository>        GitHub repository to send the pull requests to. (format: <owner>/<repo>)
-                                         [default: ddbj/yevis-workflows-dev]
+                                         [default: ddbj/workflow-registry-dev]
     -w, --wes-location <wes-location>    WES location where the test will be run. If not specified, `sapporo-service`
                                          will be started
 
@@ -301,7 +301,7 @@ The typical flow when this command is executed is as follows:
 4. Create a new pull request
 
 The default for the `--repository` option is `ddbj/yevis-workflows`, so the Pull Request will be created in the [GitHub - ddbj/yevis-workflows](https://github.com/ddbj/yevis-workflows).
-If the environment variable `YEVIS_DEV=1` is set, the default is `ddbj/yevis-workflows-dev`.
+If the environment variable `YEVIS_DEV=1` is set, the default is `ddbj/workflow-registry-dev`.
 
 ### publish
 
@@ -332,7 +332,7 @@ OPTIONS:
     -d, --docker-host <docker-host>      Location of the docker host [default: unix:///var/run/docker.sock]
         --gh-token <github-token>        GitHub Personal Access Token
     -r, --repository <repository>        GitHub repository to publish the TRS response to. (format: <owner>/<repo>)
-                                         [default: ddbj/yevis-workflows-dev]
+                                         [default: ddbj/workflow-registry-dev]
     -w, --wes-location <wes-location>    WES location where the test will be run. If not specified, `sapporo-service`
                                          will be started
 
@@ -385,7 +385,7 @@ yevis 0.1.3
 ...
 ```
 
-Setting the environment variable `YEVIS_DEV=1` will create a pull request in the development environment [`GitHub - ddbj/yevis-workflows-dev`](https://github.com/yevis/yevis-workflows-dev).
+Setting the environment variable `YEVIS_DEV=1` will create a pull request in the development environment [`GitHub - ddbj/workflow-registry-dev`](https://github.com/yevis/workflow-registry-dev).
 
 ### Build binary
 
