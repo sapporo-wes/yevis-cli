@@ -47,10 +47,12 @@ pub fn test(
             info!("WES run_id: {}", run_id);
 
             let mut status = gh_trs::wes::RunStatus::Running;
+            let mut iter_num = 0;
             while status == gh_trs::wes::RunStatus::Running {
+                sleep(iter_num);
                 status = gh_trs::wes::get_run_status(&wes_loc, &run_id)?;
                 debug!("WES run status: {:?}", status);
-                thread::sleep(time::Duration::from_secs(5));
+                iter_num += 1;
             }
 
             let run_log =
@@ -134,4 +136,20 @@ fn check_test_results(test_results: Vec<TestResult>) -> Result<()> {
         );
     }
     Ok(())
+}
+
+/// Up to 1 minute, every 10 seconds: 10 * 6
+/// Up to 5 minutes, every 30 seconds: 10 * 6 + 30 * 8
+/// Up to 60 minutes, every 1 minute: 10 * 6 + 30 * 8 + 60 * 55
+/// Beyond that, every 2 minutes
+fn sleep(iter_num: usize) {
+    if iter_num < 6 {
+        thread::sleep(time::Duration::from_secs(10));
+    } else if iter_num < 15 {
+        thread::sleep(time::Duration::from_secs(30));
+    } else if iter_num < 69 {
+        thread::sleep(time::Duration::from_secs(60));
+    } else {
+        thread::sleep(time::Duration::from_secs(120));
+    }
 }

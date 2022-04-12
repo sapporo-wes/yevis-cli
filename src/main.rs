@@ -81,13 +81,13 @@ fn main() -> Result<()> {
             ..
         } => {
             let config_locations = if from_pr {
-                info!("Run yevis test in from_pr mode");
-                info!("GitHub PR URL: {}", config_locations[0]);
+                info!("Run yevis-cli test in from_pr mode");
+                info!("GitHub Pull Request URL: {}", config_locations[0]);
                 match pr::list_modified_files(&github_token, &config_locations[0]) {
                     Ok(files) => files,
                     Err(e) => {
                         error!(
-                            "{} to get modified files from GitHub PR URL with error: {}",
+                            "{} to get modified files from a GitHub Pull Request URL with error: {}",
                             "Failed".red(),
                             e
                         );
@@ -116,7 +116,7 @@ fn main() -> Result<()> {
                 Err(e) => {
                     match gh_trs::wes::stop_wes(&docker_host) {
                         Ok(_) => {}
-                        Err(e) => error!("{} to stop WES with error: {}", "Failed".red(), e),
+                        Err(e) => error!("{} to stop the WES with error: {}", "Failed".red(), e),
                     }
                     error!("{} to test with error: {}", "Failed".red(), e);
                     exit(1);

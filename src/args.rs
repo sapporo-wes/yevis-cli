@@ -85,7 +85,7 @@ pub enum Args {
 
         /// Get modified files from a GitHub Pull Request.
         /// This option is used for pull request events in the the CI environment.
-        /// When using this option, specify GitHub Pull Request URLs (e.g., `${{ github.event.pull_request._links.html.href }}`) as `config_locations`.
+        /// When using this option, specify a GitHub Pull Request URL (e.g., `${{ github.event.pull_request._links.html.href }}`) as `config_locations`.
         #[structopt(long)]
         from_pr: bool,
 
