@@ -11,7 +11,6 @@ mod zenodo;
 
 use anyhow::Result;
 use colored::Colorize;
-use gh_trs;
 use log::{debug, error, info};
 use std::process::exit;
 use structopt::StructOpt;

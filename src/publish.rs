@@ -1,5 +1,4 @@
 use anyhow::Result;
-use gh_trs;
 use log::info;
 
 pub fn publish(
@@ -34,7 +33,7 @@ pub fn publish(
         gh_trs::github_api::get_latest_commit_sha(&gh_token, &owner, &name, branch.as_ref(), None)?;
     let mut trs_response = gh_trs::trs::response::TrsResponse::new(&owner, &name)?;
     for config in configs {
-        trs_response.add(&owner, &name, &config, verified)?;
+        trs_response.add(&owner, &name, config, verified)?;
     }
     let trs_contents = trs_response.generate_contents()?;
     let new_tree_sha =

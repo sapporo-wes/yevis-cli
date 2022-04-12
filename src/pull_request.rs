@@ -1,9 +1,6 @@
 use anyhow::{anyhow, bail, ensure, Result};
-use base64;
-use gh_trs;
 use log::info;
 use serde_json::{json, Value};
-use serde_yaml;
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::time;
@@ -36,14 +33,14 @@ pub fn pull_request(
             &config.id.to_string(),
             &default_branch_sha,
         )?;
-        commit_config(&gh_token, &user, &repo_name, &config)?;
+        commit_config(&gh_token, &user, &repo_name, config)?;
         create_pull_request(
             &gh_token,
             &user,
             &repo_owner,
             &repo_name,
             &default_branch,
-            &config,
+            config,
         )?;
     }
     Ok(())
@@ -121,28 +118,28 @@ fn parse_fork_response(res: Value) -> Result<Fork> {
     let err_msg = "Failed to parse the response when getting repo info";
     let fork = res
         .get("fork")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_bool()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let fork_parent = res
         .get("parent")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_object()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let fork_parent_owner = fork_parent
         .get("owner")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_object()
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .get("login")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_str()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let fork_parent_name = fork_parent
         .get("name")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_str()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     Ok(Fork {
         fork,
         fork_parent: ForkParent {
@@ -165,13 +162,8 @@ fn has_forked_repo(
     match parse_fork_response(res) {
         Ok(fork) => match fork.fork {
             true => {
-                if fork.fork_parent.owner.as_str() == ori_repo_owner.as_ref()
+                fork.fork_parent.owner.as_str() == ori_repo_owner.as_ref()
                     && fork.fork_parent.name.as_str() == ori_repo_name.as_ref()
-                {
-                    true
-                } else {
-                    false
-                }
             }
             false => false,
         },
@@ -331,14 +323,14 @@ fn get_contents_blob_sha(
     let err_msg = "Failed to parse the response when getting contents";
     let content = res
         .get("content")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_str()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let sha = res
         .get("sha")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_str()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     Ok(Blob {
         content: content.to_string(),
         sha: sha.to_string(),
@@ -423,8 +415,8 @@ pub fn post_pulls(
     let err_msg = "Failed to parse the response when positing pull request";
     Ok(res
         .get("url")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_str()
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .to_string())
 }

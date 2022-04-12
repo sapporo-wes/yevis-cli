@@ -17,15 +17,15 @@ impl FromStr for Version {
         let mut version_parts = s.split('.');
         let major = version_parts
             .next()
-            .ok_or(anyhow!("Failed to parse major version"))?
+            .ok_or_else(|| anyhow!("Failed to parse major version"))?
             .parse()?;
         let minor = version_parts
             .next()
-            .ok_or(anyhow!("Failed to parse minor version"))?
+            .ok_or_else(|| anyhow!("Failed to parse minor version"))?
             .parse()?;
         let patch = version_parts
             .next()
-            .ok_or(anyhow!("Failed to parse patch version"))?
+            .ok_or_else(|| anyhow!("Failed to parse patch version"))?
             .parse()?;
         Ok(Version {
             major,

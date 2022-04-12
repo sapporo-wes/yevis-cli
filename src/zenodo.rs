@@ -4,7 +4,6 @@ use crate::pull_request;
 use anyhow::{anyhow, ensure, Result};
 use crypto::digest::Digest;
 use crypto::md5::Md5;
-use gh_trs;
 use log::info;
 use reqwest::{self, blocking::multipart};
 use serde::{Deserialize, Serialize};
@@ -13,7 +12,6 @@ use std::collections::HashMap;
 use std::fmt;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
-use tempfile;
 use url::Url;
 
 pub fn upload_and_commit_zenodo(
@@ -68,7 +66,7 @@ fn upload_zenodo(
         config.id, config.version
     );
 
-    delete_unpublished_depositions(&host, &token, &config)?;
+    delete_unpublished_depositions(&host, &token, config)?;
     let published_deposition_ids = list_depositions(
         &host,
         &token,
@@ -80,10 +78,10 @@ fn upload_zenodo(
         "More than one published deposition for wf_id: {}",
         config.id
     );
-    let deposition_id = if published_deposition_ids.len() == 0 {
+    let deposition_id = if published_deposition_ids.is_empty() {
         // create new deposition
         info!("Creating new deposition");
-        create_deposition(&host, &token, &config)?
+        create_deposition(&host, &token, config)?
     } else {
         // new version deposition
         let prev_id = published_deposition_ids[0];
@@ -96,13 +94,13 @@ fn upload_zenodo(
             info!("Creating new version deposition from {}", prev_id);
             new_version_deposition(&host, &token, &prev_id)?
         };
-        update_deposition(&host, &token, &new_id, &config)?;
+        update_deposition(&host, &token, &new_id, config)?;
         new_id
     };
     info!("Created draft deposition: {}", deposition_id);
 
     let deposition_files = get_files_list(&host, &token, &deposition_id)?;
-    let config_files = config_to_files(&config)?;
+    let config_files = config_to_files(config)?;
     update_deposition_files(
         &host,
         &token,
@@ -118,7 +116,7 @@ fn upload_zenodo(
         deposition_id, zenodo.doi
     );
 
-    config.zenodo = Some(zenodo.clone());
+    config.zenodo = Some(zenodo);
 
     Ok(())
 }
@@ -259,13 +257,13 @@ fn list_depositions(
     let err_msg = "Failed to parse the response when listing depositions";
     let ids = res
         .as_array()
-        .ok_or(anyhow!(err_msg))?
-        .into_iter()
+        .ok_or_else(|| anyhow!(err_msg))?
+        .iter()
         .map(|d| {
             d.as_object()
-                .ok_or(anyhow!(err_msg))
-                .and_then(|d| d.get("id").ok_or(anyhow!(err_msg)))
-                .and_then(|id| id.as_u64().ok_or(anyhow!(err_msg)))
+                .ok_or_else(|| anyhow!(err_msg))
+                .and_then(|d| d.get("id").ok_or_else(|| anyhow!(err_msg)))
+                .and_then(|id| id.as_u64().ok_or_else(|| anyhow!(err_msg)))
         })
         .collect::<Result<Vec<u64>>>()?;
     Ok(ids)
@@ -292,7 +290,7 @@ impl Deposition {
             creators: config
                 .authors
                 .iter()
-                .map(|author| Creator::new(author))
+                .map(Creator::new)
                 .collect(),
             description: r#"This dataset was created by the <a href="https://github.com/ddbj/yevis-cli">GitHub - ddbj/yevis-cli</a>."#.to_string(),
             access_right: "open".to_string(),
@@ -318,7 +316,7 @@ struct Creator {
 impl Creator {
     fn new(author: &gh_trs::config::types::Author) -> Self {
         let name = match author.name.clone() {
-            Some(name) => name.to_string(),
+            Some(name) => name,
             None => author.github_account.clone(),
         };
         Self {
@@ -345,7 +343,7 @@ fn create_deposition(
         "https://{}/api/deposit/depositions",
         host.as_ref()
     ))?;
-    let deposition = Deposition::new(&config)?;
+    let deposition = Deposition::new(config)?;
     let body = json!({
         "metadata": deposition,
     });
@@ -353,11 +351,11 @@ fn create_deposition(
     let err_msg = "Failed to parse the response when creating a deposition";
     let id = res
         .as_object()
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .get("id")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_u64()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     Ok(id)
 }
 
@@ -373,7 +371,7 @@ fn update_deposition(
         host.as_ref(),
         deposition_id
     ))?;
-    let deposition = Deposition::new(&config)?;
+    let deposition = Deposition::new(config)?;
     let body = json!({
         "metadata": deposition,
     });
@@ -410,22 +408,22 @@ fn publish_deposition(
     ))?;
     let res = post_request(&token, &url, &json!({}))?;
     let err_msg = "Failed to parse the response when publishing a deposition";
-    let res_obj = res.as_object().ok_or(anyhow!(err_msg))?;
+    let res_obj = res.as_object().ok_or_else(|| anyhow!(err_msg))?;
     let id = res_obj
         .get("id")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_u64()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let doi = res_obj
         .get("doi")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_str()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let concept_doi = res_obj
         .get("conceptdoi")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_str()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let url = Url::parse(&format!("https://{}/record/{}", host.as_ref(), &id))?;
     Ok(gh_trs::config::types::Zenodo {
         url,
@@ -450,19 +448,19 @@ fn new_version_deposition(
     let err_msg = "Failed to parse the response when creating a new version of a deposition";
     let latest_draft = res
         .as_object()
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .get("links")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_object()
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .get("latest_draft")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_str()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let latest_draft_id: u64 = latest_draft
-        .split("/")
+        .split('/')
         .last()
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .parse()?;
     Ok(latest_draft_id)
 }
@@ -536,7 +534,7 @@ impl ConfigFile {
         file.write_all(content_bytes)?;
 
         let mut md5 = Md5::new();
-        md5.input(&content_bytes);
+        md5.input(content_bytes);
         let checksum = md5.result_str();
 
         Ok(Self {
@@ -711,7 +709,7 @@ fn delete_unpublished_depositions(
         &config.id.to_string(),
         DepositionStatus::Draft,
     )?;
-    if draft_deposition_ids.len() > 0 {
+    if !draft_deposition_ids.is_empty() {
         info!(
             "Found {} draft deposition(s), so deleting them",
             draft_deposition_ids.len()
@@ -732,12 +730,15 @@ fn update_config_files(
     let deposition_id = config
         .zenodo
         .as_ref()
-        .ok_or(anyhow!("No Zenodo deposition ID"))?
+        .ok_or_else(|| anyhow!("No Zenodo deposition ID"))?
         .id;
     let files_map: HashMap<String, Url> = get_files_download_urls(&host, &token, &deposition_id)?;
 
     let err_msg = "Failed to update config files.";
-    config.workflow.readme = files_map.get("README.md").ok_or(anyhow!(err_msg))?.clone();
+    config.workflow.readme = files_map
+        .get("README.md")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .clone();
     for file in &mut config.workflow.files {
         file.url = files_map
             .get(
@@ -750,7 +751,7 @@ fn update_config_files(
                     .collect::<Vec<_>>()
                     .join("_"),
             )
-            .ok_or(anyhow!(err_msg))?
+            .ok_or_else(|| anyhow!(err_msg))?
             .clone();
     }
     for testing in &mut config.workflow.testing {
@@ -766,7 +767,7 @@ fn update_config_files(
                         .collect::<Vec<_>>()
                         .join("_"),
                 )
-                .ok_or(anyhow!(err_msg))?
+                .ok_or_else(|| anyhow!(err_msg))?
                 .clone();
         }
     }
@@ -786,32 +787,32 @@ fn retrieve_record(
     ))?;
     let res = get_request(&token, &url, &[])?;
     let err_msg = "Failed to parse the response when retrieving a deposition";
-    let res_obj = res.as_object().ok_or(anyhow!(err_msg))?;
+    let res_obj = res.as_object().ok_or_else(|| anyhow!(err_msg))?;
     let id = res_obj
         .get("id")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_u64()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let doi = res_obj
         .get("doi")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_str()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let concept_doi = res_obj
         .get("conceptdoi")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_str()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let url = Url::parse(&format!("https://{}/record/{}", host.as_ref(), &id))?;
     let version = res_obj
         .get("metadata")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_object()
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .get("version")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_str()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
 
     Ok((
         gh_trs::config::types::Zenodo {
@@ -839,31 +840,31 @@ fn get_files_download_urls(
     let err_msg = "Failed to parse the response when retrieving a deposition";
     let files_arr = res
         .as_object()
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .get("files")
-        .ok_or(anyhow!(err_msg))?
+        .ok_or_else(|| anyhow!(err_msg))?
         .as_array()
-        .ok_or(anyhow!(err_msg))?;
+        .ok_or_else(|| anyhow!(err_msg))?;
     let mut files_map: HashMap<String, Url> = HashMap::new();
     for file_obj in files_arr {
         let filename = file_obj
             .as_object()
-            .ok_or(anyhow!(err_msg))?
+            .ok_or_else(|| anyhow!(err_msg))?
             .get("key")
-            .ok_or(anyhow!(err_msg))?
+            .ok_or_else(|| anyhow!(err_msg))?
             .as_str()
-            .ok_or(anyhow!(err_msg))?;
+            .ok_or_else(|| anyhow!(err_msg))?;
         let download_url = file_obj
             .as_object()
-            .ok_or(anyhow!(err_msg))?
+            .ok_or_else(|| anyhow!(err_msg))?
             .get("links")
-            .ok_or(anyhow!(err_msg))?
+            .ok_or_else(|| anyhow!(err_msg))?
             .as_object()
-            .ok_or(anyhow!(err_msg))?
+            .ok_or_else(|| anyhow!(err_msg))?
             .get("self")
-            .ok_or(anyhow!(err_msg))?
+            .ok_or_else(|| anyhow!(err_msg))?
             .as_str()
-            .ok_or(anyhow!(err_msg))?;
+            .ok_or_else(|| anyhow!(err_msg))?;
         files_map.insert(filename.to_string(), Url::parse(download_url)?);
     }
 
@@ -922,7 +923,7 @@ mod tests {
             &config.id.to_string(),
             DepositionStatus::Draft,
         )?;
-        if ids.len() > 0 {
+        if !ids.is_empty() {
             let id = ids[0];
             delete_deposition(&host, &token, &id)?;
         }
@@ -941,7 +942,7 @@ mod tests {
             &config.id.to_string(),
             DepositionStatus::Draft,
         )?;
-        if ids.len() > 0 {
+        if !ids.is_empty() {
             let id = ids[0];
             update_deposition(&host, &token, &id, &config)?;
         }
@@ -983,7 +984,7 @@ mod tests {
             &config.id.to_string(),
             DepositionStatus::Draft,
         )?;
-        if ids.len() > 0 {
+        if !ids.is_empty() {
             let id = ids[0];
             // let deposition_files = get_files_list(&host, &token, &id)?;
             let deposition_files = vec![];
@@ -1004,7 +1005,7 @@ mod tests {
             &config.id.to_string(),
             DepositionStatus::Published,
         )?;
-        if ids.len() > 0 {
+        if !ids.is_empty() {
             // let id = ids[0];
             let id = 1018767;
             let list = get_files_list(&host, &token, &id)?;
@@ -1025,7 +1026,7 @@ mod tests {
             &config.id.to_string(),
             DepositionStatus::Draft,
         )?;
-        if ids.len() > 0 {
+        if !ids.is_empty() {
             let id = ids[0];
             publish_deposition(&host, &token, &id)?;
         }
@@ -1044,7 +1045,7 @@ mod tests {
             &config.id.to_string(),
             DepositionStatus::Published,
         )?;
-        if ids.len() > 0 {
+        if !ids.is_empty() {
             let id = ids[0];
             new_version_deposition(&host, &token, &id)?;
         }
@@ -1076,7 +1077,7 @@ mod tests {
             &config.id.to_string(),
             DepositionStatus::Published,
         )?;
-        if ids.len() > 0 {
+        if !ids.is_empty() {
             let id = ids[0];
             let (zenodo, version) = retrieve_record(&host, &token, &id)?;
             dbg!(&zenodo);
@@ -1119,7 +1120,7 @@ mod tests {
             &config.id.to_string(),
             DepositionStatus::Published,
         )?;
-        if ids.len() > 0 {
+        if !ids.is_empty() {
             let id = ids[0];
             let files_map = get_files_download_urls(&host, &token, &id)?;
             dbg!(&files_map);

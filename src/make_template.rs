@@ -2,7 +2,6 @@ use crate::version;
 
 use anyhow::{anyhow, Result};
 use colored::Colorize;
-use gh_trs;
 use log::{debug, info, warn};
 use std::path::Path;
 use std::str::FromStr;
@@ -22,9 +21,9 @@ pub fn make_template(
 
     let config = if update {
         // the TRS ToolVersion URL (e.g., https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>) as `workflow_location`.
-        let trs_endpoint = gh_trs::trs::api::TrsEndpoint::new_from_tool_version_url(&wf_loc)?;
+        let trs_endpoint = gh_trs::trs::api::TrsEndpoint::new_from_tool_version_url(wf_loc)?;
         trs_endpoint.is_valid()?;
-        let (id, version) = parse_trs_tool_version_url(&wf_loc)?;
+        let (id, version) = parse_trs_tool_version_url(wf_loc)?;
         let config_loc = trs_endpoint.to_config_url(&id.to_string(), &version)?;
         let mut config = gh_trs::config::io::read_config(&config_loc)?;
         let prev_version = version::Version::from_str(&version)?;
@@ -32,7 +31,7 @@ pub fn make_template(
 
         config
     } else {
-        let primary_wf = gh_trs::raw_url::RawUrl::new(&gh_token, &wf_loc, None, None)?;
+        let primary_wf = gh_trs::raw_url::RawUrl::new(&gh_token, wf_loc, None, None)?;
 
         let id = Uuid::new_v4();
         let version = "1.0.0".to_string();
@@ -106,16 +105,18 @@ fn author_from_gh_api(gh_token: impl AsRef<str>) -> Result<gh_trs::config::types
 /// from: https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>
 /// to: (<wf_id>, <wf_version>)
 fn parse_trs_tool_version_url(url: &Url) -> Result<(Uuid, String)> {
-    let mut segments = url.path_segments().ok_or(anyhow!("Invalid url: {}", url))?;
+    let mut segments = url
+        .path_segments()
+        .ok_or_else(|| anyhow!("Invalid url: {}", url))?;
     let wf_version = segments
         .next_back()
-        .ok_or(anyhow!("Invalid url: {}", url))?
+        .ok_or_else(|| anyhow!("Invalid url: {}", url))?
         .to_string();
     segments.next_back();
     let wf_id = Uuid::parse_str(
         segments
             .next_back()
-            .ok_or(anyhow!("Invalid url: {}", url))?,
+            .ok_or_else(|| anyhow!("Invalid url: {}", url))?,
     )?;
     Ok((wf_id, wf_version))
 }

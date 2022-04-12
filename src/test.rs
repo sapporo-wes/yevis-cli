@@ -1,5 +1,4 @@
 use anyhow::{anyhow, bail, ensure, Result};
-use gh_trs;
 use log::{debug, info};
 use std::env;
 use std::fs;
@@ -17,7 +16,7 @@ pub fn test(
     let wes_loc = match wes_loc {
         Some(wes_loc) => wes_loc.clone(),
         None => {
-            gh_trs::wes::start_wes(&docker_host)?;
+            gh_trs::wes::start_wes(docker_host)?;
             Url::parse(&gh_trs::wes::default_wes_location())?
         }
     };
@@ -27,8 +26,7 @@ pub fn test(
     ensure!(
         supported_wes_versions
             .into_iter()
-            .find(|v| v == "sapporo-wes-1.0.1")
-            .is_some(),
+            .any(|v| &v == "sapporo-wes-1.0.1"),
         "yevis only supports WES version `sapporo-wes-1.0.1`"
     );
 
@@ -89,7 +87,7 @@ pub fn test(
         };
     }
 
-    gh_trs::wes::stop_wes(&docker_host)?;
+    gh_trs::wes::stop_wes(docker_host)?;
     Ok(())
 }
 
@@ -113,10 +111,10 @@ fn write_test_log(
     fs::create_dir_all(
         test_log_file
             .parent()
-            .ok_or(anyhow!("Failed to create dir"))?,
+            .ok_or_else(|| anyhow!("Failed to create dir"))?,
     )?;
     let mut buffer = BufWriter::new(fs::File::create(&test_log_file)?);
-    buffer.write(run_log.as_ref().as_bytes())?;
+    buffer.write_all(run_log.as_ref().as_bytes())?;
     Ok(())
 }
 
@@ -125,7 +123,7 @@ fn check_test_results(test_results: Vec<TestResult>) -> Result<()> {
         .iter()
         .filter(|r| r.status == gh_trs::wes::RunStatus::Failed)
         .collect::<Vec<_>>();
-    if failed_tests.len() > 0 {
+    if !failed_tests.is_empty() {
         bail!(
             "Some tests failed. Failed tests: {}",
             failed_tests

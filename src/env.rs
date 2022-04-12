@@ -4,10 +4,7 @@ use std::env;
 
 pub fn yevis_dev() -> bool {
     dotenv().ok();
-    match env::var("YEVIS_DEV") {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+    env::var("YEVIS_DEV").is_ok()
 }
 
 pub fn default_pr_repo() -> &'static str {
