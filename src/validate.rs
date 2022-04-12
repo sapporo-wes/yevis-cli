@@ -14,11 +14,9 @@ pub fn validate(
     let gh_token = gh_trs::env::github_token(gh_token)?;
 
     let mut configs = vec![];
-
     for config_loc in config_locs {
         info!("Validating {}", config_loc.as_ref());
         let mut config = gh_trs::config::io::read_config(config_loc.as_ref())?;
-
         validate_version(&config, &repo)?;
         validate_license(&mut config, &gh_token)?;
         validate_authors(&config)?;
@@ -27,16 +25,15 @@ pub fn validate(
         validate_and_update_workflow(&mut config, &gh_token)?;
 
         debug!("updated config: {:?}", config);
-
         configs.push(config);
     }
+
     Ok(configs)
 }
 
 fn validate_version(config: &gh_trs::config::types::Config, repo: impl AsRef<str>) -> Result<()> {
     let version =
         version::Version::from_str(&config.version).context("Invalid version, must be x.y.z")?;
-
     let (owner, name) = gh_trs::github_api::parse_repo(&repo)?;
     let trs_endpoint = gh_trs::trs::api::TrsEndpoint::new_gh_pages(&owner, &name)?;
     if trs_endpoint.is_valid().is_ok() {
@@ -60,7 +57,7 @@ fn validate_version(config: &gh_trs::config::types::Config, repo: impl AsRef<str
 }
 
 /// Validate the license of the config.
-/// Contact the GitHub API and Zenodo API to confirm.
+/// Contact GitHub API and Zenodo API to confirm.
 /// Change the license to `spdx_id`
 /// e.g., `apache-2.0` -> `Apache-2.0`
 fn validate_license(
@@ -73,56 +70,28 @@ fn validate_license(
             validate_with_zenodo_license_api(&spdx_id)?;
             config.license = Some(spdx_id);
         },
-        None => bail!("The `license` is not specified. In yevis, the `license` must be a distributable license such as `CC0-1.0` or `MIT`"),
+        None => bail!("`license` is not specified. In Yevis, `license` must be a distributable license such as `CC0-1.0` or `MIT`"),
     };
     Ok(())
 }
 
 fn validate_authors(config: &gh_trs::config::types::Config) -> Result<()> {
     let orcid_re = Regex::new(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")?;
-
     let mut account_set: HashSet<&str> = HashSet::new();
     for author in &config.authors {
-        ensure!(
-            author.name.is_some(),
-            "The `authors[].name` is not specified",
-        );
+        ensure!(author.name.is_some(), "`authors[].name` is not specified",);
         if let Some(orcid) = &author.orcid {
-            ensure!(
-                orcid_re.is_match(orcid),
-                "The `authors[].orcid` is not valid",
-            );
+            ensure!(orcid_re.is_match(orcid), "`authors[].orcid` is not valid",);
         };
-
-        if author.github_account.as_str() == "ddbj" {
-            ensure!(
-                author.name.as_ref().unwrap() == "ddbj-workflow",
-                "The ddbj author `name` is not `ddbj-workflow`",
-            );
-            ensure!(
-                author.affiliation.as_ref().unwrap() == "DNA Data Bank of Japan",
-                "The ddbj author `affiliation` is not `DDBJ`",
-            );
-            ensure!(
-                author.orcid.is_none(),
-                "The ddbj author `orcid` is not `None`",
-            );
-        }
-
         ensure!(
             !account_set.contains(author.github_account.as_str()),
-            "The `authors[].github_account` is not unique",
+            "`authors[].github_account` is not unique",
         );
         account_set.insert(author.github_account.as_str());
     }
-
-    ensure!(
-        account_set.contains("ddbj"),
-        "The `authors[].github_account` is not contained the ddbj author",
-    );
     ensure!(
         config.authors.len() > 1,
-        "The `authors` must have more than one author",
+        "`authors` must have more than one author",
     );
     Ok(())
 }
@@ -130,11 +99,11 @@ fn validate_authors(config: &gh_trs::config::types::Config) -> Result<()> {
 fn validate_language(config: &gh_trs::config::types::Config) -> Result<()> {
     ensure!(
         config.workflow.language.r#type.is_some(),
-        "The `workflow.language.type` is not specified",
+        "`workflow.language.type` is not specified",
     );
     ensure!(
         config.workflow.language.version.is_some(),
-        "The `workflow.language.version` is not specified",
+        "`workflow.language.version` is not specified",
     );
     Ok(())
 }
@@ -162,7 +131,7 @@ fn validate_and_update_workflow(
         ) {
             Ok(raw_url) => raw_url.to_url(&gh_trs::raw_url::UrlType::Commit)?,
             Err(e) => {
-                bail!("The `workflow.readme` is not valid with error: {}", e);
+                bail!("`workflow.readme` is not valid with error: {}", e);
             }
         };
     }
@@ -176,7 +145,7 @@ fn validate_and_update_workflow(
         if !is_zenodo_url(&file.url) {
             match file.update_url(&gh_token, Some(&mut branch_memo), Some(&mut commit_memo)) {
                 Ok(()) => {}
-                Err(e) => bail!("The `workflow.files[].url` is not valid with error: {}", e),
+                Err(e) => bail!("`workflow.files[].url` is not valid with error: {}", e),
             }
         }
         file.complement_target()?;
@@ -186,7 +155,7 @@ fn validate_and_update_workflow(
     for testing in &mut config.workflow.testing {
         ensure!(
             !test_id_set.contains(testing.id.as_str()),
-            "The `workflow.testing[].id` is not unique, duplicated id: {}",
+            "`workflow.testing[].id` is not unique, duplicated id: {}",
             testing.id.as_str()
         );
         test_id_set.insert(testing.id.as_str());
@@ -214,7 +183,7 @@ fn validate_with_github_license_api(
         license.as_ref()
     ))?;
     let res = gh_trs::github_api::get_request(gh_token, &url, &[])?;
-    let err_msg = "The `license` is not valid from GitHub license API";
+    let err_msg = "`license` is not valid from GitHub license API";
     let permissions = res
         .get("permissions")
         .ok_or_else(|| anyhow!(err_msg))?
@@ -243,7 +212,7 @@ fn validate_with_zenodo_license_api(license: impl AsRef<str>) -> Result<()> {
     let status = response.status();
     ensure!(
         status.is_success(),
-        "The `license` is not valid from Zenodo license API"
+        "`license` is not valid from Zenodo license API"
     );
     Ok(())
 }
