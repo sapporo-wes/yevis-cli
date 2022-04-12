@@ -1,5 +1,5 @@
 [package]
-authors = ["DDBJ(DNA Data Bank of Japan)"]
+authors = ["DDBJ(Bioinformatics and DDBJ Center)"]
 edition = "2018"
 license = "Apache-2.0"
 name = "yevis"
@@ -8,19 +8,19 @@ repository = "https://github.com/ddbj/yevis-cli"
 version = "0.1.7"
 
 [dependencies]
-anyhow = { version = "1.0.56", features = ["backtrace"] }
+anyhow = {version = "1.0.56", features = ["backtrace"]}
 base64 = "0.13.0"
 colored = "2.0.0"
 dotenv = "0.15.0"
 gh-trs = "1.1.11"
 log = "0.4.16"
 regex = "1.5.5"
-reqwest = { version = "0.11.10", features = ["blocking", "json", "multipart"] }
+reqwest = {version = "0.11.10", features = ["blocking", "json", "multipart"]}
 rust-crypto = "0.2.36"
-serde = { version = "1.0.136", features = ["derive"] }
+serde = {version = "1.0.136", features = ["derive"]}
 serde_json = "1.0.79"
 serde_yaml = "0.8.23"
 structopt = "0.3.26"
 tempfile = "3.3.0"
-url = { version = "2.2.2", features = ["serde"] }
-uuid = { version = "0.8.2", features = ["serde", "v4"] }
+url = {version = "2.2.2", features = ["serde"]}
+uuid = {version = "0.8.2", features = ["serde", "v4"]}

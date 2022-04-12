@@ -1,6 +1,6 @@
 FROM debian:stretch-slim
 
-LABEL org.opencontainers.image.authors="DDBJ(DNA Data Bank of Japan) <t.ohta@nig.ac.jp>"
+LABEL org.opencontainers.image.authors="DDBJ(Bioinformatics and DDBJ Center) <t.ohta@nig.ac.jp>"
 LABEL org.opencontainers.image.url="https://github.com/ddbj/yevis-cli"
 LABEL org.opencontainers.image.source="https://github.com/ddbj/yevis-cli/blob/main/Dockerfile"
 LABEL org.opencontainers.image.version="0.1.7"

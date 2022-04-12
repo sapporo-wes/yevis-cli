@@ -35,7 +35,7 @@ fn main() -> Result<()> {
             github_token,
             output,
             update,
-            use_branch_url,
+            use_commit_url,
             ..
         } => {
             info!("{} make-template", "Running".green());
@@ -44,9 +44,9 @@ fn main() -> Result<()> {
                 &github_token,
                 &output,
                 update,
-                match use_branch_url {
-                    true => gh_trs::raw_url::UrlType::Branch,
-                    false => gh_trs::raw_url::UrlType::Commit,
+                match use_commit_url {
+                    true => gh_trs::raw_url::UrlType::Commit,
+                    false => gh_trs::raw_url::UrlType::Branch,
                 },
             ) {
                 Ok(()) => info!("{} make-template", "Success".green()),
@@ -169,7 +169,6 @@ fn main() -> Result<()> {
             config_locations,
             github_token,
             repository,
-            branch,
             with_test,
             wes_location,
             docker_host,
@@ -263,7 +262,7 @@ fn main() -> Result<()> {
             };
 
             info!("{} publish", "Running".green());
-            match publish::publish(&configs, &github_token, &repository, &branch, verified) {
+            match publish::publish(&configs, &github_token, &repository, verified) {
                 Ok(()) => info!("{} publish", "Success".green()),
                 Err(e) => {
                     error!("{} to publish with error: {}", "Failed".red(), e);

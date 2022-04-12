@@ -5,32 +5,32 @@ pub fn publish(
     configs: &Vec<gh_trs::config::types::Config>,
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
-    branch: impl AsRef<str>,
     verified: bool,
 ) -> Result<()> {
     let gh_token = gh_trs::env::github_token(gh_token)?;
 
     let (owner, name) = gh_trs::github_api::parse_repo(repo)?;
 
+    // TODO branch from api
+    let branch = "gh-pages";
+
     info!(
         "Publishing to repo: {}/{}, branch: {}",
-        &owner,
-        &name,
-        branch.as_ref(),
+        &owner, &name, branch,
     );
 
-    match gh_trs::github_api::exists_branch(&gh_token, &owner, &name, branch.as_ref()) {
+    match gh_trs::github_api::exists_branch(&gh_token, &owner, &name, branch) {
         Ok(_) => {}
         Err(_) => {
-            info!("Branch {} does not exist, creating it", branch.as_ref());
-            gh_trs::github_api::create_empty_branch(&gh_token, &owner, &name, branch.as_ref())?;
-            info!("Branch {} created", branch.as_ref());
+            info!("Branch {} does not exist, creating it", branch);
+            gh_trs::github_api::create_empty_branch(&gh_token, &owner, &name, branch)?;
+            info!("Branch {} created", branch);
         }
     }
 
-    let branch_sha = gh_trs::github_api::get_branch_sha(&gh_token, &owner, &name, branch.as_ref())?;
+    let branch_sha = gh_trs::github_api::get_branch_sha(&gh_token, &owner, &name, branch)?;
     let latest_commit_sha =
-        gh_trs::github_api::get_latest_commit_sha(&gh_token, &owner, &name, branch.as_ref(), None)?;
+        gh_trs::github_api::get_latest_commit_sha(&gh_token, &owner, &name, branch, None)?;
     let mut trs_response = gh_trs::trs::response::TrsResponse::new(&owner, &name)?;
     for config in configs {
         trs_response.add(&owner, &name, config, verified)?;
@@ -58,13 +58,11 @@ pub fn publish(
         &new_tree_sha,
         &commit_message,
     )?;
-    gh_trs::github_api::update_ref(&gh_token, &owner, &name, branch.as_ref(), &new_commit_sha)?;
+    gh_trs::github_api::update_ref(&gh_token, &owner, &name, branch, &new_commit_sha)?;
 
     info!(
         "Published to repo: {}/{}, branch: {}",
-        &owner,
-        &name,
-        branch.as_ref()
+        &owner, &name, branch
     );
     Ok(())
 }
