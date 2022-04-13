@@ -90,7 +90,7 @@ fn validate_authors(config: &gh_trs::config::types::Config) -> Result<()> {
         account_set.insert(author.github_account.as_str());
     }
     ensure!(
-        config.authors.len() > 1,
+        config.authors.len() > 0,
         "`authors` must have more than one author",
     );
     Ok(())
