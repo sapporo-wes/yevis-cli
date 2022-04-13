@@ -9,7 +9,7 @@ use url::Url;
     author = env!("CARGO_PKG_AUTHORS"),
 )]
 #[structopt(setting(clap::AppSettings::ColoredHelp))]
-/// CLI tool to support building and maintaining a workflow registry.
+/// CLI tool to support building and maintaining Yevis workflow registry.
 pub enum Args {
     #[structopt(setting(clap::AppSettings::ColoredHelp))]
     /// Make a template for the Yevis configuration file.
