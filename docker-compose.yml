@@ -4,7 +4,6 @@ services:
     image: ghcr.io/ddbj/yevis-cli:0.1.7
     container_name: yevis-cli
     volumes:
-      - ${PWD}/.env:/app/.env
       - ${PWD}/sapporo_run:/app/sapporo_run
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -13,8 +12,8 @@ services:
     working_dir: /app
     command: [ "sleep", "infinity" ]
     networks:
-      - yevis-network
+      - gh-trs-network
 
 networks:
-  yevis-network:
-    name: yevis-network
+  gh-trs-network:
+    name: gh-trs-network

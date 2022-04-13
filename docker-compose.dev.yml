@@ -17,8 +17,8 @@ services:
     working_dir: /app
     command: [ "sleep", "infinity" ]
     networks:
-      - yevis-network
+      - gh-trs-network
 
 networks:
-  yevis-network:
-    name: yevis-network
+  gh-trs-network:
+    name: gh-trs-network
