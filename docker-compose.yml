@@ -4,11 +4,9 @@ services:
     image: ghcr.io/ddbj/yevis-cli:0.1.7
     container_name: yevis-cli
     volumes:
-      # - ${PWD}:/app
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - SAPPORO_RUN_DIR=${PWD}/sapporo_run
-      # - GITHUB_TOKEN=<PASTE YOUR TOKEN>
     entrypoint: [ "" ]
     command: [ "sleep", "infinity" ]
     restart: on-failure
