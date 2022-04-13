@@ -12,6 +12,7 @@ permissions:
   pull-requests: read
   actions: read
   contents: write
+  pages: read
 
 jobs:
   publish:
