@@ -381,7 +381,12 @@ fn create_pull_request(
         owner.as_ref(),
         name.as_ref()
     );
-    let pull_request_url = post_pulls(&gh_token, &owner, &name, &title, &head, &branch)?;
+    // https://api.github.com/repos/suecharo/yevis-getting-started/pulls/1
+    let pull_request_apt_url = post_pulls(&gh_token, &owner, &name, &title, &head, &branch)?;
+    // https://github.com/suecharo/yevis-getting-started/pull/1
+    let pull_request_url = pull_request_apt_url
+        .as_str()
+        .replace("https://api.github.com/repos/", "https://github.com/");
     info!("Pull Request URL: {}", &pull_request_url);
     Ok(())
 }
