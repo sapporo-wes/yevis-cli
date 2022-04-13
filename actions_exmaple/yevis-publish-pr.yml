@@ -39,12 +39,16 @@ jobs:
         run: |
           mkdir -p ./test-logs
           SAPPORO_RUN_DIR=${GITHUB_WORKSPACE}/test-results \
-            ./yevis publish --verbose --with-test --upload-zenodo --from-pr ${{github.event.pull_request._links.html.href }} 2>&1 \
-            | tee ./test-logs/yevis-log.txt
+            ./yevis publish \
+              --verbose \
+              --repository ${{ github.repository }} \
+              --with-test \
+              --from-pr ${{github.event.pull_request._links.html.href }} \
+              --upload-zenodo \
+              2>&1 | tee ./test-logs/yevis-log.txt
           exit ${PIPESTATUS[0]}
         continue-on-error: true
         env:
-          YEVIS_DEV: 1
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ZENODO_TOKEN: ${{ secrets.ZENODO_TOKEN }}
 
