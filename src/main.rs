@@ -149,7 +149,7 @@ fn main() -> Result<()> {
                 Err(e) => {
                     match gh_trs::wes::stop_wes(&docker_host) {
                         Ok(_) => {}
-                        Err(e) => error!("{} to stop WES with error: {}", "Failed".red(), e),
+                        Err(e) => error!("{} to stop the WES with error: {}", "Failed".red(), e),
                     }
                     error!("{} to test with error: {}", "Failed".red(), e);
                     exit(1);
@@ -256,7 +256,9 @@ fn main() -> Result<()> {
                     Err(e) => {
                         match gh_trs::wes::stop_wes(&docker_host) {
                             Ok(_) => {}
-                            Err(e) => error!("{} to stop WES with error: {}", "Failed".red(), e),
+                            Err(e) => {
+                                error!("{} to stop the WES with error: {}", "Failed".red(), e)
+                            }
                         }
                         error!("{} to test with error: {}", "Failed".red(), e);
                         exit(1);

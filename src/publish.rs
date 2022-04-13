@@ -1,5 +1,6 @@
-use anyhow::Result;
+use anyhow::{anyhow, bail, Result};
 use log::info;
+use url::Url;
 
 pub fn publish(
     configs: &Vec<gh_trs::config::types::Config>,
@@ -10,27 +11,22 @@ pub fn publish(
     let gh_token = gh_trs::env::github_token(gh_token)?;
 
     let (owner, name) = gh_trs::github_api::parse_repo(repo)?;
-
-    // TODO branch from api
-    let branch = "gh-pages";
+    let branch = get_gh_pages_branch(&owner, &name, &gh_token)?;
 
     info!(
         "Publishing to repo: {}/{}, branch: {}",
         &owner, &name, branch,
     );
 
-    match gh_trs::github_api::exists_branch(&gh_token, &owner, &name, branch) {
-        Ok(_) => {}
-        Err(_) => {
-            info!("Branch {} does not exist, creating it", branch);
-            gh_trs::github_api::create_empty_branch(&gh_token, &owner, &name, branch)?;
-            info!("Branch {} created", branch);
-        }
+    if gh_trs::github_api::exists_branch(&gh_token, &owner, &name, &branch).is_err() {
+        info!("Branch {} does not exist, creating it...", &branch);
+        gh_trs::github_api::create_empty_branch(&gh_token, &owner, &name, &branch)?;
+        info!("Branch {} created", &branch);
     }
 
-    let branch_sha = gh_trs::github_api::get_branch_sha(&gh_token, &owner, &name, branch)?;
+    let branch_sha = gh_trs::github_api::get_branch_sha(&gh_token, &owner, &name, &branch)?;
     let latest_commit_sha =
-        gh_trs::github_api::get_latest_commit_sha(&gh_token, &owner, &name, branch, None)?;
+        gh_trs::github_api::get_latest_commit_sha(&gh_token, &owner, &name, &branch, None)?;
     let mut trs_response = gh_trs::trs::response::TrsResponse::new(&owner, &name)?;
     for config in configs {
         trs_response.add(&owner, &name, config, verified)?;
@@ -38,16 +34,15 @@ pub fn publish(
     let trs_contents = trs_response.generate_contents()?;
     let new_tree_sha =
         gh_trs::github_api::create_tree(&gh_token, &owner, &name, Some(&branch_sha), trs_contents)?;
-    let in_ci = gh_trs::env::in_ci();
     let mut commit_message = if configs.len() == 1 {
         format!(
-            "Publish a workflow, id: {} version: {} by gh-trs",
+            "Publish workflow, id: {} version: {} by yevis",
             configs[0].id, configs[0].version,
         )
     } else {
-        "Publish multiple workflows by gh-trs".to_string()
+        "Publish multiple workflows by yevis".to_string()
     };
-    if in_ci {
+    if gh_trs::env::in_ci() {
         commit_message.push_str(" in CI");
     }
     let new_commit_sha = gh_trs::github_api::create_commit(
@@ -58,11 +53,65 @@ pub fn publish(
         &new_tree_sha,
         &commit_message,
     )?;
-    gh_trs::github_api::update_ref(&gh_token, &owner, &name, branch, &new_commit_sha)?;
+    gh_trs::github_api::update_ref(&gh_token, &owner, &name, &branch, &new_commit_sha)?;
 
     info!(
         "Published to repo: {}/{}, branch: {}",
-        &owner, &name, branch
+        &owner, &name, &branch
     );
     Ok(())
+}
+
+/// https://docs.github.com/en/rest/reference/pages#get-a-github-pages-site
+fn get_gh_pages_branch(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+) -> Result<String> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/pages",
+        owner.as_ref(),
+        name.as_ref(),
+    ))?;
+    let res = match gh_trs::github_api::get_request(gh_token, &url, &[]) {
+        Ok(res) => res,
+        Err(err) => {
+            if err.to_string().contains("Not Found") {
+                return Ok("gh-pages".to_string());
+            }
+            bail!(err);
+        }
+    };
+    let err_msg = "Failed to parse the response when getting the gh-pages branch";
+    let branch = res
+        .get("source")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_object()
+        .ok_or_else(|| anyhow!(err_msg))?
+        .get("branch")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_str()
+        .ok_or_else(|| anyhow!(err_msg))?;
+    Ok(branch.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_gh_pages_branch() -> Result<()> {
+        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        let branch = get_gh_pages_branch(&gh_token, "ddbj", "workflow-registry-dev")?;
+        assert_eq!(branch, "gh-pages");
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_gh_pages_branch_no_branch() -> Result<()> {
+        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        let branch = get_gh_pages_branch(&gh_token, "ddbj", "yevis-cli")?;
+        assert_eq!(branch, "gh-pages");
+        Ok(())
+    }
 }
