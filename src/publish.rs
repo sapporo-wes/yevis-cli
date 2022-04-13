@@ -11,7 +11,7 @@ pub fn publish(
     let gh_token = gh_trs::env::github_token(gh_token)?;
 
     let (owner, name) = gh_trs::github_api::parse_repo(repo)?;
-    let branch = get_gh_pages_branch(&owner, &name, &gh_token)?;
+    let branch = get_gh_pages_branch(&gh_token, &owner, &name)?;
 
     info!(
         "Publishing to repo: {}/{}, branch: {}",
