@@ -9,11 +9,12 @@ LABEL org.opencontainers.image.licenses="Apache2.0"
 
 RUN apt update && \
     apt install -y --no-install-recommends \
+    ca-certificates \
     curl && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN curl -o /tmp/docker.tgz https://download.docker.com/linux/static/stable/$(uname -m)/docker-20.10.9.tgz && \
+RUN curl -fsSL -o /tmp/docker.tgz https://download.docker.com/linux/static/stable/$(uname -m)/docker-20.10.9.tgz && \
     tar -C /tmp -xf /tmp/docker.tgz && \
     mv /tmp/docker/* /usr/bin/ && \
     rm -rf /tmp/docker /tmp/docker.tgz

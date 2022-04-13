@@ -10,11 +10,10 @@ RUN apt update && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
-ADD https://download.docker.com/linux/static/stable/x86_64/docker-20.10.9.tgz /tmp/
-RUN tar xf /tmp/docker-20.10.9.tgz -C /tmp && \
+RUN curl -fsSL -o /tmp/docker.tgz https://download.docker.com/linux/static/stable/$(uname -m)/docker-20.10.9.tgz && \
+    tar -C /tmp -xf /tmp/docker.tgz && \
     mv /tmp/docker/* /usr/bin/ && \
-    rmdir /tmp/docker && \
-    rm -f /tmp/docker-20.10.9.tgz
+    rm -rf /tmp/docker /tmp/docker.tgz
 
 WORKDIR /app
 COPY . .
