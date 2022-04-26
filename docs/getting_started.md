@@ -113,7 +113,7 @@ The generated `GitHub Personal Access Token` can be passed to `yevis-cli` in one
 
 - `.env` file: write the `.env` file as `GITHUB_TOKEN=<PASTE_YOUR_TOKEN>`.
 - Environment variables: Set the `GITHUB_TOKEN` environment variable.
-- Command-line option: Use `--github-token <PASTE_YOUR_TOKEN>`.
+- Command-line option: Use `--gh-token <PASTE_YOUR_TOKEN>`.
 
 This time, use environment variables:
 
@@ -123,7 +123,7 @@ $ export GITHUB_TOKEN=<PASTE_YOUR_TOKEN>
 
 #### 3.1.1. Describe metadata
 
-Create a file, `yevis-config.yml`, a workflow metadata collection.
+Create a file, `yevis-metadata.yml`, a workflow metadata collection.
 
 As an example of a workflow, use [`https://github.com/pitagora-network/pitagora-cwl/blob/master/workflows/download-fastq/download-fastq.cwl`](https://github.com/pitagora-network/pitagora-cwl/blob/master/workflows/download-fastq/download-fastq.cwl).
 
@@ -136,7 +136,7 @@ Note that:
   - Therefore, if `wf.cwl` contains a line like `run: tools/tool.cwl`, an error will occur when running the workflow.
     - **Please run `cwltool --pack` to pack them into a single workflow file.**
 
-Make a template file for `yevis-config.yml` with `yevis make-template` as follows:
+Make a template file for `yevis-metadata.yml` with `yevis make-template` as follows:
 
 ```bash=
 $ yevis make-template https://github.com/pitagora-network/pitagora-cwl/blob/master/tools/download-sra/download-sra.cwl
@@ -145,11 +145,11 @@ Running make-template
 Making a template from https://github.com/pitagora-network/pitagora-cwl/blob/master/tools/download-sra/download-sra.cwl
 Success make-template
 
-$ ls yevis-config.yml
-yevis-config.yml
+$ ls yevis-metadata.yml
+yevis-metadata.yml
 ```
 
-Edit the generated `yevis-config.yml` as follows:
+Edit the generated `yevis-metadata.yml` as follows:
 
 ```yaml=
 id: be733bb3-9d9c-41af-a6e2-292751351b1e
@@ -180,13 +180,13 @@ workflow:
 
 #### 3.1.2. Validate metadata
 
-Validate `yevis-config.yml` with `yevis validate` as follows:
+Validate `yevis-metadata.yml` with `yevis validate` as follows:
 
 ```bash=
-$ yevis validate -r suecharo/yevis-getting-started ./yevis-config.yml
+$ yevis validate -r suecharo/yevis-getting-started ./yevis-metadata.yml
 Start yevis
 Running validate
-Validating ./yevis-config.yml
+Validating ./yevis-metadata.yml
 Success validate
 ```
 
@@ -198,10 +198,10 @@ If `--wes-location` is not specified, `yevis-cli` will launch Sapporo using Dock
 Therefore, the `docker` command and Docker Socket must be available.
 
 ```bash=
-$ yevis test -r suecharo/yevis-getting-started ./yevis-config.yml
+$ yevis test -r suecharo/yevis-getting-started ./yevis-metadata.yml
 Start yevis
 Running validate
-Validating ./yevis-config.yml
+Validating ./yevis-metadata.yml
 Success validate
 Running test
 Starting sapporo-service using docker_host: unix:///var/run/docker.sock
@@ -237,10 +237,10 @@ Create a Pull Request for the Repository created in `Section 1.1.`.
 Unless passing validation and testing, cannot create a Pull Request.
 
 ```bash=
-$ yevis pull-request -r suecharo/yevis-getting-started ./yevis-config.yml
+$ yevis pull-request -r suecharo/yevis-getting-started ./yevis-metadata.yml
 Start yevis
 Running validate
-Validating ./yevis-config.yml
+Validating ./yevis-metadata.yml
 Success validate
 Running test
 Starting sapporo-service using docker_host: unix:///var/run/docker.sock

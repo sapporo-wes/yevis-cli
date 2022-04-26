@@ -59,12 +59,12 @@ FLAGS:
 
 SUBCOMMANDS:
     help             Prints this message or the help of the given subcommand(s)
-    make-template    Make a template for the Yevis configuration file
+    make-template    Make a template for the Yevis metadata file
     publish          Generate TRS responses and host them on GitHub Pages. (Basically used in the CI environment
                      (`CI=true`))
-    pull-request     Create a pull request based on the Yevis configuration files (after validation and testing)
-    test             Test workflow based on the Yevis configuration files
-    validate         Validate schema and contents of the Yevis configuration file
+    pull-request     Create a pull request based on the Yevis metadata files (after validation and testing)
+    test             Test workflow based on the Yevis metadata files
+    validate         Validate schema and contents of the Yevis metadata file
 ```
 
 ### make-template
@@ -73,16 +73,8 @@ Generate a workflow metadata file template from a primary workflow file URL.
 
 ```bash
 $ yevis make-template --help
-yevis-make-template 0.1.3
-Make a template for the yevis configuration file
-
-USAGE:
-    yevis make-template [FLAGS] [OPTIONS] <workflow-location>
-
-FLAGS:
-    -h, --help       Prints help information
 yevis-make-template 0.2.0
-Make a template for the Yevis configuration file
+Make a template for the Yevis metadata file
 
 USAGE:
     yevis make-template [FLAGS] [OPTIONS] <workflow-location>
@@ -98,7 +90,7 @@ FLAGS:
 
 OPTIONS:
         --gh-token <github-token>    GitHub Personal Access Token
-    -o, --output <output>            Path to the output file [default: yevis-config.yml]
+    -o, --output <output>            Path to the output file [default: yevis-metadata.yml]
 
 ARGS:
     <workflow-location>    Location of a primary workflow document (only hosted on GitHub)
@@ -120,10 +112,10 @@ Validate schema and contents of the workflow metadata file.
 ```bash
 $ yevis validate --help
 yevis-validate 0.2.0
-Validate schema and contents of the Yevis configuration file
+Validate schema and contents of the Yevis metadata file
 
 USAGE:
-    yevis validate [FLAGS] [OPTIONS] --repository <repository> [config-locations]...
+    yevis validate [FLAGS] [OPTIONS] --repository <repository> [metadata-locations]...
 
 FLAGS:
     -h, --help       Prints help information
@@ -136,8 +128,8 @@ OPTIONS:
                                      is used for version validation)
 
 ARGS:
-    <config-locations>...    Location of the Yevis configuration files (local file path or remote URL) [default:
-                             yevis-config.yml]
+    <metadata-locations>...    Location of the Yevis metadata files (local file path or remote URL) [default:
+                               yevis-metadata.yml]
 ```
 
 Explanation of validation rules for some fields:
@@ -160,10 +152,10 @@ Explanation of validation rules for some fields:
 
 Several example are provided as follows:
 
-- [`test_config_CWL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test_config_CWL.yml)
-- [`test_config_WDL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test_config_WDL.yml)
-- [`test_config_NFL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test_config_NFL.yml)
-- [`test_config_SMK.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test_config_SMK.yml)
+- [`test-metadata-CWL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test-metadata-CWL.yml)
+- [`test-metadata-WDL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test-metadata-WDL.yml)
+- [`test-metadata-NFL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test-metadata-NFL.yml)
+- [`test-metadata-SMK.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test-metadata-SMK.yml)
 
 ### test
 
@@ -172,15 +164,15 @@ Test workflow using [GA4GH WES](https://www.ga4gh.org/news/ga4gh-wes-api-enables
 ```bash
 $ yevis test --help
 yevis-test 0.2.0
-Test workflow based on the Yevis configuration files
+Test workflow based on the Yevis metadata files
 
 USAGE:
-    yevis test [FLAGS] [OPTIONS] --repository <repository> [config-locations]...
+    yevis test [FLAGS] [OPTIONS] --repository <repository> [metadata-locations]...
 
 FLAGS:
         --from-pr    Get modified files from a GitHub Pull Request. This option is used for pull request events in the
                      the CI environment. When using this option, specify a GitHub Pull Request URL (e.g., `${{
-                     github.event.pull_request._links.html.href }}`) as `config_locations`
+                     github.event.pull_request._links.html.href }}`) as `metadata_locations`
     -h, --help       Prints help information
     -V, --version    Prints version information
     -v, --verbose    Verbose mode
@@ -194,8 +186,8 @@ OPTIONS:
                                          will be started
 
 ARGS:
-    <config-locations>...    Location of the Yevis configuration files (local file path or remote URL) [default:
-                             yevis-config.yml]
+    <metadata-locations>...    Location of the Yevis metadata files (local file path or remote URL) [default:
+                               yevis-metadata.yml]
 ```
 
 The tests are executed using WES.
@@ -241,10 +233,10 @@ Create a pull request after validation and testing.
 ```bash
 $ yevis pull-request --help
 yevis-pull-request 0.2.0
-Create a pull request based on the Yevis configuration files (after validation and testing)
+Create a pull request based on the Yevis metadata files (after validation and testing)
 
 USAGE:
-    yevis pull-request [FLAGS] [OPTIONS] --repository <repository> [config-locations]...
+    yevis pull-request [FLAGS] [OPTIONS] --repository <repository> [metadata-locations]...
 
 FLAGS:
     -h, --help       Prints help information
@@ -260,8 +252,8 @@ OPTIONS:
                                          service` will be started
 
 ARGS:
-    <config-locations>...    Location of the Yevis configuration files (local file path or remote URL) [default:
-                             yevis-config.yml]
+    <metadata-locations>...    Location of the Yevis metadata files (local file path or remote URL) [default:
+                               yevis-metadata.yml]
 ```
 
 A pull request is created from the forked repository as follows:
@@ -277,18 +269,19 @@ Upload files to Zenodo, generate TRS responses, and deploy them on GitHub Pages.
 
 ```bash
 $ yevis publish --help
+yevis-publish 0.2.0
 Generate TRS responses and host them on GitHub Pages. (Basically used in the CI environment (`CI=true`))
 
 USAGE:
-    yevis publish [FLAGS] [OPTIONS] --repository <repository> [config-locations]...
+    yevis publish [FLAGS] [OPTIONS] --repository <repository> [metadata-locations]...
 
 FLAGS:
         --from-pr          Get modified files from GitHub Pull Request. This option is used for pull request events in
                            the CI environment. When using this option, specify GitHub Pull Request URL (e.g., `${{
-                           github.event.pull_request._links.html.href }}`) as `config_locations`
-        --from-trs         Recursively get the Yevis configuration files from the TRS endpoint and publish them. This
-                           option is used in the CI environment. When using this option, specify the TRS endpoint (e.g.,
-                           https://ddbj.github.io/yevis-workflows/) as `config_locations`
+                           github.event.pull_request._links.html.href }}`) as `metadata_locations`
+        --from-trs         Recursively get the Yevis metadata files from the TRS endpoint and publish them. This option
+                           is used in the CI environment. When using this option, specify the TRS endpoint (e.g.,
+                           https://ddbj.github.io/yevis-workflows/) as `metadata_locations`
     -h, --help             Prints help information
         --upload-zenodo    Upload dataset to Zenodo
     -V, --version          Prints version information
@@ -305,8 +298,8 @@ OPTIONS:
         --zenodo-community <zenodo-community>    Community set in Zenodo deposition
 
 ARGS:
-    <config-locations>...    Location of the Yevis configuration files (local file path or remote URL) [default:
-                             yevis-config.yml]
+    <metadata-locations>...    Location of the Yevis metadata files (local file path or remote URL) [default:
+                               yevis-metadata.yml]
 ```
 
 This command is used within GitHub Actions.

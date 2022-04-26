@@ -23,8 +23,10 @@ pub fn validate(
         validate_language(&config)?;
         gh_trs::command::validate::validate_wf_name(&config.workflow.name)?;
         validate_and_update_workflow(&mut config, &gh_token)?;
-
-        debug!("updated config: {:?}", config);
+        debug!(
+            "updated metadata file:\n{}",
+            serde_yaml::to_string(&config)?
+        );
         configs.push(config);
     }
 
@@ -56,7 +58,7 @@ fn validate_version(config: &gh_trs::config::types::Config, repo: impl AsRef<str
     Ok(())
 }
 
-/// Validate the license of the config.
+/// Validate the license of the metadata file.
 /// Contact GitHub API and Zenodo API to confirm.
 /// Change the license to `spdx_id`
 /// e.g., `apache-2.0` -> `Apache-2.0`

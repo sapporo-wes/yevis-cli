@@ -17,8 +17,8 @@ pub fn make_template(
     info!("Making a template from {}", wf_loc);
 
     let config = if update {
-        // Retrieve config from API because wf_loc is TRS ToolVersion URL
-        let config_loc = tool_version_url_to_config_url(wf_loc)?;
+        // Retrieve metadata file from API because wf_loc is TRS ToolVersion URL
+        let config_loc = tool_version_url_to_metadata_url(wf_loc)?;
         let mut config = gh_trs::config::io::read_config(&config_loc)?;
         let prev_version = version::Version::from_str(&config.version)?;
         config.version = prev_version.increment_patch().to_string();
@@ -26,7 +26,10 @@ pub fn make_template(
     } else {
         generate_config(wf_loc, gh_token, url_type)?
     };
-    debug!("template config: {:?}", config);
+    debug!(
+        "template metadata file:\n{}",
+        serde_yaml::to_string(&config)?
+    );
 
     let file_ext = gh_trs::config::io::parse_file_ext(&output)?;
     gh_trs::config::io::write_config(&config, &output, &file_ext)?;
@@ -34,8 +37,8 @@ pub fn make_template(
 }
 
 /// TRS ToolVersion URL: https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>
-/// config URL: https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>/gh-trs-config.json
-fn tool_version_url_to_config_url(wf_loc: &Url) -> Result<Url> {
+/// metadata file URL: https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>/yevis-metadata.json
+fn tool_version_url_to_metadata_url(wf_loc: &Url) -> Result<Url> {
     let tool_version_url_re = regex::Regex::new(r"^https?://.+/tools/([^/]+)/versions/([^/]+)$")?;
     let (id, version) = match tool_version_url_re.captures(wf_loc.as_str()) {
         Some(caps) => (caps.get(1).unwrap().as_str(), caps.get(2).unwrap().as_str()),
@@ -43,8 +46,13 @@ fn tool_version_url_to_config_url(wf_loc: &Url) -> Result<Url> {
     };
     let trs_endpoint = gh_trs::trs::api::TrsEndpoint::new_from_tool_version_url(wf_loc)?;
     trs_endpoint.is_valid()?;
-    let config_loc = trs_endpoint.to_config_url(id, version)?;
-    Ok(config_loc)
+    let metadata_url = Url::parse(&format!(
+        "{}tools/{}/versions/{}/yevis-metadata.json",
+        trs_endpoint.url.as_str(),
+        id,
+        version
+    ))?;
+    Ok(metadata_url)
 }
 
 fn generate_config(
@@ -100,25 +108,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_tool_version_url_to_config_url() {
+    fn test_tool_version_url_to_metadata_url() {
         let url = Url::parse(
-            "https://ddbj.github.io/workflow-registry-dev/tools/9df2332c-f51d-4752-b2bf-d4a4ed4e6760/versions/1.0.0",
+            "https://ddbj.github.io/workflow-registry/tools/9df2332c-f51d-4752-b2bf-d4a4ed4e6760/versions/1.0.0",
         )
         .unwrap();
-        let config_url = tool_version_url_to_config_url(&url).unwrap();
+        let config_url = tool_version_url_to_metadata_url(&url).unwrap();
+        println!("{}", config_url);
         assert_eq!(
             config_url,
             Url::parse(
-                "https://ddbj.github.io/workflow-registry-dev/tools/9df2332c-f51d-4752-b2bf-d4a4ed4e6760/versions/1.0.0/gh-trs-config.json"
+                "https://ddbj.github.io/workflow-registry/tools/9df2332c-f51d-4752-b2bf-d4a4ed4e6760/versions/1.0.0/yevis-metadata.json"
             )
             .unwrap()
         );
     }
 
     #[test]
-    fn test_tool_version_url_to_config_url_invalid() {
+    fn test_tool_version_url_to_metadata_url_invalid() {
         let url = Url::parse("https://example.com/tools/1.0.0").unwrap();
-        let config_url = tool_version_url_to_config_url(&url);
+        let config_url = tool_version_url_to_metadata_url(&url);
         assert!(config_url.is_err());
     }
 }

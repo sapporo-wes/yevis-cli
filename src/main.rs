@@ -57,13 +57,13 @@ fn main() -> Result<()> {
             }
         }
         args::Args::Validate {
-            config_locations,
+            metadata_locations,
             github_token,
             repository,
             ..
         } => {
             info!("{} validate", "Running".green());
-            match validate::validate(config_locations, &github_token, &repository) {
+            match validate::validate(metadata_locations, &github_token, &repository) {
                 Ok(_) => info!("{} validate", "Success".green()),
                 Err(e) => {
                     error!("{} to validate with error: {}", "Failed".red(), e);
@@ -72,7 +72,7 @@ fn main() -> Result<()> {
             }
         }
         args::Args::Test {
-            config_locations,
+            metadata_locations,
             github_token,
             repository,
             wes_location,
@@ -80,10 +80,10 @@ fn main() -> Result<()> {
             from_pr,
             ..
         } => {
-            let config_locations = if from_pr {
+            let metadata_locations = if from_pr {
                 info!("Run yevis-cli test in from_pr mode");
-                info!("GitHub Pull Request URL: {}", config_locations[0]);
-                match pr::list_modified_files(&github_token, &config_locations[0]) {
+                info!("GitHub Pull Request URL: {}", metadata_locations[0]);
+                match pr::list_modified_files(&github_token, &metadata_locations[0]) {
                     Ok(files) => files,
                     Err(e) => {
                         error!(
@@ -95,11 +95,11 @@ fn main() -> Result<()> {
                     }
                 }
             } else {
-                config_locations
+                metadata_locations
             };
 
             info!("{} validate", "Running".green());
-            let configs = match validate::validate(config_locations, &github_token, &repository) {
+            let configs = match validate::validate(metadata_locations, &github_token, &repository) {
                 Ok(configs) => {
                     info!("{} validate", "Success".green());
                     configs
@@ -124,7 +124,7 @@ fn main() -> Result<()> {
             };
         }
         args::Args::PullRequest {
-            config_locations,
+            metadata_locations,
             github_token,
             repository,
             wes_location,
@@ -132,7 +132,7 @@ fn main() -> Result<()> {
             ..
         } => {
             info!("{} validate", "Running".green());
-            let configs = match validate::validate(config_locations, &github_token, &repository) {
+            let configs = match validate::validate(metadata_locations, &github_token, &repository) {
                 Ok(configs) => {
                     info!("{} validate", "Success".green());
                     configs
@@ -166,7 +166,7 @@ fn main() -> Result<()> {
             };
         }
         args::Args::Publish {
-            config_locations,
+            metadata_locations,
             github_token,
             repository,
             with_test,
@@ -183,10 +183,10 @@ fn main() -> Result<()> {
                 exit(1);
             }
 
-            let config_locations = if from_pr {
+            let metadata_locations = if from_pr {
                 info!("Run yevis-cli test in from_pr mode");
-                info!("GitHub Pull Request URL: {}", config_locations[0]);
-                match pr::list_modified_files(&github_token, &config_locations[0]) {
+                info!("GitHub Pull Request URL: {}", metadata_locations[0]);
+                match pr::list_modified_files(&github_token, &metadata_locations[0]) {
                     Ok(files) => files,
                     Err(e) => {
                         error!(
@@ -198,18 +198,19 @@ fn main() -> Result<()> {
                     }
                 }
             } else {
-                config_locations
+                metadata_locations
             };
 
-            let config_locations = if from_trs {
+            let metadata_locations = if from_trs {
                 info!("Run yevis-cli publish in from_trs mode");
-                info!("TRS endpoint: {}", config_locations[0]);
-                match gh_trs::config::io::find_config_loc_recursively_from_trs(&config_locations[0])
-                {
-                    Ok(config_locations) => config_locations,
+                info!("TRS endpoint: {}", metadata_locations[0]);
+                match gh_trs::config::io::find_config_loc_recursively_from_trs(
+                    &metadata_locations[0],
+                ) {
+                    Ok(metadata_locations) => metadata_locations,
                     Err(e) => {
                         error!(
-                            "{} to find config locations from TRS endpoint with error: {}",
+                            "{} to find metadata file locations from TRS endpoint with error: {}",
                             "Failed".red(),
                             e
                         );
@@ -217,21 +218,21 @@ fn main() -> Result<()> {
                     }
                 }
             } else {
-                config_locations
+                metadata_locations
             };
 
             info!("{} validate", "Running".green());
-            let mut configs = match validate::validate(config_locations, &github_token, &repository)
-            {
-                Ok(configs) => {
-                    info!("{} validate", "Success".green());
-                    configs
-                }
-                Err(e) => {
-                    error!("{} to validate with error: {}", "Failed".red(), e);
-                    exit(1);
-                }
-            };
+            let mut configs =
+                match validate::validate(metadata_locations, &github_token, &repository) {
+                    Ok(configs) => {
+                        info!("{} validate", "Success".green());
+                        configs
+                    }
+                    Err(e) => {
+                        error!("{} to validate with error: {}", "Failed".red(), e);
+                        exit(1);
+                    }
+                };
 
             if upload_zenodo {
                 info!("{} upload_zenodo", "Running".green());

@@ -115,7 +115,7 @@ DDBJ(DNA Data Bank of Japan)
 
 - `.env` file: `.env` ファイルに `GITHUB_TOKEN=<PASTE_YOUR_TOKEN>` と記述する
 - 環境変数: 環境変数に `GITHUB_TOKEN` を設定する
-- Command-line option: `--github-token <PASTE_YOUR_TOKEN>` を使用する
+- Command-line option: `--gh-token <PASTE_YOUR_TOKEN>` を使用する
 
 今回は、環境変数を使用します。
 
@@ -125,7 +125,7 @@ $ export GITHUB_TOKEN=<PASTE_YOUR_TOKEN>
 
 #### 3.1.1. Describe metadata
 
-ワークフローのメタデータをまとめたファイル `yevis-config.yml` を作成します。
+ワークフローのメタデータをまとめたファイル `yevis-metadata.yml` を作成します。
 
 ワークフローの例として、[`https://github.com/pitagora-network/pitagora-cwl/blob/master/workflows/download-fastq/download-fastq.cwl`](https://github.com/pitagora-network/pitagora-cwl/blob/master/workflows/download-fastq/download-fastq.cwl) を使用します。
 
@@ -138,7 +138,7 @@ $ export GITHUB_TOKEN=<PASTE_YOUR_TOKEN>
   - そのため、ワークフローの実行時に `run: tools/tool.cwl` のような行が `wf.cwl` が含まれるとエラーになります
     - **`cwltool --pack` を実行して、一つのファイルにまとめてください**
 
-以下のように、`yevis make-template` を使用して `yevis-config.yml` のテンプレートファイルを作成します。
+以下のように、`yevis make-template` を使用して `yevis-metadata.yml` のテンプレートファイルを作成します。
 
 ```bash=
 $ yevis make-template https://github.com/pitagora-network/pitagora-cwl/blob/master/tools/download-sra/download-sra.cwl
@@ -147,11 +147,11 @@ Running make-template
 Making a template from https://github.com/pitagora-network/pitagora-cwl/blob/master/tools/download-sra/download-sra.cwl
 Success make-template
 
-$ ls yevis-config.yml
-yevis-config.yml
+$ ls yevis-metadata.yml
+yevis-metadata.yml
 ```
 
-生成された `yevis-config.yml` を以下のように編集します。
+生成された `yevis-metadata.yml` を以下のように編集します。
 
 ```yaml=
 id: be733bb3-9d9c-41af-a6e2-292751351b1e
@@ -182,13 +182,13 @@ workflow:
 
 #### 3.1.2. Validate metadata
 
-`yevis-config.yml` を `yevis validate` でバリデートします。
+`yevis-metadata.yml` を `yevis validate` でバリデートします。
 
 ```bash=
-$ yevis validate -r suecharo/yevis-getting-started ./yevis-config.yml
+$ yevis validate -r suecharo/yevis-getting-started ./yevis-metadata.yml
 Start yevis
 Running validate
-Validating ./yevis-config.yml
+Validating ./yevis-metadata.yml
 Success validate
 ```
 
@@ -200,10 +200,10 @@ Success validate
 そのため、`docker` command と Docker Socket が利用可能である必要があります。
 
 ```bash=
-$ yevis test -r suecharo/yevis-getting-started ./yevis-config.yml
+$ yevis test -r suecharo/yevis-getting-started ./yevis-metadata.yml
 Start yevis
 Running validate
-Validating ./yevis-config.yml
+Validating ./yevis-metadata.yml
 Success validate
 Running test
 Starting sapporo-service using docker_host: unix:///var/run/docker.sock
@@ -239,10 +239,10 @@ bc58bac48e3c   quay.io/commonwl/cwltool:3.1.20211107152837   "/cwltool-in-docker
 Validation と Test を pass しない限り、Pull Request を作成できません。
 
 ```bash=
-$ yevis pull-request -r suecharo/yevis-getting-started ./yevis-config.yml
+$ yevis pull-request -r suecharo/yevis-getting-started ./yevis-metadata.yml
 Start yevis
 Running validate
-Validating ./yevis-config.yml
+Validating ./yevis-metadata.yml
 Success validate
 Running test
 Starting sapporo-service using docker_host: unix:///var/run/docker.sock

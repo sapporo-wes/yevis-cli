@@ -12,7 +12,7 @@ use url::Url;
 /// CLI tool to support building and maintaining Yevis workflow registry.
 pub enum Args {
     #[structopt(setting(clap::AppSettings::ColoredHelp))]
-    /// Make a template for the Yevis configuration file.
+    /// Make a template for the Yevis metadata file.
     MakeTemplate {
         /// Location of a primary workflow document (only hosted on GitHub).
         workflow_location: Url,
@@ -22,7 +22,7 @@ pub enum Args {
         github_token: Option<String>,
 
         /// Path to the output file.
-        #[structopt(short, long, parse(from_os_str), default_value = "yevis-config.yml")]
+        #[structopt(short, long, parse(from_os_str), default_value = "yevis-metadata.yml")]
         output: PathBuf,
 
         /// Make a template from an existing workflow.
@@ -40,11 +40,11 @@ pub enum Args {
     },
 
     #[structopt(setting(clap::AppSettings::ColoredHelp))]
-    /// Validate schema and contents of the Yevis configuration file.
+    /// Validate schema and contents of the Yevis metadata file.
     Validate {
-        /// Location of the Yevis configuration files (local file path or remote URL).
-        #[structopt(default_value = "yevis-config.yml")]
-        config_locations: Vec<String>,
+        /// Location of the Yevis metadata files (local file path or remote URL).
+        #[structopt(default_value = "yevis-metadata.yml")]
+        metadata_locations: Vec<String>,
 
         /// GitHub Personal Access Token.
         #[structopt(long = "gh-token")]
@@ -60,11 +60,11 @@ pub enum Args {
     },
 
     #[structopt(setting(clap::AppSettings::ColoredHelp))]
-    /// Test workflow based on the Yevis configuration files.
+    /// Test workflow based on the Yevis metadata files.
     Test {
-        /// Location of the Yevis configuration files (local file path or remote URL).
-        #[structopt(default_value = "yevis-config.yml")]
-        config_locations: Vec<String>,
+        /// Location of the Yevis metadata files (local file path or remote URL).
+        #[structopt(default_value = "yevis-metadata.yml")]
+        metadata_locations: Vec<String>,
 
         /// GitHub Personal Access Token.
         #[structopt(long = "gh-token")]
@@ -85,7 +85,7 @@ pub enum Args {
 
         /// Get modified files from a GitHub Pull Request.
         /// This option is used for pull request events in the the CI environment.
-        /// When using this option, specify a GitHub Pull Request URL (e.g., `${{ github.event.pull_request._links.html.href }}`) as `config_locations`.
+        /// When using this option, specify a GitHub Pull Request URL (e.g., `${{ github.event.pull_request._links.html.href }}`) as `metadata_locations`.
         #[structopt(long)]
         from_pr: bool,
 
@@ -95,11 +95,11 @@ pub enum Args {
     },
 
     #[structopt(setting(clap::AppSettings::ColoredHelp))]
-    /// Create a pull request based on the Yevis configuration files (after validation and testing).
+    /// Create a pull request based on the Yevis metadata files (after validation and testing).
     PullRequest {
-        /// Location of the Yevis configuration files (local file path or remote URL).
-        #[structopt(default_value = "yevis-config.yml")]
-        config_locations: Vec<String>,
+        /// Location of the Yevis metadata files (local file path or remote URL).
+        #[structopt(default_value = "yevis-metadata.yml")]
+        metadata_locations: Vec<String>,
 
         /// GitHub Personal Access Token.
         #[structopt(long = "gh-token")]
@@ -126,9 +126,9 @@ pub enum Args {
     #[structopt(setting(clap::AppSettings::ColoredHelp))]
     /// Generate TRS responses and host them on GitHub Pages. (Basically used in the CI environment (`CI=true`))
     Publish {
-        /// Location of the Yevis configuration files (local file path or remote URL).
-        #[structopt(default_value = "yevis-config.yml")]
-        config_locations: Vec<String>,
+        /// Location of the Yevis metadata files (local file path or remote URL).
+        #[structopt(default_value = "yevis-metadata.yml")]
+        metadata_locations: Vec<String>,
 
         /// GitHub Personal Access Token.
         #[structopt(long = "gh-token")]
@@ -151,15 +151,15 @@ pub enum Args {
         #[structopt(short, long, default_value = "unix:///var/run/docker.sock")]
         docker_host: Url,
 
-        /// Recursively get the Yevis configuration files from the TRS endpoint and publish them.
+        /// Recursively get the Yevis metadata files from the TRS endpoint and publish them.
         /// This option is used in the CI environment.
-        /// When using this option, specify the TRS endpoint (e.g., https://ddbj.github.io/yevis-workflows/) as `config_locations`.
+        /// When using this option, specify the TRS endpoint (e.g., https://ddbj.github.io/yevis-workflows/) as `metadata_locations`.
         #[structopt(long)]
         from_trs: bool,
 
         /// Get modified files from GitHub Pull Request.
         /// This option is used for pull request events in the CI environment.
-        /// When using this option, specify GitHub Pull Request URL (e.g., `${{ github.event.pull_request._links.html.href }}`) as `config_locations`.
+        /// When using this option, specify GitHub Pull Request URL (e.g., `${{ github.event.pull_request._links.html.href }}`) as `metadata_locations`.
         #[structopt(long)]
         from_pr: bool,
 

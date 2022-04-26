@@ -3,21 +3,18 @@ id: 9565388a-2fc3-47f5-89fe-b2f302a2cabf
 version: 1.0.0
 license: CC0-1.0
 authors:
-  - github_account: ddbj
-    name: ddbj-workflow
-    affiliation: DNA Data Bank of Japan
   - github_account: suecharo
     name: Doe, John (Family name, Given names)
-    affiliation: "Example Affiliation"
-    orcid: "0000-0003-2765-0049"
+    affiliation: Example Affiliation
+    orcid: 0000-0003-2765-0049
 workflow:
   name: NFL_file_input
-  readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/README.md"
+  readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/main/README.md"
   language:
     type: NFL
     version: "1.0"
   files:
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/478d9cab65d5a25820fc6609189082b469b2b2c7/tests/NFL/wf/file_input.nf"
+    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/main/tests/NFL/wf/file_input.nf"
       target: file_input.nf
       type: primary
   testing:

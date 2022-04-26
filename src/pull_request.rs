@@ -346,7 +346,7 @@ fn commit_config(
     config: &gh_trs::config::types::Config,
 ) -> Result<()> {
     let config_path = PathBuf::from(format!(
-        "{}/yevis-config-{}.yml",
+        "{}/yevis-metadata-{}.yml",
         &config.id, &config.version
     ));
     let config_content = serde_yaml::to_string(&config)?;

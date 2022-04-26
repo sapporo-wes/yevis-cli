@@ -25,17 +25,17 @@ pub fn upload_and_commit_zenodo(
 
     for config in configs {
         upload_zenodo(&host, &token, config, &repo, zenodo_community)?;
-        info!("Updating config to Zenodo URL");
+        info!("Updating workflow metadata to Zenodo URL");
         update_config_files(&host, &token, config)?;
 
-        // push modified config to GitHub default branch
-        info!("Pushing modified config to GitHub");
+        // push modified metadata file to GitHub default branch
+        info!("Pushing modified workflow metadata file to GitHub");
         let gh_token = gh_trs::env::github_token(gh_token)?;
         let (owner, name) = gh_trs::github_api::parse_repo(&repo)?;
         let default_branch =
             gh_trs::github_api::get_default_branch(&gh_token, &owner, &name, None)?;
         let config_path = PathBuf::from(format!(
-            "{}/yevis-config-{}.yml",
+            "{}/yevis-metadata-{}.yml",
             &config.id, &config.version
         ));
         let config_content = serde_yaml::to_string(&config)?;
@@ -637,7 +637,7 @@ fn config_to_files(config: &gh_trs::config::types::Config) -> Result<Vec<ConfigF
     let mut files = vec![];
     files.push(ConfigFile::new_from_str(
         serde_yaml::to_string(&config)?,
-        PathBuf::from(format!("yevis-config-{}.yml", config.version)),
+        PathBuf::from(format!("yevis-metadata-{}.yml", config.version)),
     )?);
     files.push(ConfigFile::new(
         &config.workflow.readme,
@@ -751,7 +751,7 @@ fn update_config_files(
         .id;
     let files_map: HashMap<String, Url> = get_files_download_urls(&host, &token, &deposition_id)?;
 
-    let err_msg = "Failed to update config files.";
+    let err_msg = "Failed to update workflow metadata files.";
     config.workflow.readme = files_map
         .get("README.md")
         .ok_or_else(|| anyhow!(err_msg))?
@@ -899,7 +899,7 @@ mod tests {
     fn test_list_depositions() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -913,7 +913,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_new_deposition() -> Result<()> {
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         Deposition::new(&config, "ddbj/workflow-registry-dev", &None::<String>)?;
         Ok(())
     }
@@ -923,7 +923,7 @@ mod tests {
     fn test_create_deposition() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         create_deposition(
             &host,
             &token,
@@ -939,7 +939,7 @@ mod tests {
     fn test_delete_draft_deposition() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -958,7 +958,7 @@ mod tests {
     fn test_update_deposition() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -984,7 +984,8 @@ mod tests {
     fn test_update_deposition_new_version() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let mut config =
+            gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         config.version = "1.0.1".to_string();
         let id = 1018767;
         update_deposition(
@@ -1001,7 +1002,7 @@ mod tests {
     #[test]
     #[ignore]
     fn test_config_to_files() -> Result<()> {
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         let files = config_to_files(&config)?;
         dbg!(&files);
         Ok(())
@@ -1012,7 +1013,7 @@ mod tests {
     fn test_update_deposition_files() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         let config_files = config_to_files(&config)?;
         // let config_files = vec![];
         let ids = list_depositions(
@@ -1035,7 +1036,7 @@ mod tests {
     fn test_get_files_list() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -1056,7 +1057,7 @@ mod tests {
     fn test_publish_deposition() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -1075,7 +1076,7 @@ mod tests {
     fn test_new_version_deposition() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -1094,7 +1095,8 @@ mod tests {
     fn test_upload_zenodo() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let mut config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let mut config =
+            gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         // config.id = Uuid::new_v4();
         upload_zenodo(
             &host,
@@ -1113,7 +1115,7 @@ mod tests {
     fn test_retrieve_record() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
@@ -1135,7 +1137,7 @@ mod tests {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
         let mut config = validate::validate(
-            vec!["./tests/test_config_SMK.yml"],
+            vec!["./tests/test-metadata-SMK.yml"],
             &None::<String>,
             "ddbj/workflow-registry-dev",
         )?[0]
@@ -1156,7 +1158,7 @@ mod tests {
     fn test_get_files_download_urls() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
         let ids = list_depositions(
             &host,
             &token,
