@@ -1,5 +1,6 @@
 mod args;
 mod env;
+mod io;
 mod make_template;
 mod pr;
 mod publish;
@@ -204,9 +205,7 @@ fn main() -> Result<()> {
             let metadata_locations = if from_trs {
                 info!("Run yevis-cli publish in from_trs mode");
                 info!("TRS endpoint: {}", metadata_locations[0]);
-                match gh_trs::config::io::find_config_loc_recursively_from_trs(
-                    &metadata_locations[0],
-                ) {
+                match io::find_config_loc_recursively_from_trs(&metadata_locations[0]) {
                     Ok(metadata_locations) => metadata_locations,
                     Err(e) => {
                         error!(

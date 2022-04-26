@@ -1,5 +1,7 @@
 use anyhow::{anyhow, bail, Result};
 use log::info;
+use std::collections::HashMap;
+use std::path::PathBuf;
 use url::Url;
 
 pub fn publish(
@@ -31,7 +33,7 @@ pub fn publish(
     for config in configs {
         trs_response.add(&owner, &name, config, verified)?;
     }
-    let trs_contents = trs_response.generate_contents()?;
+    let trs_contents = generate_trs_contents(trs_response)?;
     let new_tree_sha =
         gh_trs::github_api::create_tree(&gh_token, &owner, &name, Some(&branch_sha), trs_contents)?;
     let mut commit_message = if configs.len() == 1 {
@@ -93,6 +95,90 @@ fn get_gh_pages_branch(
         .as_str()
         .ok_or_else(|| anyhow!(err_msg))?;
     Ok(branch.to_string())
+}
+
+/// modified from gh-trs::response::TrsResponse::generate_contents
+fn generate_trs_contents(
+    trs_res: gh_trs::trs::response::TrsResponse,
+) -> Result<HashMap<PathBuf, String>> {
+    let mut map: HashMap<PathBuf, String> = HashMap::new();
+    map.insert(
+        PathBuf::from("service-info/index.json"),
+        serde_json::to_string(&trs_res.service_info)?,
+    );
+    map.insert(
+        PathBuf::from("toolClasses/index.json"),
+        serde_json::to_string(&trs_res.tool_classes)?,
+    );
+    map.insert(
+        PathBuf::from("tools/index.json"),
+        serde_json::to_string(&trs_res.tools)?,
+    );
+    for ((id, version), config) in trs_res.gh_trs_config.iter() {
+        let tools_id = trs_res.tools.iter().find(|t| &t.id == id).unwrap();
+        let tools_id_versions = tools_id.versions.clone();
+        let tools_id_versions_version = tools_id_versions
+            .iter()
+            .find(|v| &v.version() == version)
+            .unwrap();
+        let tools_descriptor = trs_res
+            .tools_descriptor
+            .get(&(*id, version.clone()))
+            .unwrap();
+        let tools_files = trs_res.tools_files.get(&(*id, version.clone())).unwrap();
+        let tools_tests = trs_res.tools_tests.get(&(*id, version.clone())).unwrap();
+
+        let desc_type = config.workflow.language.r#type.clone().unwrap().to_string();
+
+        map.insert(
+            PathBuf::from(format!(
+                "tools/{}/versions/{}/yevis-metadata.json",
+                id, version
+            )),
+            serde_json::to_string(&config)?,
+        );
+        map.insert(
+            PathBuf::from(format!("tools/{}/index.json", id)),
+            serde_json::to_string(&tools_id)?,
+        );
+        map.insert(
+            PathBuf::from(format!("tools/{}/versions/index.json", id)),
+            serde_json::to_string(&tools_id_versions)?,
+        );
+        map.insert(
+            PathBuf::from(format!("tools/{}/versions/{}/index.json", id, version)),
+            serde_json::to_string(&tools_id_versions_version)?,
+        );
+        map.insert(
+            PathBuf::from(format!(
+                "tools/{}/versions/{}/{}/descriptor/index.json",
+                id, version, desc_type
+            )),
+            serde_json::to_string(&tools_descriptor)?,
+        );
+        map.insert(
+            PathBuf::from(format!(
+                "tools/{}/versions/{}/{}/files/index.json",
+                id, version, desc_type
+            )),
+            serde_json::to_string(&tools_files)?,
+        );
+        map.insert(
+            PathBuf::from(format!(
+                "tools/{}/versions/{}/{}/tests/index.json",
+                id, version, desc_type
+            )),
+            serde_json::to_string(&tools_tests)?,
+        );
+        map.insert(
+            PathBuf::from(format!(
+                "tools/{}/versions/{}/containerfile/index.json",
+                id, version
+            )),
+            serde_json::to_string(&Vec::<gh_trs::trs::types::FileWrapper>::new())?,
+        );
+    }
+    Ok(map)
 }
 
 #[cfg(test)]
