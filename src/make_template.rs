@@ -1,3 +1,4 @@
+use crate::file_url;
 use crate::version;
 
 use anyhow::{anyhow, bail, Result};
@@ -61,7 +62,7 @@ fn generate_config(
     url_type: gh_trs::raw_url::UrlType,
 ) -> Result<gh_trs::config::types::Config> {
     let gh_token = gh_trs::env::github_token(gh_token)?;
-    let primary_wf = gh_trs::raw_url::RawUrl::new(&gh_token, wf_loc, None, None)?;
+    let primary_wf = file_url::FileUrl::new(&gh_token, wf_loc, None, None)?;
 
     Ok(gh_trs::config::types::Config {
         id: Uuid::new_v4(),
@@ -71,23 +72,9 @@ fn generate_config(
         zenodo: None,
         workflow: gh_trs::config::types::Workflow {
             name: primary_wf.file_stem()?,
-            readme: gh_trs::raw_url::RawUrl::new(
-                &gh_token,
-                &gh_trs::github_api::get_readme_url(
-                    &gh_token,
-                    &primary_wf.owner,
-                    &primary_wf.name,
-                )?,
-                None,
-                None,
-            )?
-            .to_url(&url_type)?,
+            readme: primary_wf.readme(&gh_token, &url_type)?,
             language: gh_trs::inspect::inspect_wf_type_version(&primary_wf.to_url(&url_type)?)?,
-            files: gh_trs::command::make_template::obtain_wf_files(
-                &gh_token,
-                &primary_wf,
-                &url_type,
-            )?,
+            files: primary_wf.wf_files(&gh_token, &url_type)?,
             testing: vec![gh_trs::config::types::Testing::default()],
         },
     })

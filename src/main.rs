@@ -1,5 +1,6 @@
 mod args;
 mod env;
+mod file_url;
 mod io;
 mod make_template;
 mod pr;
