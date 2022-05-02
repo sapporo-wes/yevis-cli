@@ -8,7 +8,7 @@ authors:
     affiliation: Example Affiliation
     orcid: 0000-0003-2765-0049
 workflow:
-  name: CWL_trimming_and_qc
+  name: CWL_trimming_and_qc by Apache-2.0
   readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/main/README.md"
   language:
     type: CWL

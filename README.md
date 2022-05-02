@@ -4,12 +4,12 @@ CLI tool to support building and maintaining Yevis workflow registry.
 
 Features include:
 
-- Generate a template of a workflow metadata file
+- Generate a workflow metadata file template
 - Validate the workflow metadata file
-- Execute the workflow tests
+- Execute workflow tests
 - Create a Pull Request to GitHub Repository
 - Upload workflow-related files to [Zenodo](https://zenodo.org/) and obtain DOI
-- Generate TRS responses ([GA4GH - Tool Registry Service API](https://www.ga4gh.org/news/tool-registry-service-api-enabling-an-interoperable-library-of-genomics-analysis-tools/)) and deploy to GitHub Pages
+- Generate TRS responses ([GA4GH - Tool Registry Service API](https://www.ga4gh.org/news/tool-registry-service-api-enabling-an-interoperable-library-of-genomics-analysis-tools/)) and deploy them to GitHub Pages
 
 In addition, see the below links:
 
@@ -93,10 +93,10 @@ OPTIONS:
     -o, --output <output>            Path to the output file [default: yevis-metadata.yml]
 
 ARGS:
-    <workflow-location>    Location of a primary workflow document (only hosted on GitHub)
+    <workflow-location>    Location of a primary workflow document (only hosted on GitHub or Gist)
 ```
 
-Only URL hosted on GitHub is accepted as `workflow-location`.
+Only URL hosted on GitHub or Gist is accepted as `workflow-location`.
 This URL is a URL like `https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl`, which will later be converted to a raw URL like `https://raw.githubusercontent.com/ddbj/yevis-cli/main/tests/CWL/wf/trimming_and_qc.cwl`.
 
 `yevis-cli` collects various information and generates a template for the workflow metadata file.

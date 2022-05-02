@@ -14,7 +14,7 @@ pub enum Args {
     #[structopt(setting(clap::AppSettings::ColoredHelp))]
     /// Make a template for the Yevis metadata file.
     MakeTemplate {
-        /// Location of a primary workflow document (only hosted on GitHub).
+        /// Location of a primary workflow document (only hosted on GitHub or Gist).
         workflow_location: Url,
 
         /// GitHub Personal Access Token.
