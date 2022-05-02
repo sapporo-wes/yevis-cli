@@ -14,15 +14,9 @@ workflow:
     type: CWL
     version: v1.0
   files:
-    - url: "https://gist.githubusercontent.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/8c249db05bf4625e8a09604174acf859b66097ad/fastqc.cwl"
-      target: fastqc.cwl
-      type: secondary
-    - url: "https://gist.githubusercontent.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/330cd87f6b5dc90614cecfd36bca0c60f5c50622/trimming_and_qc.cwl"
-      target: trimming_and_qc.cwl
+    - url: "https://gist.githubusercontent.com/suecharo/b7af2f86931845bcfdbbedc277024862/raw/ecd35716bcb62b5607930cba1660d42fc728be35/trimming_and_qc.packed.cwl"
+      target: trimming_and_qc.packed.cwl
       type: primary
-    - url: "https://gist.githubusercontent.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/61d159ab5b9b0fbeaabda34ffbb9689dfc24a64d/trimmomatic_pe.cwl"
-      target: trimmomatic_pe.cwl
-      type: secondary
   testing:
     - id: test_1
       files:
