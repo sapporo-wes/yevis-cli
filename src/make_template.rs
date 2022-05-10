@@ -71,7 +71,7 @@ fn generate_config(
         authors: vec![author_from_gh_api(&gh_token)?],
         zenodo: None,
         workflow: gh_trs::config::types::Workflow {
-            name: primary_wf.file_stem()?,
+            name: primary_wf.file_name()?,
             readme: primary_wf.readme(&gh_token, &url_type)?,
             language: gh_trs::inspect::inspect_wf_type_version(&primary_wf.to_url(&url_type)?)?,
             files: primary_wf.wf_files(&gh_token, &url_type)?,

@@ -111,42 +111,14 @@ fn validate_language(config: &gh_trs::config::types::Config) -> Result<()> {
     Ok(())
 }
 
-fn is_github_url(url: &Url) -> bool {
-    url.host_str() == Some("github.com") || url.host_str() == Some("raw.githubusercontent.com")
-}
-
-fn is_gist_url(url: &Url) -> bool {
-    url.host_str() == Some("gist.github.com")
-        || url.host_str() == Some("gist.githubusercontent.com")
-}
-
-/// is true:
-/// https://zenodo.org/record/1015875/files/README.md
-/// https://sandbox.zenodo.org/record/1015875/files/README.md
-fn is_zenodo_url(url: &Url) -> bool {
-    url.host_str() == Some("zenodo.org") || url.host_str() == Some("sandbox.zenodo.org")
-}
-
 fn update_url(
     gh_token: impl AsRef<str>,
     url: &Url,
     branch_memo: Option<&mut HashMap<String, String>>,
     commit_memo: Option<&mut HashMap<String, String>>,
 ) -> Result<Url> {
-    if is_zenodo_url(url) {
-        // do nothing
-        Ok(url.clone())
-    } else if is_github_url(url) {
-        gh_trs::raw_url::RawUrl::new(gh_token, url, branch_memo, commit_memo)?
-            .to_url(&gh_trs::raw_url::UrlType::Commit)
-    } else if is_gist_url(url) {
-        Ok(file_url::GistUrl::new(gh_token, url)?.raw_url)
-    } else {
-        bail!(
-            "Unsupported URL: {}, yevis-cli only supports GitHub, Gist, and Zenodo",
-            url
-        );
-    }
+    let file_url = file_url::FileUrl::new(gh_token, url, branch_memo, commit_memo)?;
+    file_url.to_url(&gh_trs::raw_url::UrlType::Commit)
 }
 
 fn validate_and_update_workflow(
@@ -162,7 +134,7 @@ fn validate_and_update_workflow(
         Some(&mut branch_memo),
         Some(&mut commit_memo),
     )
-    .context("Invalid `workflow.readme`")?;
+    .map_err(|e| anyhow!("Invalid `workflow.readme`: {}", e))?;
 
     ensure!(
         config.workflow.primary_wf().is_ok(),
@@ -176,7 +148,7 @@ fn validate_and_update_workflow(
             Some(&mut branch_memo),
             Some(&mut commit_memo),
         )
-        .context("Invalid `workflow.files[].url`")?;
+        .map_err(|e| anyhow!("Invalid `workflow.files[].url`: {}", e))?;
         file.complement_target()?;
     }
 
@@ -196,7 +168,7 @@ fn validate_and_update_workflow(
                 Some(&mut branch_memo),
                 Some(&mut commit_memo),
             )
-            .context("Invalid `workflow.files[].url`")?;
+            .map_err(|e| anyhow!("Invalid `workflow.testing[].files[].url`: {}", e))?;
             file.complement_target()?;
         }
     }

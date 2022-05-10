@@ -180,14 +180,23 @@ fn get_gist_raw_url(gh_token: impl AsRef<str>, gist_id: impl AsRef<str>) -> Resu
 pub enum FileUrl {
     Gist(GistUrl),
     GitHub(GitHubUrl),
+    Zenodo(Url),
+    Other(Url),
 }
 
 impl FileUrl {
     /// Accept Url:
-    /// - https://github.com/...
-    /// - https://raw.githubusercontent.com/...
-    /// - https://gist.github.com/...
-    /// - https://gist.githubusercontent.com/...
+    ///   - GitHub:
+    ///     - https://github.com/...
+    ///     - https://raw.githubusercontent.com/...
+    ///   - Gist:
+    ///     - https://gist.github.com/...
+    ///     - https://gist.githubusercontent.com/...
+    ///   - Zenodo:
+    ///     - https://zenodo.org/...
+    ///     - https://sandbox.zenodo.org/...
+    ///   - Other:
+    ///     - https://...
     pub fn new(
         gh_token: impl AsRef<str>,
         url: &Url,
@@ -201,8 +210,10 @@ impl FileUrl {
             Self::GitHub(GitHubUrl::new(gh_token, url, branch_memo, commit_memo)?)
         } else if host == "gist.github.com" || host == "gist.githubusercontent.com" {
             Self::Gist(GistUrl::new(gh_token, url)?)
+        } else if host == "zenodo.org" {
+            Self::Zenodo(url.clone())
         } else {
-            bail!("Only GitHub and Gist URL is supported, but found: {}", url);
+            Self::Other(url.clone())
         };
         Ok(file_url)
     }
@@ -211,7 +222,32 @@ impl FileUrl {
         match self {
             Self::GitHub(url) => url.file_stem(),
             Self::Gist(url) => url.file_stem(),
+            Self::Zenodo(url) => {
+                let file_name = url
+                    .path()
+                    .split('/')
+                    .last()
+                    .ok_or_else(|| anyhow!("No file name found in your raw URL: {}", url))?;
+                Ok(file_name.to_string())
+            }
+            Self::Other(url) => {
+                let file_name = url
+                    .path()
+                    .split('/')
+                    .last()
+                    .ok_or_else(|| anyhow!("No file name found in your raw URL: {}", url))?;
+                Ok(file_name.to_string())
+            }
         }
+    }
+
+    pub fn file_name(&self) -> Result<String> {
+        Ok(self
+            .file_stem()?
+            .split('.')
+            .next()
+            .ok_or_else(|| anyhow!("No file name found in your raw URL"))?
+            .to_string())
     }
 
     pub fn readme(
@@ -228,6 +264,8 @@ impl FileUrl {
             )?
             .to_url(url_type)?,
             Self::Gist(_) => Url::parse("https://example.com/PATH/TO/README.md")?,
+            Self::Zenodo(_) => Url::parse("https://example.com/PATH/TO/README.md")?,
+            Self::Other(_) => Url::parse("https://example.com/PATH/TO/README.md")?,
         };
         Ok(readme)
     }
@@ -236,6 +274,8 @@ impl FileUrl {
         match self {
             Self::GitHub(url) => Ok(url.to_url(url_type)?),
             Self::Gist(url) => Ok(url.raw_url.clone()),
+            Self::Zenodo(url) => Ok(url.clone()),
+            Self::Other(url) => Ok(url.clone()),
         }
     }
 
@@ -249,6 +289,16 @@ impl FileUrl {
                 gh_trs::command::make_template::obtain_wf_files(&gh_token, url, url_type)
             }
             Self::Gist(url) => url.wf_files(&gh_token),
+            Self::Zenodo(url) => Ok(vec![gh_trs::config::types::File::new(
+                url,
+                &Some(self.file_stem()?),
+                gh_trs::config::types::FileType::Primary,
+            )?]),
+            Self::Other(url) => Ok(vec![gh_trs::config::types::File::new(
+                url,
+                &Some(self.file_stem()?),
+                gh_trs::config::types::FileType::Primary,
+            )?]),
         }
     }
 }
