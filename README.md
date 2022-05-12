@@ -18,8 +18,8 @@ In addition, see the below links:
 
 - [`ddbj/workflow-registry`](https://github.com/ddbj/workflow-registry): a workflow registry built and maintained by [DDBJ](https://www.ddbj.nig.ac.jp/) using `yevis-cli`
 - [`ddbj/yevis-web`](https://github.com/ddbj/yevis-web): a web application to browse published workflows
-- [`Yevis Getting Started`](https://github.com/ddbj/yevis-cli/blob/main/docs/getting_started.md): the document for Yevis system installation and usage
-- [`Yevis Getting Started Ja`](https://github.com/ddbj/yevis-cli/blob/main/docs/getting_started_ja.md): 日本語での Yevis system の使い方
+- [`Yevis Getting Started`](https://ddbj.github.io/yevis-cli/getting_started): the document for Yevis system installation and usage
+- [`Yevis Getting Started Ja`](https://ddbj.github.io/yevis-cli/getting_started_ja): 日本語での Yevis system の使い方
 
 ## Installation
 
@@ -43,7 +43,7 @@ $ docker-compose exec app yevis --help
 
 ## Usage
 
-See [Getting Started - 3. Workflow Registration](https://github.com/ddbj/yevis-cli/blob/main/docs/getting_started.md#3-workflow-registration) for a series of usages.
+See [Getting Started - 3. Workflow Registration](https://ddbj.github.io/yevis-cli/getting_started#3-workflow-registration) for a series of usages.
 
 This section describes some subcommands.
 
