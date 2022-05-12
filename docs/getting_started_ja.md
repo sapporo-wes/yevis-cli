@@ -47,11 +47,23 @@
 
 ワークフローをブラウズするための Web Application、[`ddbj/yevis-web`](https://github.com/ddbj/yevis-web) をデプロイします。
 
-まず、[`ddbj/yevis-web`](https://github.com/ddbj/yevis-web) を Fork します。
+この [Link](https://github.com/ddbj/yevis-web/generate) をクリックすると、GitHub Repository の作成が開始されます。
 
-![fork-web-repo.png](./img/fork-web-repo.png)
+**`Include all branched` オプションにチェック入れる必要はありません。**
 
-次に、フォークしたリポジトリの `[Actions] - [deploy-dispatch]` にある GitHub Actions ワークフローを実行します。
+![create-new-web-repository.png](./img/create-new-web-repository.png)
+
+`README.md` と `LICENSE` はファイルは自由に設定できます。
+
+---
+
+`[Settings] - [Actions] - [General]` において、ワークフローのパーミッションが `Read` と `Write` のアクセス権を持っていることを確認します。
+
+![./img/repo-settings-permission.png](./img/repo-settings-permission.png)
+
+---
+
+次に、作成したリポジトリの `[Actions] - [deploy-web]` にある GitHub Actions ワークフローを実行します。
 
 ワークフローを実行するために、以下のパラメータを入力します。
 

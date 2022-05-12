@@ -47,11 +47,23 @@ Then, in `[Settings] - [Secrets] - [Actions]` of the created repository, registe
 
 Deploy [`ddbj/yevis-web`](https://github.com/ddbj/yevis-web), a web application to browse a workflow registry.
 
-First, fork the [`ddbj/yevis-web`](https://github.com/ddbj/yevis-web) repository.
+First, click on this [Link](https://github.com/ddbj/yevis-web/generate) to start the creation of the GitHub repository.
 
-![fork-web-repo.png](./img/fork-web-repo.png)
+**Do not need to check the `Include all branched` option.**
 
-Then, execute the GitHub Actions workflow in `[Actions] - [deploy-dispatch]` of the forked repository.
+![create-new-web-repository.png](./img/create-new-web-repository.png)
+
+You can set `README.md` and `LICENSE` files freely.
+
+---
+
+In `[Settings] - [Actions] - [General]`, make sure that the workflow permissions have `Read` and `Write` access.
+
+![./img/repo-settings-permission.png](./img/repo-settings-permission.png)
+
+---
+
+Then, execute the GitHub Actions workflow in `[Actions] - [deploy-dispatch]` of the created repository.
 
 Enter the following parameters for running the workflow:
 
