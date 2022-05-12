@@ -1,5 +1,8 @@
 # yevis-cli
 
+[![DOI](https://zenodo.org/badge/442338046.svg)](https://zenodo.org/badge/latestdoi/442338046)
+[![Apache License](https://img.shields.io/badge/license-Apache%202.0-orange.svg?style=flat&color=important)](http://www.apache.org/licenses/LICENSE-2.0)
+
 CLI tool to support building and maintaining Yevis workflow registry.
 
 Features include:
