@@ -38,7 +38,7 @@ jobs:
       - name: "Run publish"
         id: publish
         run: |
-          mkdir -p ./test-logs
+          mkdir -p ./test-logs ./test-results
           SAPPORO_RUN_DIR=${GITHUB_WORKSPACE}/test-results \
             ./yevis publish \
               --verbose \

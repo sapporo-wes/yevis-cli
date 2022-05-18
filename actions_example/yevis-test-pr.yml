@@ -37,7 +37,7 @@ jobs:
       - name: "Run tests"
         id: test
         run: |
-          mkdir -p ./test-logs
+          mkdir -p ./test-logs ./test-results
           SAPPORO_RUN_DIR=${GITHUB_WORKSPACE}/test-results \
             ./yevis test \
               --verbose \
