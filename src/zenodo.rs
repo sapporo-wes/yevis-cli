@@ -12,6 +12,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
+use std::time;
 use url::Url;
 
 pub fn upload_and_commit_zenodo(
@@ -124,7 +125,10 @@ fn upload_zenodo(
 }
 
 fn get_request(zenodo_token: impl AsRef<str>, url: &Url, query: &[(&str, &str)]) -> Result<Value> {
-    let client = reqwest::blocking::Client::new();
+    // timeout is set to 10 minutes
+    let client = reqwest::blocking::Client::builder()
+        .timeout(time::Duration::from_secs(600))
+        .build()?;
     let response = client
         .get(url.as_str())
         .header(
@@ -150,7 +154,10 @@ fn get_request(zenodo_token: impl AsRef<str>, url: &Url, query: &[(&str, &str)])
 }
 
 fn post_request(zenodo_token: impl AsRef<str>, url: &Url, body: &Value) -> Result<Value> {
-    let client = reqwest::blocking::Client::new();
+    // timeout is set to 60 minutes
+    let client = reqwest::blocking::Client::builder()
+        .timeout(time::Duration::from_secs(3600))
+        .build()?;
     let response = client
         .post(url.as_str())
         .header(reqwest::header::CONTENT_TYPE, "application/json")
@@ -177,7 +184,10 @@ fn post_request(zenodo_token: impl AsRef<str>, url: &Url, body: &Value) -> Resul
 }
 
 fn put_request(zenodo_token: impl AsRef<str>, url: &Url, body: &Value) -> Result<Value> {
-    let client = reqwest::blocking::Client::new();
+    // timeout is set to 60 minutes
+    let client = reqwest::blocking::Client::builder()
+        .timeout(time::Duration::from_secs(3600))
+        .build()?;
     let response = client
         .put(url.as_str())
         .header(reqwest::header::CONTENT_TYPE, "application/json")
@@ -204,7 +214,10 @@ fn put_request(zenodo_token: impl AsRef<str>, url: &Url, body: &Value) -> Result
 }
 
 fn delete_request(zenodo_token: impl AsRef<str>, url: &Url) -> Result<()> {
-    let client = reqwest::blocking::Client::new();
+    // timeout is set to 10 minutes
+    let client = reqwest::blocking::Client::builder()
+        .timeout(time::Duration::from_secs(600))
+        .build()?;
     let response = client
         .delete(url.as_str())
         .header(
@@ -515,7 +528,11 @@ struct ConfigFile {
 
 impl ConfigFile {
     fn new(file_url: &Url, target: impl AsRef<Path>) -> Result<Self> {
-        let res = reqwest::blocking::get(file_url.as_str())?;
+        // timeout is set to 60 * 60 seconds
+        let client = reqwest::blocking::Client::builder()
+            .timeout(time::Duration::from_secs(3600))
+            .build()?;
+        let res = client.get(file_url.as_str()).send()?;
         let status = res.status();
         let res_bytes = res.bytes()?;
         ensure!(
@@ -672,7 +689,10 @@ fn create_deposition_file(
         .text("name", file_name.as_ref().to_string())
         .file("file", file_path.as_ref())?;
 
-    let client = reqwest::blocking::Client::new();
+    // timeout is set to 60 * 60 seconds
+    let client = reqwest::blocking::Client::builder()
+        .timeout(time::Duration::from_secs(3600))
+        .build()?;
     let response = client
         .post(url.as_str())
         .header(reqwest::header::ACCEPT, "application/json")
