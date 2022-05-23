@@ -5,11 +5,11 @@ use anyhow::{anyhow, ensure, Result};
 use crypto::digest::Digest;
 use crypto::md5::Md5;
 use log::info;
-use reqwest::{self, blocking::multipart};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fmt;
+use std::fs;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
 use std::time;
@@ -672,6 +672,31 @@ fn config_to_files(config: &gh_trs::config::types::Config) -> Result<Vec<ConfigF
     Ok(files)
 }
 
+fn get_bucket_url(
+    host: impl AsRef<str>,
+    token: impl AsRef<str>,
+    deposition_id: &u64,
+) -> Result<String> {
+    let url = Url::parse(&format!(
+        "https://{}/api/deposit/depositions/{}",
+        host.as_ref(),
+        deposition_id
+    ))?;
+    let res = get_request(&token, &url, &[])?;
+    let err_msg = "Failed to parse the response when getting bucket url";
+    let res_obj = res.as_object().ok_or_else(|| anyhow!(err_msg))?;
+    let bucket_url = res_obj
+        .get("links")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_object()
+        .ok_or_else(|| anyhow!(err_msg))?
+        .get("bucket")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_str()
+        .ok_or_else(|| anyhow!(err_msg))?;
+    Ok(bucket_url.to_string())
+}
+
 /// https://developers.zenodo.org/?shell#create24
 fn create_deposition_file(
     host: impl AsRef<str>,
@@ -680,27 +705,19 @@ fn create_deposition_file(
     file_name: impl AsRef<str>,
     file_path: impl AsRef<Path>,
 ) -> Result<()> {
-    let url = Url::parse(&format!(
-        "https://{}/api/deposit/depositions/{}/files",
-        host.as_ref(),
-        &deposition_id
-    ))?;
-    let form = multipart::Form::new()
-        .text("name", file_name.as_ref().to_string())
-        .file("file", file_path.as_ref())?;
-
+    let bucket_url = get_bucket_url(&host, &token, deposition_id)?;
+    let url = Url::parse(&format!("{}/{}", bucket_url, file_name.as_ref()))?;
     // timeout is set to 60 * 60 seconds
     let client = reqwest::blocking::Client::builder()
         .timeout(time::Duration::from_secs(3600))
         .build()?;
     let response = client
-        .post(url.as_str())
-        .header(reqwest::header::ACCEPT, "application/json")
+        .put(url.as_ref())
         .header(
             reqwest::header::AUTHORIZATION,
             format!("Bearer {}", token.as_ref()),
         )
-        .multipart(form)
+        .body(fs::File::open(file_path)?)
         .send()?;
     let status = response.status();
     let res_body = response.json::<Value>()?;
@@ -710,7 +727,7 @@ fn create_deposition_file(
     );
     ensure!(
         status.is_success(),
-        "Failed to post request to {}. Status: {}. Response: {}",
+        "Failed to put request to {}. Status: {}. Response: {}",
         url,
         status,
         res_body
@@ -1030,24 +1047,39 @@ mod tests {
 
     #[test]
     #[ignore]
+    fn test_get_bucket_url() -> Result<()> {
+        let host = env::zenodo_host();
+        let token = env::zenodo_token()?;
+        let deposition_id = 1064212;
+        let bucket_url = get_bucket_url(&host, &token, &deposition_id)?;
+        dbg!(&bucket_url);
+        Ok(())
+    }
+
+    #[test]
+    #[ignore]
     fn test_update_deposition_files() -> Result<()> {
         let host = env::zenodo_host();
         let token = env::zenodo_token()?;
-        let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
-        let config_files = config_to_files(&config)?;
-        // let config_files = vec![];
-        let ids = list_depositions(
-            &host,
-            &token,
-            &config.id.to_string(),
-            DepositionStatus::Draft,
+        let config = validate::validate(
+            vec!["./yevis-metadata_gatk-workflows_mitochondria-pipeline.yml"],
+            &None::<String>,
+            "ddbj/workflow-registry",
         )?;
-        if !ids.is_empty() {
-            let id = ids[0];
-            // let deposition_files = get_files_list(&host, &token, &id)?;
-            let deposition_files = vec![];
-            update_deposition_files(&host, &token, &id, deposition_files, config_files)?;
-        }
+        // let config = gh_trs::config::io::read_config("./tests/test-metadata-CWL-validated.yml")?;
+        let config_files = config_to_files(&config[0])?;
+        // let config_files = vec![];
+        // let ids = list_depositions(
+        //     &host,
+        //     &token,
+        //     &config.id.to_string(),
+        //     DepositionStatus::Draft,
+        // )?;
+        // let id = ids[0];
+        let id = 1064212;
+        let deposition_files = get_files_list(&host, &token, &id)?;
+        // let deposition_files = vec![];
+        update_deposition_files(&host, &token, &id, deposition_files, config_files)?;
         Ok(())
     }
 
