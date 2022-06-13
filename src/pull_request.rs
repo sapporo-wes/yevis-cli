@@ -285,7 +285,7 @@ fn put_request(gh_token: impl AsRef<str>, url: &Url, body: &Value) -> Result<Val
     let client = reqwest::blocking::Client::new();
     let response = client
         .put(url.as_str())
-        .header(reqwest::header::USER_AGENT, "gh-trs")
+        .header(reqwest::header::USER_AGENT, "yevis")
         .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
         .header(
             reqwest::header::AUTHORIZATION,

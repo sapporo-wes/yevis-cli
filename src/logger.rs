@@ -1,4 +1,3 @@
-use env_logger;
 use std::io::Write;
 
 #[cfg(not(tarpaulin_include))]

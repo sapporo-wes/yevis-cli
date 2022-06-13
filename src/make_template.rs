@@ -3,13 +3,10 @@ use crate::file_url;
 use crate::inspect;
 use crate::metadata;
 use crate::raw_url;
-use crate::trs;
-use crate::version;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use log::{debug, info};
 use std::path::Path;
-use std::str::FromStr;
 use url::Url;
 use uuid::Uuid;
 
@@ -21,16 +18,6 @@ pub fn make_template(
 ) -> Result<()> {
     info!("Making a template from {}", wf_loc);
 
-    // let config = if update {
-    //     // Retrieve metadata file from API because wf_loc is TRS ToolVersion URL
-    //     let config_loc = tool_version_url_to_metadata_url(wf_loc)?;
-    //     let mut config = metadata::io::read_config(&config_loc)?;
-    //     let prev_version = version::Version::from_str(&config.version)?;
-    //     config.version = prev_version.increment_patch().to_string();
-    //     config
-    // } else {
-    //     generate_config(wf_loc, gh_token, url_type)?
-    // };
     let config = generate_config(wf_loc, gh_token, url_type)?;
 
     debug!(
@@ -41,25 +28,6 @@ pub fn make_template(
     let file_ext = metadata::io::parse_file_ext(&output)?;
     metadata::io::write_config(&config, &output, &file_ext)?;
     Ok(())
-}
-
-/// TRS ToolVersion URL: https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>
-/// metadata file URL: https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>/yevis-metadata.json
-fn tool_version_url_to_metadata_url(wf_loc: &Url) -> Result<Url> {
-    let tool_version_url_re = regex::Regex::new(r"^https?://.+/tools/([^/]+)/versions/([^/]+)$")?;
-    let (id, version) = match tool_version_url_re.captures(wf_loc.as_str()) {
-        Some(caps) => (caps.get(1).unwrap().as_str(), caps.get(2).unwrap().as_str()),
-        None => bail!("Invalid TRS ToolVersion URL: {}", wf_loc),
-    };
-    let trs_endpoint = trs::api::TrsEndpoint::new_from_tool_version_url(wf_loc)?;
-    trs_endpoint.is_valid()?;
-    let metadata_url = Url::parse(&format!(
-        "{}tools/{}/versions/{}/yevis-metadata.json",
-        trs_endpoint.url.as_str(),
-        id,
-        version
-    ))?;
-    Ok(metadata_url)
 }
 
 fn generate_config(
@@ -93,34 +61,5 @@ fn author_from_gh_api(gh_token: impl AsRef<str>) -> Result<metadata::types::Auth
             Ok(author)
         }
         Err(e) => Err(anyhow!("Failed to get GitHub user with error: {}", e)),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_tool_version_url_to_metadata_url() {
-        let url = Url::parse(
-            "https://ddbj.github.io/workflow-registry/tools/9df2332c-f51d-4752-b2bf-d4a4ed4e6760/versions/1.0.0",
-        )
-        .unwrap();
-        let config_url = tool_version_url_to_metadata_url(&url).unwrap();
-        println!("{}", config_url);
-        assert_eq!(
-            config_url,
-            Url::parse(
-                "https://ddbj.github.io/workflow-registry/tools/9df2332c-f51d-4752-b2bf-d4a4ed4e6760/versions/1.0.0/yevis-metadata.json"
-            )
-            .unwrap()
-        );
-    }
-
-    #[test]
-    fn test_tool_version_url_to_metadata_url_invalid() {
-        let url = Url::parse("https://example.com/tools/1.0.0").unwrap();
-        let config_url = tool_version_url_to_metadata_url(&url);
-        assert!(config_url.is_err());
     }
 }

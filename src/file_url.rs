@@ -429,7 +429,7 @@ mod tests {
         let primary_wf = raw_url::RawUrl::new(
             &gh_token,
             &Url::parse(
-                "https://github.com/suecharo/gh-trs/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
+                "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
             )?,
             None,
             None,

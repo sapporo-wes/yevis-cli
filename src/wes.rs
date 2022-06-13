@@ -3,7 +3,6 @@ use crate::metadata;
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use log::info;
-use reqwest;
 use reqwest::blocking::multipart;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -16,7 +15,7 @@ use std::time;
 use url::Url;
 
 const SAPPORO_SERVICE_IMAGE: &str = "ghcr.io/sapporo-wes/sapporo-service:1.2.4";
-const SAPPORO_SERVICE_NAME: &str = "gh-trs-sapporo-service";
+const SAPPORO_SERVICE_NAME: &str = "yevis-sapporo-service";
 
 pub fn inside_docker_container() -> bool {
     Path::new("/.dockerenv").exists()
@@ -51,7 +50,7 @@ pub fn start_wes(docker_host: &Url) -> Result<()> {
     );
     let arg_run_dir_val = &format!("{}:{}", sapporo_run_dir, sapporo_run_dir);
     let (arg_network, arg_network_val) = if inside_docker_container() {
-        ("--network", "gh-trs-network")
+        ("--network", "yevis-network")
     } else {
         ("-p", "1122:1122")
     };

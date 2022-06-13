@@ -6,7 +6,6 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -78,84 +77,6 @@ impl TrsResponse {
             .insert((config.id, config.version.clone()), config.clone());
 
         Ok(())
-    }
-
-    pub fn generate_contents(&self) -> Result<HashMap<PathBuf, String>> {
-        let mut map: HashMap<PathBuf, String> = HashMap::new();
-        map.insert(
-            PathBuf::from("service-info/index.json"),
-            serde_json::to_string(&self.service_info)?,
-        );
-        map.insert(
-            PathBuf::from("toolClasses/index.json"),
-            serde_json::to_string(&self.tool_classes)?,
-        );
-        map.insert(
-            PathBuf::from("tools/index.json"),
-            serde_json::to_string(&self.tools)?,
-        );
-        for ((id, version), config) in self.gh_trs_config.iter() {
-            let tools_id = self.tools.iter().find(|t| &t.id == id).unwrap();
-            let tools_id_versions = tools_id.versions.clone();
-            let tools_id_versions_version = tools_id_versions
-                .iter()
-                .find(|v| &v.version() == version)
-                .unwrap();
-            let tools_descriptor = self.tools_descriptor.get(&(*id, version.clone())).unwrap();
-            let tools_files = self.tools_files.get(&(*id, version.clone())).unwrap();
-            let tools_tests = self.tools_tests.get(&(*id, version.clone())).unwrap();
-
-            let desc_type = config.workflow.language.r#type.clone().unwrap().to_string();
-
-            map.insert(
-                PathBuf::from(format!(
-                    "tools/{}/versions/{}/gh-trs-config.json",
-                    id, version
-                )),
-                serde_json::to_string(&config)?,
-            );
-            map.insert(
-                PathBuf::from(format!("tools/{}/index.json", id)),
-                serde_json::to_string(&tools_id)?,
-            );
-            map.insert(
-                PathBuf::from(format!("tools/{}/versions/index.json", id)),
-                serde_json::to_string(&tools_id_versions)?,
-            );
-            map.insert(
-                PathBuf::from(format!("tools/{}/versions/{}/index.json", id, version)),
-                serde_json::to_string(&tools_id_versions_version)?,
-            );
-            map.insert(
-                PathBuf::from(format!(
-                    "tools/{}/versions/{}/{}/descriptor/index.json",
-                    id, version, desc_type
-                )),
-                serde_json::to_string(&tools_descriptor)?,
-            );
-            map.insert(
-                PathBuf::from(format!(
-                    "tools/{}/versions/{}/{}/files/index.json",
-                    id, version, desc_type
-                )),
-                serde_json::to_string(&tools_files)?,
-            );
-            map.insert(
-                PathBuf::from(format!(
-                    "tools/{}/versions/{}/{}/tests/index.json",
-                    id, version, desc_type
-                )),
-                serde_json::to_string(&tools_tests)?,
-            );
-            map.insert(
-                PathBuf::from(format!(
-                    "tools/{}/versions/{}/containerfile/index.json",
-                    id, version
-                )),
-                serde_json::to_string(&Vec::<trs::types::FileWrapper>::new())?,
-            );
-        }
-        Ok(map)
     }
 }
 
@@ -271,7 +192,7 @@ mod tests {
             r#"
 [
   {
-    "path": "https://raw.githubusercontent.com/suecharo/gh-trs/458d0524e667f2442a5effb730b523c1f15748d4/tests/CWL/wf/fastqc.cwl",
+    "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/458d0524e667f2442a5effb730b523c1f15748d4/tests/CWL/wf/fastqc.cwl",
     "file_type": "SECONDARY_DESCRIPTOR",
     "checksum": {
       "checksum": "1bd771a51336a782b695db8334872e00f305cd7c49c4978e7e58786ea4714437",
@@ -279,7 +200,7 @@ mod tests {
     }
   },
   {
-    "path": "https://raw.githubusercontent.com/suecharo/gh-trs/458d0524e667f2442a5effb730b523c1f15748d4/tests/CWL/wf/trimming_and_qc.cwl",
+    "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/458d0524e667f2442a5effb730b523c1f15748d4/tests/CWL/wf/trimming_and_qc.cwl",
     "file_type": "PRIMARY_DESCRIPTOR",
     "checksum": {
       "checksum": "33ef70b2d5ee38cb394c5ca6354243f44a85118271026eb9fc61365a703e730b",
@@ -287,7 +208,7 @@ mod tests {
     }
   },
   {
-    "path": "https://raw.githubusercontent.com/suecharo/gh-trs/458d0524e667f2442a5effb730b523c1f15748d4/tests/CWL/wf/trimmomatic_pe.cwl",
+    "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/458d0524e667f2442a5effb730b523c1f15748d4/tests/CWL/wf/trimmomatic_pe.cwl",
     "file_type": "SECONDARY_DESCRIPTOR",
     "checksum": {
       "checksum": "531d0a38116347cade971c211056334f7cae48e1293e2bb0e334894e55636f8e",
@@ -308,7 +229,7 @@ mod tests {
             r#"
 [
   {
-    "content": "{\"id\":\"test_1\",\"files\":[{\"url\":\"https://raw.githubusercontent.com/suecharo/gh-trs/4e7e2e3ddb42bdaaf5e294f4bf67319f23c4eaa4/tests/CWL/test/wf_params.json\",\"target\":\"wf_params.json\",\"type\":\"wf_params\"},{\"url\":\"https://raw.githubusercontent.com/suecharo/gh-trs/4e7e2e3ddb42bdaaf5e294f4bf67319f23c4eaa4/tests/CWL/test/ERR034597_1.small.fq.gz\",\"target\":\"ERR034597_1.small.fq.gz\",\"type\":\"other\"},{\"url\":\"https://raw.githubusercontent.com/suecharo/gh-trs/4e7e2e3ddb42bdaaf5e294f4bf67319f23c4eaa4/tests/CWL/test/ERR034597_2.small.fq.gz\",\"target\":\"ERR034597_2.small.fq.gz\",\"type\":\"other\"}]}",
+    "content": "{\"id\":\"test_1\",\"files\":[{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/4e7e2e3ddb42bdaaf5e294f4bf67319f23c4eaa4/tests/CWL/test/wf_params.json\",\"target\":\"wf_params.json\",\"type\":\"wf_params\"},{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/4e7e2e3ddb42bdaaf5e294f4bf67319f23c4eaa4/tests/CWL/test/ERR034597_1.small.fq.gz\",\"target\":\"ERR034597_1.small.fq.gz\",\"type\":\"other\"},{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/4e7e2e3ddb42bdaaf5e294f4bf67319f23c4eaa4/tests/CWL/test/ERR034597_2.small.fq.gz\",\"target\":\"ERR034597_2.small.fq.gz\",\"type\":\"other\"}]}",
     "checksum": [
       {
         "checksum": "e6de556f3d71919d6e678d319231f9cf8d240bec594b09d1eff137c8de4dd9e9",

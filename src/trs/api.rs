@@ -41,52 +41,13 @@ impl TrsEndpoint {
         Ok(TrsEndpoint { url })
     }
 
-    /// from: https://suecharo.github.io/gh-trs/tools/<wf_id>/versions/<wf_version>
-    /// to: https://suecharo.github.io/gh-trs/
-    pub fn new_from_tool_version_url(url: &Url) -> Result<Self> {
-        let scheme = url.scheme();
-        let host = url
-            .host_str()
-            .ok_or_else(|| anyhow!("Invalid url: {}", url))?;
-        let mut path_segments = url
-            .path_segments()
-            .ok_or_else(|| anyhow!("Invalid url: {}", url))?
-            .map(|s| s.to_string())
-            .collect::<Vec<_>>();
-        path_segments.pop();
-        path_segments.pop();
-        path_segments.pop();
-        path_segments.pop();
-        let trs_url = Url::parse(&format!(
-            "{}://{}/{}/",
-            scheme,
-            host,
-            path_segments.join("/")
-        ))?;
-        Ok(TrsEndpoint { url: trs_url })
-    }
-
     pub fn is_valid(&self) -> Result<()> {
         let service_info = get_service_info(self)?;
         ensure!(
-            service_info.r#type.artifact == "gh-trs" && service_info.r#type.version == "2.0.1",
-            "gh-trs only supports gh-trs 2.0.1 as a TRS endpoint"
+            service_info.r#type.artifact == "yevis" && service_info.r#type.version == "2.0.1",
+            "Yevis only supports yevis 2.0.1 as a TRS endpoint"
         );
         Ok(())
-    }
-
-    pub fn to_config_url(
-        &self,
-        wf_id: impl AsRef<str>,
-        wf_version: impl AsRef<str>,
-    ) -> Result<Url> {
-        let url = Url::parse(&format!(
-            "{}tools/{}/versions/{}/gh-trs-config.json",
-            self.url.as_str(),
-            wf_id.as_ref(),
-            wf_version.as_ref()
-        ))?;
-        Ok(url)
     }
 
     pub fn all_versions(&self, wf_id: impl AsRef<str>) -> Result<Vec<String>> {
@@ -170,21 +131,10 @@ mod tests {
 
     #[test]
     fn test_get_request_not_found() -> Result<()> {
-        let url = Url::parse("https://suecharo.github.io/gh-trs/invalid_path")?;
+        let url = Url::parse("https://ddbj.github.io/yevis-cli/invalid_path")?;
         let res = get_request(&url);
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("404"));
-        Ok(())
-    }
-
-    #[test]
-    fn test_new_from_tool_version_url() -> Result<()> {
-        let url = Url::parse("https://suecharo.github.io/gh-trs/tools/foo/versions/bar")?;
-        let trs_endpoint = TrsEndpoint::new_from_tool_version_url(&url)?;
-        assert_eq!(
-            trs_endpoint.url,
-            Url::parse("https://suecharo.github.io/gh-trs/")?
-        );
         Ok(())
     }
 }

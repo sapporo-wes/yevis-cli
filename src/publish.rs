@@ -102,7 +102,6 @@ fn get_gh_pages_branch(
     Ok(branch.to_string())
 }
 
-/// modified from gh-trs::response::TrsResponse::generate_contents
 fn generate_trs_contents(trs_res: trs::response::TrsResponse) -> Result<HashMap<PathBuf, String>> {
     let mut map: HashMap<PathBuf, String> = HashMap::new();
     map.insert(

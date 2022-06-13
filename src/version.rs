@@ -61,13 +61,3 @@ impl ToString for Version {
         format!("{}.{}.{}", self.major, self.minor, self.patch)
     }
 }
-
-impl Version {
-    pub fn increment_patch(&self) -> Version {
-        Version {
-            major: self.major,
-            minor: self.minor,
-            patch: self.patch + 1,
-        }
-    }
-}
