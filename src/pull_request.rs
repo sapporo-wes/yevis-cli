@@ -1,5 +1,6 @@
 use crate::env;
 use crate::gh_trs;
+use crate::metadata;
 
 use anyhow::{anyhow, bail, ensure, Result};
 use log::info;
@@ -10,7 +11,7 @@ use std::time;
 use url::Url;
 
 pub fn pull_request(
-    configs: &Vec<gh_trs::config::types::Config>,
+    configs: &Vec<metadata::types::Config>,
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
 ) -> Result<()> {
@@ -346,7 +347,7 @@ fn commit_config(
     gh_token: impl AsRef<str>,
     owner: impl AsRef<str>,
     name: impl AsRef<str>,
-    config: &gh_trs::config::types::Config,
+    config: &metadata::types::Config,
 ) -> Result<()> {
     let config_path = PathBuf::from(format!(
         "{}/yevis-metadata-{}.yml",
@@ -375,7 +376,7 @@ fn create_pull_request(
     owner: impl AsRef<str>,
     name: impl AsRef<str>,
     branch: impl AsRef<str>,
-    config: &gh_trs::config::types::Config,
+    config: &metadata::types::Config,
 ) -> Result<()> {
     let title = format!("Add workflow: {}", config.workflow.name);
     let head = format!("{}:{}", user.as_ref(), &config.id);

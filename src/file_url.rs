@@ -1,6 +1,7 @@
 use crate::gh_trs;
 use crate::gh_trs::raw_url;
 use crate::gh_trs::raw_url::RawUrl as GitHubUrl;
+use crate::metadata;
 
 use anyhow::{anyhow, bail, ensure, Result};
 use regex::Regex;
@@ -76,7 +77,7 @@ impl GistUrl {
         Ok(file_name.to_string())
     }
 
-    pub fn wf_files(&self, gh_token: impl AsRef<str>) -> Result<Vec<gh_trs::config::types::File>> {
+    pub fn wf_files(&self, gh_token: impl AsRef<str>) -> Result<Vec<metadata::types::File>> {
         let primary_target = self.file_stem()?;
         let res = get_gist(gh_token, &self.id)?;
         let err_msg = "Failed to parse raw_url when getting Gist";
@@ -88,7 +89,7 @@ impl GistUrl {
             .ok_or_else(|| anyhow!(err_msg))?
             .values()
             .into_iter()
-            .map(|file| -> Result<gh_trs::config::types::File> {
+            .map(|file| -> Result<metadata::types::File> {
                 let target = file
                     .get("filename")
                     .ok_or_else(|| anyhow!(err_msg))?
@@ -100,11 +101,11 @@ impl GistUrl {
                     .as_str()
                     .ok_or_else(|| anyhow!(err_msg))?;
                 let r#type = if target == primary_target {
-                    gh_trs::config::types::FileType::Primary
+                    metadata::types::FileType::Primary
                 } else {
-                    gh_trs::config::types::FileType::Secondary
+                    metadata::types::FileType::Secondary
                 };
-                gh_trs::config::types::File::new(&Url::parse(url)?, &Some(target), r#type)
+                metadata::types::File::new(&Url::parse(url)?, &Some(target), r#type)
             })
             .collect::<Result<Vec<_>>>()
     }
@@ -286,19 +287,19 @@ impl FileUrl {
         &self,
         gh_token: impl AsRef<str>,
         url_type: &gh_trs::raw_url::UrlType,
-    ) -> Result<Vec<gh_trs::config::types::File>> {
+    ) -> Result<Vec<metadata::types::File>> {
         match self {
             Self::GitHub(url) => obtain_wf_files(&gh_token, url, url_type),
             Self::Gist(url) => url.wf_files(&gh_token),
-            Self::Zenodo(url) => Ok(vec![gh_trs::config::types::File::new(
+            Self::Zenodo(url) => Ok(vec![metadata::types::File::new(
                 url,
                 &Some(self.file_stem()?),
-                gh_trs::config::types::FileType::Primary,
+                metadata::types::FileType::Primary,
             )?]),
-            Self::Other(url) => Ok(vec![gh_trs::config::types::File::new(
+            Self::Other(url) => Ok(vec![metadata::types::File::new(
                 url,
                 &Some(self.file_stem()?),
-                gh_trs::config::types::FileType::Primary,
+                metadata::types::FileType::Primary,
             )?]),
         }
     }
@@ -308,7 +309,7 @@ pub fn obtain_wf_files(
     gh_token: impl AsRef<str>,
     primary_wf: &raw_url::RawUrl,
     url_type: &raw_url::UrlType,
-) -> Result<Vec<gh_trs::config::types::File>> {
+) -> Result<Vec<metadata::types::File>> {
     let primary_wf_url = primary_wf.to_url(url_type)?;
     let base_dir = primary_wf.base_dir()?;
     let base_url = primary_wf.to_base_url(url_type)?;
@@ -321,15 +322,15 @@ pub fn obtain_wf_files(
     )?;
     files
         .into_iter()
-        .map(|file| -> Result<gh_trs::config::types::File> {
+        .map(|file| -> Result<metadata::types::File> {
             let target = file.strip_prefix(&base_dir)?;
             let url = base_url.join(target.to_str().ok_or_else(|| anyhow!("Invalid URL"))?)?;
             let r#type = if url == primary_wf_url {
-                gh_trs::config::types::FileType::Primary
+                metadata::types::FileType::Primary
             } else {
-                gh_trs::config::types::FileType::Secondary
+                metadata::types::FileType::Secondary
             };
-            gh_trs::config::types::File::new(&url, &Some(target), r#type)
+            metadata::types::File::new(&url, &Some(target), r#type)
         })
         .collect::<Result<Vec<_>>>()
 }

@@ -1,5 +1,5 @@
-use crate::gh_trs::config;
 use crate::gh_trs::remote;
+use crate::metadata;
 
 use anyhow::{anyhow, Result};
 use colored::Colorize;
@@ -9,17 +9,17 @@ use serde_yaml;
 use std::collections::BTreeMap;
 use url::Url;
 
-pub fn inspect_wf_type_version(wf_loc: &Url) -> Result<config::types::Language> {
+pub fn inspect_wf_type_version(wf_loc: &Url) -> Result<metadata::types::Language> {
     let wf_content = remote::fetch_raw_content(wf_loc)?;
     let wf_type = inspect_wf_type(&wf_content);
     let wf_version = inspect_wf_version(&wf_content, &wf_type);
-    Ok(config::types::Language {
+    Ok(metadata::types::Language {
         r#type: wf_type,
         version: wf_version,
     })
 }
 
-pub fn inspect_wf_type(wf_content: impl AsRef<str>) -> Option<config::types::LanguageType> {
+pub fn inspect_wf_type(wf_content: impl AsRef<str>) -> Option<metadata::types::LanguageType> {
     match check_by_shebang(&wf_content) {
         Some(lang) => Some(lang),
         None => match check_by_regexp(&wf_content) {
@@ -32,35 +32,37 @@ pub fn inspect_wf_type(wf_content: impl AsRef<str>) -> Option<config::types::Lan
     }
 }
 
-pub fn check_by_shebang(wf_content: impl AsRef<str>) -> Option<config::types::LanguageType> {
+pub fn check_by_shebang(wf_content: impl AsRef<str>) -> Option<metadata::types::LanguageType> {
     let first_line = wf_content.as_ref().lines().next().unwrap_or("");
     if first_line.starts_with("#!") {
         if first_line.contains("cwl") {
-            return Some(config::types::LanguageType::Cwl);
+            return Some(metadata::types::LanguageType::Cwl);
         } else if first_line.contains("cromwell") {
-            return Some(config::types::LanguageType::Wdl);
+            return Some(metadata::types::LanguageType::Wdl);
         } else if first_line.contains("nextflow") {
-            return Some(config::types::LanguageType::Nfl);
+            return Some(metadata::types::LanguageType::Nfl);
         } else if first_line.contains("snakemake") {
-            return Some(config::types::LanguageType::Smk);
+            return Some(metadata::types::LanguageType::Smk);
         }
     }
     None
 }
 
-pub fn check_by_regexp(wf_content: impl AsRef<str>) -> Result<Option<config::types::LanguageType>> {
+pub fn check_by_regexp(
+    wf_content: impl AsRef<str>,
+) -> Result<Option<metadata::types::LanguageType>> {
     let pattern_wdl = Regex::new(r"^(workflow|task) \w* \{$")?;
     let pattern_nfl = Regex::new(r"^process \w* \{$")?;
     let pattern_smk = Regex::new(r"^rule \w*:$")?;
     for line in wf_content.as_ref().lines() {
         if line.contains("cwlVersion") {
-            return Ok(Some(config::types::LanguageType::Cwl));
+            return Ok(Some(metadata::types::LanguageType::Cwl));
         } else if pattern_wdl.is_match(line) {
-            return Ok(Some(config::types::LanguageType::Wdl));
+            return Ok(Some(metadata::types::LanguageType::Wdl));
         } else if pattern_nfl.is_match(line) {
-            return Ok(Some(config::types::LanguageType::Nfl));
+            return Ok(Some(metadata::types::LanguageType::Nfl));
         } else if pattern_smk.is_match(line) {
-            return Ok(Some(config::types::LanguageType::Smk));
+            return Ok(Some(metadata::types::LanguageType::Smk));
         }
     }
     Ok(None)
@@ -68,31 +70,31 @@ pub fn check_by_regexp(wf_content: impl AsRef<str>) -> Result<Option<config::typ
 
 pub fn inspect_wf_version(
     wf_content: impl AsRef<str>,
-    wf_type: &Option<config::types::LanguageType>,
+    wf_type: &Option<metadata::types::LanguageType>,
 ) -> Option<String> {
     match wf_type {
-        Some(config::types::LanguageType::Cwl) => match inspect_cwl_version(wf_content) {
+        Some(metadata::types::LanguageType::Cwl) => match inspect_cwl_version(wf_content) {
             Ok(version) => Some(version),
             Err(e) => {
                 warn!("{}: {}", "Warning".yellow(), e);
                 Some("v1.0".to_string())
             }
         },
-        Some(config::types::LanguageType::Wdl) => match inspect_wdl_version(wf_content) {
+        Some(metadata::types::LanguageType::Wdl) => match inspect_wdl_version(wf_content) {
             Ok(version) => Some(version),
             Err(e) => {
                 warn!("{}: {}", "Warning".yellow(), e);
                 Some("1.0".to_string())
             }
         },
-        Some(config::types::LanguageType::Nfl) => match inspect_nfl_version(wf_content) {
+        Some(metadata::types::LanguageType::Nfl) => match inspect_nfl_version(wf_content) {
             Ok(version) => Some(version),
             Err(e) => {
                 warn!("{}: {}", "Warning".yellow(), e);
                 Some("1.0".to_string())
             }
         },
-        Some(config::types::LanguageType::Smk) => match inspect_smk_version(wf_content) {
+        Some(metadata::types::LanguageType::Smk) => match inspect_smk_version(wf_content) {
             Ok(version) => Some(version),
             Err(e) => {
                 warn!("{}: {}", "Warning".yellow(), e);
@@ -153,7 +155,7 @@ mod tests {
         let wf_type_version = inspect_wf_type_version(&url)?;
         assert_eq!(
             wf_type_version.r#type,
-            Some(config::types::LanguageType::Cwl)
+            Some(metadata::types::LanguageType::Cwl)
         );
         assert_eq!(wf_type_version.version, Some("v1.0".to_string()));
         Ok(())
@@ -165,7 +167,7 @@ mod tests {
         let wf_type_version = inspect_wf_type_version(&url)?;
         assert_eq!(
             wf_type_version.r#type,
-            Some(config::types::LanguageType::Wdl)
+            Some(metadata::types::LanguageType::Wdl)
         );
         assert_eq!(wf_type_version.version, Some("1.0".to_string()));
         Ok(())
@@ -179,7 +181,7 @@ mod tests {
         let wf_type_version = inspect_wf_type_version(&url)?;
         assert_eq!(
             wf_type_version.r#type,
-            Some(config::types::LanguageType::Nfl)
+            Some(metadata::types::LanguageType::Nfl)
         );
         assert_eq!(wf_type_version.version, Some("1.0".to_string()));
         Ok(())
@@ -193,7 +195,7 @@ mod tests {
         let wf_type_version = inspect_wf_type_version(&url)?;
         assert_eq!(
             wf_type_version.r#type,
-            Some(config::types::LanguageType::Smk)
+            Some(metadata::types::LanguageType::Smk)
         );
         assert_eq!(wf_type_version.version, Some("1.0".to_string()));
         Ok(())

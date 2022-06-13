@@ -1,5 +1,6 @@
 use crate::env;
 use crate::gh_trs;
+use crate::metadata;
 
 use anyhow::{anyhow, bail, ensure, Result};
 use log::{debug, info};
@@ -12,7 +13,7 @@ use url::Url;
 use uuid::Uuid;
 
 pub fn test(
-    configs: &Vec<gh_trs::config::types::Config>,
+    configs: &Vec<metadata::types::Config>,
     wes_loc: &Option<Url>,
     docker_host: &Url,
 ) -> Result<()> {

@@ -1,5 +1,5 @@
 use crate::env;
-use crate::gh_trs::config;
+use crate::metadata;
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use log::info;
@@ -220,8 +220,8 @@ pub fn get_supported_wes_versions(wes_loc: &Url) -> Result<Vec<String>> {
 }
 
 pub fn test_case_to_form(
-    wf: &config::types::Workflow,
-    test_case: &config::types::Testing,
+    wf: &metadata::types::Workflow,
+    test_case: &metadata::types::Testing,
 ) -> Result<multipart::Form> {
     let form = multipart::Form::new()
         .text(
@@ -236,10 +236,10 @@ pub fn test_case_to_form(
         .text(
             "workflow_engine_name",
             match wf.language.r#type.clone().unwrap() {
-                config::types::LanguageType::Cwl => "cwltool",
-                config::types::LanguageType::Wdl => "cromwell",
-                config::types::LanguageType::Nfl => "nextflow",
-                config::types::LanguageType::Smk => "snakemake",
+                metadata::types::LanguageType::Cwl => "cwltool",
+                metadata::types::LanguageType::Wdl => "cromwell",
+                metadata::types::LanguageType::Nfl => "nextflow",
+                metadata::types::LanguageType::Smk => "snakemake",
             },
         )
         .text("workflow_params", test_case.wf_params()?)
@@ -248,10 +248,10 @@ pub fn test_case_to_form(
     Ok(form)
 }
 
-pub fn wf_url(wf: &config::types::Workflow) -> Result<String> {
+pub fn wf_url(wf: &metadata::types::Workflow) -> Result<String> {
     let primary_wf = wf.primary_wf()?;
     match wf.language.r#type.clone().unwrap() {
-        config::types::LanguageType::Nfl => {
+        metadata::types::LanguageType::Nfl => {
             let file_name = match primary_wf.target.unwrap().to_str() {
                 Some(file_name) => file_name.to_string(),
                 None => primary_wf.url.path().to_string(),
@@ -269,14 +269,14 @@ pub struct AttachedFile {
 }
 
 impl AttachedFile {
-    pub fn new_from_file(file: &config::types::File) -> Self {
+    pub fn new_from_file(file: &metadata::types::File) -> Self {
         Self {
             file_name: file.target.clone().unwrap(),
             file_url: file.url.clone(),
         }
     }
 
-    pub fn new_from_test_file(test_file: &config::types::TestFile) -> Self {
+    pub fn new_from_test_file(test_file: &metadata::types::TestFile) -> Self {
         Self {
             file_name: test_file.target.clone().unwrap(),
             file_url: test_file.url.clone(),
@@ -285,22 +285,22 @@ impl AttachedFile {
 }
 
 pub fn wf_attachment(
-    wf: &config::types::Workflow,
-    test_case: &config::types::Testing,
+    wf: &metadata::types::Workflow,
+    test_case: &metadata::types::Testing,
 ) -> Result<String> {
     let mut attachments: Vec<AttachedFile> = vec![];
     wf.files.iter().for_each(|f| match &f.r#type {
-        config::types::FileType::Primary => {
-            if wf.language.r#type.clone().unwrap() == config::types::LanguageType::Nfl {
+        metadata::types::FileType::Primary => {
+            if wf.language.r#type.clone().unwrap() == metadata::types::LanguageType::Nfl {
                 attachments.push(AttachedFile::new_from_file(f));
             }
         }
-        config::types::FileType::Secondary => {
+        metadata::types::FileType::Secondary => {
             attachments.push(AttachedFile::new_from_file(f));
         }
     });
     test_case.files.iter().for_each(|f| {
-        if f.r#type == config::types::TestFileType::Other {
+        if f.r#type == metadata::types::TestFileType::Other {
             attachments.push(AttachedFile::new_from_test_file(f));
         }
     });
@@ -480,7 +480,7 @@ mod tests {
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
         start_wes(&docker_host)?;
         let wes_loc = Url::parse(&default_wes_location())?;
-        let config = config::io::read_config("./tests/test_config_CWL_validated.yml")?;
+        let config = metadata::io::read_config("./tests/test_config_CWL_validated.yml")?;
         let form = test_case_to_form(&config.workflow, &config.workflow.testing[0])?;
         let run_id = post_run(&wes_loc, form)?;
         assert!(!run_id.is_empty());

@@ -1,6 +1,7 @@
 use crate::env;
 use crate::file_url;
 use crate::gh_trs;
+use crate::metadata;
 use crate::version;
 
 use anyhow::{anyhow, bail, Result};
@@ -21,7 +22,7 @@ pub fn make_template(
     // let config = if update {
     //     // Retrieve metadata file from API because wf_loc is TRS ToolVersion URL
     //     let config_loc = tool_version_url_to_metadata_url(wf_loc)?;
-    //     let mut config = gh_trs::config::io::read_config(&config_loc)?;
+    //     let mut config = metadata::io::read_config(&config_loc)?;
     //     let prev_version = version::Version::from_str(&config.version)?;
     //     config.version = prev_version.increment_patch().to_string();
     //     config
@@ -35,8 +36,8 @@ pub fn make_template(
         serde_yaml::to_string(&config)?
     );
 
-    let file_ext = gh_trs::config::io::parse_file_ext(&output)?;
-    gh_trs::config::io::write_config(&config, &output, &file_ext)?;
+    let file_ext = metadata::io::parse_file_ext(&output)?;
+    metadata::io::write_config(&config, &output, &file_ext)?;
     Ok(())
 }
 
@@ -63,28 +64,28 @@ fn generate_config(
     wf_loc: &Url,
     gh_token: &Option<impl AsRef<str>>,
     url_type: gh_trs::raw_url::UrlType,
-) -> Result<gh_trs::config::types::Config> {
+) -> Result<metadata::types::Config> {
     let gh_token = env::github_token(gh_token)?;
     let primary_wf = file_url::FileUrl::new(&gh_token, wf_loc, None, None)?;
 
-    Ok(gh_trs::config::types::Config {
+    Ok(metadata::types::Config {
         id: Uuid::new_v4(),
         version: "1.0.0".to_string(),
         license: Some("CC0-1.0".to_string()),
         authors: vec![author_from_gh_api(&gh_token)?],
         zenodo: None,
-        workflow: gh_trs::config::types::Workflow {
+        workflow: metadata::types::Workflow {
             name: primary_wf.file_name()?,
             readme: primary_wf.readme(&gh_token, &url_type)?,
             language: gh_trs::inspect::inspect_wf_type_version(&primary_wf.to_url(&url_type)?)?,
             files: primary_wf.wf_files(&gh_token, &url_type)?,
-            testing: vec![gh_trs::config::types::Testing::default()],
+            testing: vec![metadata::types::Testing::default()],
         },
     })
 }
 
-fn author_from_gh_api(gh_token: impl AsRef<str>) -> Result<gh_trs::config::types::Author> {
-    match gh_trs::config::types::Author::new_from_api(&gh_token) {
+fn author_from_gh_api(gh_token: impl AsRef<str>) -> Result<metadata::types::Author> {
+    match metadata::types::Author::new_from_api(&gh_token) {
         Ok(mut author) => {
             author.orcid = Some("PUT YOUR ORCID OR REMOVE THIS LINE".to_string());
             Ok(author)

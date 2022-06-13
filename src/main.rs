@@ -4,6 +4,7 @@ mod file_url;
 mod gh_trs;
 mod io;
 mod make_template;
+mod metadata;
 mod pr;
 mod publish;
 mod pull_request;

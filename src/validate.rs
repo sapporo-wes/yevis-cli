@@ -1,6 +1,7 @@
 use crate::env;
 use crate::file_url;
 use crate::gh_trs;
+use crate::metadata;
 use crate::version;
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
@@ -14,13 +15,13 @@ pub fn validate(
     config_locs: Vec<impl AsRef<str>>,
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
-) -> Result<Vec<gh_trs::config::types::Config>> {
+) -> Result<Vec<metadata::types::Config>> {
     let gh_token = env::github_token(gh_token)?;
 
     let mut configs = vec![];
     for config_loc in config_locs {
         info!("Validating {}", config_loc.as_ref());
-        let mut config = gh_trs::config::io::read_config(config_loc.as_ref())?;
+        let mut config = metadata::io::read_config(config_loc.as_ref())?;
         validate_version(&config, &repo)?;
         validate_license(&mut config, &gh_token)?;
         validate_authors(&config)?;
@@ -37,7 +38,7 @@ pub fn validate(
     Ok(configs)
 }
 
-fn validate_version(config: &gh_trs::config::types::Config, repo: impl AsRef<str>) -> Result<()> {
+fn validate_version(config: &metadata::types::Config, repo: impl AsRef<str>) -> Result<()> {
     let version =
         version::Version::from_str(&config.version).context("Invalid version, must be x.y.z")?;
     let (owner, name) = gh_trs::github_api::parse_repo(&repo)?;
@@ -66,10 +67,7 @@ fn validate_version(config: &gh_trs::config::types::Config, repo: impl AsRef<str
 /// Contact GitHub API and Zenodo API to confirm.
 /// Change the license to `spdx_id`
 /// e.g., `apache-2.0` -> `Apache-2.0`
-fn validate_license(
-    config: &mut gh_trs::config::types::Config,
-    gh_token: impl AsRef<str>,
-) -> Result<()> {
+fn validate_license(config: &mut metadata::types::Config, gh_token: impl AsRef<str>) -> Result<()> {
     match &config.license {
         Some(license) => {
             let spdx_id = validate_with_github_license_api(gh_token, license)?;
@@ -81,7 +79,7 @@ fn validate_license(
     Ok(())
 }
 
-fn validate_authors(config: &gh_trs::config::types::Config) -> Result<()> {
+fn validate_authors(config: &metadata::types::Config) -> Result<()> {
     let orcid_re = Regex::new(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")?;
     let mut account_set: HashSet<&str> = HashSet::new();
     for author in &config.authors {
@@ -102,7 +100,7 @@ fn validate_authors(config: &gh_trs::config::types::Config) -> Result<()> {
     Ok(())
 }
 
-fn validate_language(config: &gh_trs::config::types::Config) -> Result<()> {
+fn validate_language(config: &metadata::types::Config) -> Result<()> {
     ensure!(
         config.workflow.language.r#type.is_some(),
         "`workflow.language.type` is not specified",
@@ -125,7 +123,7 @@ fn update_url(
 }
 
 fn validate_and_update_workflow(
-    config: &mut gh_trs::config::types::Config,
+    config: &mut metadata::types::Config,
     gh_token: impl AsRef<str>,
 ) -> Result<()> {
     let mut branch_memo = HashMap::new();

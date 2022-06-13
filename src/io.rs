@@ -3,7 +3,7 @@ use anyhow::Result;
 use log::debug;
 use url::Url;
 
-/// modified from gh_trs::config::io
+/// modified from metadata::io
 pub fn find_config_loc_recursively_from_trs(trs_loc: impl AsRef<str>) -> Result<Vec<String>> {
     let trs_endpoint = trs::api::TrsEndpoint::new_from_url(&Url::parse(trs_loc.as_ref())?)?;
     trs_endpoint.is_valid()?;

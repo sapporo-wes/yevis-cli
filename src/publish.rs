@@ -1,5 +1,6 @@
 use crate::env;
 use crate::gh_trs;
+use crate::metadata;
 
 use anyhow::{anyhow, bail, Result};
 use log::info;
@@ -8,7 +9,7 @@ use std::path::PathBuf;
 use url::Url;
 
 pub fn publish(
-    configs: &Vec<gh_trs::config::types::Config>,
+    configs: &Vec<metadata::types::Config>,
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
     verified: bool,

@@ -1,4 +1,3 @@
-pub mod config;
 pub mod github_api;
 pub mod inspect;
 pub mod logger;

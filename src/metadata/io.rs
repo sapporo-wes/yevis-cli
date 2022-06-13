@@ -1,6 +1,6 @@
-use crate::gh_trs::config;
 use crate::gh_trs::remote;
 use crate::gh_trs::trs;
+use crate::metadata;
 
 use anyhow::{bail, Result};
 use log::debug;
@@ -31,7 +31,7 @@ pub fn parse_file_ext(path: impl AsRef<Path>) -> Result<FileExt> {
 }
 
 pub fn write_config(
-    config: &config::types::Config,
+    config: &metadata::types::Config,
     path: impl AsRef<Path>,
     ext: &FileExt,
 ) -> Result<()> {
@@ -45,7 +45,7 @@ pub fn write_config(
     Ok(())
 }
 
-pub fn read_config(location: impl AsRef<str>) -> Result<config::types::Config> {
+pub fn read_config(location: impl AsRef<str>) -> Result<metadata::types::Config> {
     match Url::parse(location.as_ref()) {
         Ok(url) => {
             // as remote url
