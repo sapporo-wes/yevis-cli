@@ -12,8 +12,8 @@ services:
     restart: on-failure
     working_dir: /app
     networks:
-      - gh-trs-network
+      - yevis-network
 
 networks:
-  gh-trs-network:
-    name: gh-trs-network
+  yevis-network:
+    name: yevis-network

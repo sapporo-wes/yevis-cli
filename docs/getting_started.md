@@ -97,7 +97,7 @@ In this document, uses a Docker environment since using M1 Mac (the binary is on
 $ curl -fsSL -O https://raw.githubusercontent.com/ddbj/yevis-cli/main/docker-compose.yml
 $ docker compose up -d
 [+] Running 2/2
- ⠿ Network gh-trs-network  Created                                                                   0.0s
+ ⠿ Network yevis-network  Created                                                                   0.0s
  ⠿ Container yevis-cli     Started                                                                   0.2s
 $ docker ps
 CONTAINER ID   IMAGE                          COMMAND            CREATED          STATUS          PORTS     NAMES
@@ -219,7 +219,7 @@ Running test
 Starting sapporo-service using docker_host: unix:///var/run/docker.sock
 Stdout from docker:
 51841ce5da7ff0e166cd9ad2dfb564d6a0ef626fbac72fb43a96c118df43811d
-Use WES location: http://gh-trs-sapporo-service:1122/ for testing
+Use WES location: http://yevis-sapporo-service:1122/ for testing
 Test workflow_id: be733bb3-9d9c-41af-a6e2-292751351b1e, version: 1.0.0
 Testing test case: test_1
 WES run_id: a45f20ba-6b76-40b2-ac12-f669a2b82ce2
@@ -227,7 +227,7 @@ Complete test case: test_1
 Passed all test cases in workflow_id: be733bb3-9d9c-41af-a6e2-292751351b1e, version: 1.0.0
 Stopping sapporo-service
 Stdout from docker:
-gh-trs-sapporo-service
+yevis-sapporo-service
 Success test
 ```
 
@@ -238,7 +238,7 @@ $ docker ps
 CONTAINER ID   IMAGE                                         COMMAND                  CREATED          STATUS          PORTS      NAMES
 ff447ea21f90   ghcr.io/inutano/download-sra:177141a          "download-sra -r ddb…"   3 seconds ago    Up 3 seconds               focused_rhodes
 bc58bac48e3c   quay.io/commonwl/cwltool:3.1.20211107152837   "/cwltool-in-docker.…"   49 seconds ago   Up 48 seconds              sweet_saha
-51841ce5da7f   ghcr.io/sapporo-wes/sapporo-service:1.1.2     "tini -- sapporo --r…"   56 seconds ago   Up 56 seconds   1122/tcp   gh-trs-sapporo-service
+51841ce5da7f   ghcr.io/sapporo-wes/sapporo-service:1.1.2     "tini -- sapporo --r…"   56 seconds ago   Up 56 seconds   1122/tcp   yevis-sapporo-service
 33d426de77c7   yevis-cli:0.1.8                               "sleep infinity"         3 hours ago      Up 2 minutes               yevis-cli
 ```
 
@@ -258,7 +258,7 @@ Running test
 Starting sapporo-service using docker_host: unix:///var/run/docker.sock
 Stdout from docker:
 8c693de066c12f64e5f322a9e0ecc555b509d1e4db8e072335cfa16083836516
-Use WES location: http://gh-trs-sapporo-service:1122/ for testing
+Use WES location: http://yevis-sapporo-service:1122/ for testing
 Test workflow_id: be733bb3-9d9c-41af-a6e2-292751351b1e, version: 1.0.0
 Testing test case: test_1
 WES run_id: 057e23f9-8527-49e2-9e50-f18989ab6a82
@@ -266,7 +266,7 @@ Complete test case: test_1
 Passed all test cases in workflow_id: be733bb3-9d9c-41af-a6e2-292751351b1e, version: 1.0.0
 Stopping sapporo-service
 Stdout from docker:
-gh-trs-sapporo-service
+yevis-sapporo-service
 Success test
 Running pull-request
 Creating a pull request based on workflow_id: be733bb3-9d9c-41af-a6e2-292751351b1e, version: 1.0.0
