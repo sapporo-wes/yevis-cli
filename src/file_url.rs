@@ -1,5 +1,7 @@
+use crate::gh_trs;
+use crate::gh_trs::raw_url::RawUrl as GitHubUrl;
+
 use anyhow::{anyhow, bail, ensure, Result};
-use gh_trs::raw_url::RawUrl as GitHubUrl;
 use regex::Regex;
 use serde_json::Value;
 use std::collections::HashMap;

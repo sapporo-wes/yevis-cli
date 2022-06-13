@@ -16,5 +16,5 @@
 .env
 yevis-metadata.yml
 yevis-metadata.json
-sapporo_run
+sapporo-run
 test-logs

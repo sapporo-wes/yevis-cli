@@ -1,4 +1,5 @@
 use crate::env;
+use crate::gh_trs;
 use crate::pull_request;
 
 use anyhow::{anyhow, ensure, Result};

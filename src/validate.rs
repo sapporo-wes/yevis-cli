@@ -1,5 +1,7 @@
 use crate::file_url;
+use crate::gh_trs;
 use crate::version;
+
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use log::{debug, info};
 use regex::Regex;

@@ -12,7 +12,7 @@ services:
     environment:
       - RUST_BACKTRACE=1
       - YEVIS_DEV=1
-      - SAPPORO_RUN_DIR=${PWD}/sapporo_run
+      - SAPPORO_RUN_DIR=${PWD}/sapporo-run
     restart: on-failure
     working_dir: /app
     command: [ "sleep", "infinity" ]

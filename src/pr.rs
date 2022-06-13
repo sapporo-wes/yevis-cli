@@ -1,3 +1,5 @@
+use crate::gh_trs;
+
 use anyhow::{anyhow, Result};
 use url::Url;
 

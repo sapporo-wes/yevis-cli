@@ -1,3 +1,5 @@
+use crate::gh_trs;
+
 use anyhow::{anyhow, bail, ensure, Result};
 use log::{debug, info};
 use std::env;

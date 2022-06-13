@@ -9,12 +9,12 @@ use url::Url;
     author = env!("CARGO_PKG_AUTHORS"),
 )]
 #[structopt(setting(clap::AppSettings::ColoredHelp))]
-/// CLI tool to support building and maintaining Yevis workflow registry.
+/// CLI tool that supports building a Yevis workflow registry with automated quality control.
 pub enum Args {
     #[structopt(setting(clap::AppSettings::ColoredHelp))]
-    /// Make a template for the Yevis metadata file.
+    /// Generate a template file for the Yevis metadata file.
     MakeTemplate {
-        /// Location of a primary workflow document (only hosted on GitHub or Gist).
+        /// Remote location of a primary workflow document.
         workflow_location: Url,
 
         /// GitHub Personal Access Token.
@@ -24,11 +24,6 @@ pub enum Args {
         /// Path to the output file.
         #[structopt(short, long, parse(from_os_str), default_value = "yevis-metadata.yml")]
         output: PathBuf,
-
-        /// Make a template from an existing workflow.
-        /// When using this option, specify a TRS ToolVersion URL (e.g., `https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>`) as `workflow_location`.
-        #[structopt(short, long)]
-        update: bool,
 
         /// Use `<commit_hash>` instead of `<branch_name>` in generated GitHub raw contents URLs.
         #[structopt(long)]

@@ -1,4 +1,5 @@
 use crate::file_url;
+use crate::gh_trs;
 use crate::version;
 
 use anyhow::{anyhow, bail, Result};
@@ -12,21 +13,22 @@ pub fn make_template(
     wf_loc: &Url,
     gh_token: &Option<impl AsRef<str>>,
     output: impl AsRef<Path>,
-    update: bool,
     url_type: gh_trs::raw_url::UrlType,
 ) -> Result<()> {
     info!("Making a template from {}", wf_loc);
 
-    let config = if update {
-        // Retrieve metadata file from API because wf_loc is TRS ToolVersion URL
-        let config_loc = tool_version_url_to_metadata_url(wf_loc)?;
-        let mut config = gh_trs::config::io::read_config(&config_loc)?;
-        let prev_version = version::Version::from_str(&config.version)?;
-        config.version = prev_version.increment_patch().to_string();
-        config
-    } else {
-        generate_config(wf_loc, gh_token, url_type)?
-    };
+    // let config = if update {
+    //     // Retrieve metadata file from API because wf_loc is TRS ToolVersion URL
+    //     let config_loc = tool_version_url_to_metadata_url(wf_loc)?;
+    //     let mut config = gh_trs::config::io::read_config(&config_loc)?;
+    //     let prev_version = version::Version::from_str(&config.version)?;
+    //     config.version = prev_version.increment_patch().to_string();
+    //     config
+    // } else {
+    //     generate_config(wf_loc, gh_token, url_type)?
+    // };
+    let config = generate_config(wf_loc, gh_token, url_type)?;
+
     debug!(
         "template metadata file:\n{}",
         serde_yaml::to_string(&config)?

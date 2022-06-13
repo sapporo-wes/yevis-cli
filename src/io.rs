@@ -1,5 +1,5 @@
+use crate::gh_trs::trs;
 use anyhow::Result;
-use gh_trs::trs;
 use log::debug;
 use url::Url;
 

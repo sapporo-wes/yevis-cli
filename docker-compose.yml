@@ -6,7 +6,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - SAPPORO_RUN_DIR=${PWD}/sapporo_run
+      - SAPPORO_RUN_DIR=${PWD}/sapporo-run
     entrypoint: [ "" ]
     command: [ "sleep", "infinity" ]
     restart: on-failure

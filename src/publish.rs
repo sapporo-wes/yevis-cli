@@ -1,3 +1,5 @@
+use crate::gh_trs;
+
 use anyhow::{anyhow, bail, Result};
 use log::info;
 use std::collections::HashMap;
