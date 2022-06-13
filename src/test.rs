@@ -1,8 +1,9 @@
+use crate::env;
 use crate::gh_trs;
 
 use anyhow::{anyhow, bail, ensure, Result};
 use log::{debug, info};
-use std::env;
+use std::env::current_dir;
 use std::fs;
 use std::io::{BufWriter, Write};
 use std::thread;
@@ -32,7 +33,7 @@ pub fn test(
         "yevis only supports WES version `sapporo-wes-1.0.1`"
     );
 
-    let in_ci = gh_trs::env::in_ci();
+    let in_ci = env::in_ci();
 
     for config in configs {
         info!(
@@ -106,7 +107,7 @@ fn write_test_log(
     test_id: impl AsRef<str>,
     run_log: impl AsRef<str>,
 ) -> Result<()> {
-    let test_log_file = env::current_dir()?.join(format!(
+    let test_log_file = current_dir()?.join(format!(
         "test-logs/{}_{}_{}.log",
         id,
         version.as_ref(),

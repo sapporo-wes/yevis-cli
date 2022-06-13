@@ -32,7 +32,7 @@ pub fn upload_and_commit_zenodo(
 
         // push modified metadata file to GitHub default branch
         info!("Pushing modified workflow metadata file to GitHub");
-        let gh_token = gh_trs::env::github_token(gh_token)?;
+        let gh_token = env::github_token(gh_token)?;
         let (owner, name) = gh_trs::github_api::parse_repo(&repo)?;
         let default_branch =
             gh_trs::github_api::get_default_branch(&gh_token, &owner, &name, None)?;

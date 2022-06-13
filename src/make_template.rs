@@ -1,3 +1,4 @@
+use crate::env;
 use crate::file_url;
 use crate::gh_trs;
 use crate::version;
@@ -63,7 +64,7 @@ fn generate_config(
     gh_token: &Option<impl AsRef<str>>,
     url_type: gh_trs::raw_url::UrlType,
 ) -> Result<gh_trs::config::types::Config> {
-    let gh_token = gh_trs::env::github_token(gh_token)?;
+    let gh_token = env::github_token(gh_token)?;
     let primary_wf = file_url::FileUrl::new(&gh_token, wf_loc, None, None)?;
 
     Ok(gh_trs::config::types::Config {

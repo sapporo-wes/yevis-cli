@@ -1,3 +1,4 @@
+use crate::env;
 use crate::gh_trs;
 
 use anyhow::{anyhow, Result};
@@ -22,7 +23,7 @@ pub fn list_modified_files(
         .parse::<u64>()
         .map_err(|_| anyhow!(err_msg))?;
 
-    let gh_token = gh_trs::env::github_token(gh_token)?;
+    let gh_token = env::github_token(gh_token)?;
     let url = Url::parse(&format!(
         "https://api.github.com/repos/{}/{}/pulls/{}/files",
         repo_owner, repo_name, pr_number

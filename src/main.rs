@@ -179,7 +179,7 @@ fn main() -> Result<()> {
             zenodo_community,
             ..
         } => {
-            if !gh_trs::env::in_ci() {
+            if !env::in_ci() {
                 info!("yevis-cli publish is only available in the CI environment (GitHub Actions). Aborting.");
                 exit(1);
             }

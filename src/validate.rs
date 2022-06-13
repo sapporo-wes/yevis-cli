@@ -1,3 +1,4 @@
+use crate::env;
 use crate::file_url;
 use crate::gh_trs;
 use crate::version;
@@ -14,7 +15,7 @@ pub fn validate(
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
 ) -> Result<Vec<gh_trs::config::types::Config>> {
-    let gh_token = gh_trs::env::github_token(gh_token)?;
+    let gh_token = env::github_token(gh_token)?;
 
     let mut configs = vec![];
     for config_loc in config_locs {
@@ -228,7 +229,7 @@ mod tests {
 
     #[test]
     fn test_validate_with_github_license_api() -> Result<()> {
-        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        let gh_token = env::github_token(&None::<String>)?;
         validate_with_github_license_api(&gh_token, "cc0-1.0")?;
         validate_with_github_license_api(&gh_token, "mit")?;
         validate_with_github_license_api(&gh_token, "MIT")?;

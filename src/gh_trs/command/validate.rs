@@ -1,5 +1,5 @@
+use crate::env;
 use crate::gh_trs::config;
-use crate::gh_trs::env;
 use crate::gh_trs::raw_url;
 
 use anyhow::{ensure, Context, Result};

@@ -1,3 +1,4 @@
+use crate::env;
 use crate::gh_trs;
 
 use anyhow::{anyhow, bail, ensure, Result};
@@ -13,7 +14,7 @@ pub fn pull_request(
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
 ) -> Result<()> {
-    let gh_token = gh_trs::env::github_token(gh_token)?;
+    let gh_token = env::github_token(gh_token)?;
 
     let (user, _, _) = gh_trs::github_api::get_author_info(&gh_token)?;
     let (repo_owner, repo_name) = gh_trs::github_api::parse_repo(&repo)?;

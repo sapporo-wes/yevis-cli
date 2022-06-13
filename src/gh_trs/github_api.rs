@@ -582,7 +582,7 @@ pub fn create_commit(
 #[cfg(not(tarpaulin_include))]
 mod tests {
     use super::*;
-    use crate::gh_trs::env;
+    use crate::env;
 
     #[test]
     fn test_get_default_branch() -> Result<()> {

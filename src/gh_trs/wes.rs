@@ -1,5 +1,5 @@
+use crate::env;
 use crate::gh_trs::config;
-use crate::gh_trs::env;
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
 use log::info;

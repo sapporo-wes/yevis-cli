@@ -1,6 +1,5 @@
 pub mod command;
 pub mod config;
-pub mod env;
 pub mod github_api;
 pub mod inspect;
 pub mod logger;

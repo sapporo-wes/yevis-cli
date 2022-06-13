@@ -1,5 +1,5 @@
+use crate::env;
 use crate::gh_trs::config;
-use crate::gh_trs::env;
 use crate::gh_trs::wes;
 
 use anyhow::{anyhow, bail, ensure, Result};

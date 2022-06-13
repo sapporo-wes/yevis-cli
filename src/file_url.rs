@@ -308,6 +308,7 @@ impl FileUrl {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::env;
 
     #[test]
     fn test_extract_gist_id() -> Result<()> {
@@ -327,7 +328,7 @@ mod tests {
 
     #[test]
     fn test_get_gist() -> Result<()> {
-        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        let gh_token = env::github_token(&None::<String>)?;
         let gist_id = "9c6aa4ba5d7464066d55175f59e428ac";
         get_gist(gh_token, gist_id)?;
         Ok(())
@@ -335,7 +336,7 @@ mod tests {
 
     #[test]
     fn test_get_gist_raw_url_single() -> Result<()> {
-        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        let gh_token = env::github_token(&None::<String>)?;
         let gist_id = "cdd4bcbb6f13ae797947cd7981e35b5f";
         let raw_url = get_gist_raw_url(gh_token, gist_id)?;
         assert_eq!(
@@ -347,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_get_gist_raw_url_multiple() -> Result<()> {
-        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        let gh_token = env::github_token(&None::<String>)?;
         let gist_id = "9c6aa4ba5d7464066d55175f59e428ac";
         let result = get_gist_raw_url(gh_token, gist_id);
         assert!(result.is_err());
@@ -356,7 +357,7 @@ mod tests {
 
     #[test]
     fn test_gist_url_new_single() -> Result<()> {
-        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        let gh_token = env::github_token(&None::<String>)?;
         let url = Url::parse("https://gist.github.com/cdd4bcbb6f13ae797947cd7981e35b5f")?;
         let gist_url = GistUrl::new(gh_token, &url)?;
         assert_eq!(
@@ -372,7 +373,7 @@ mod tests {
 
     #[test]
     fn test_gist_url_new_multiple() -> Result<()> {
-        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        let gh_token = env::github_token(&None::<String>)?;
         let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1/trimming_and_qc.cwl")?;
         let gist_url = GistUrl::new(gh_token, &url)?;
         assert_eq!(
@@ -388,7 +389,7 @@ mod tests {
 
     #[test]
     fn test_gist_url_wf_files() -> Result<()> {
-        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        let gh_token = env::github_token(&None::<String>)?;
         let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1/trimming_and_qc.cwl")?;
         let gist_url = GistUrl::new(&gh_token, &url)?;
         let files = gist_url.wf_files(&gh_token)?;

@@ -1,3 +1,4 @@
+use crate::env;
 use crate::gh_trs;
 
 use anyhow::{anyhow, bail, Result};
@@ -12,7 +13,7 @@ pub fn publish(
     repo: impl AsRef<str>,
     verified: bool,
 ) -> Result<()> {
-    let gh_token = gh_trs::env::github_token(gh_token)?;
+    let gh_token = env::github_token(gh_token)?;
 
     let (owner, name) = gh_trs::github_api::parse_repo(repo)?;
     let branch = get_gh_pages_branch(&gh_token, &owner, &name)?;
@@ -46,7 +47,7 @@ pub fn publish(
     } else {
         "Publish multiple workflows by yevis".to_string()
     };
-    if gh_trs::env::in_ci() {
+    if env::in_ci() {
         commit_message.push_str(" in CI");
     }
     let new_commit_sha = gh_trs::github_api::create_commit(
@@ -189,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_get_gh_pages_branch() -> Result<()> {
-        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        let gh_token = env::github_token(&None::<String>)?;
         let branch = get_gh_pages_branch(&gh_token, "ddbj", "workflow-registry-dev")?;
         assert_eq!(branch, "gh-pages");
         Ok(())
@@ -197,7 +198,7 @@ mod tests {
 
     #[test]
     fn test_get_gh_pages_branch_no_branch() -> Result<()> {
-        let gh_token = gh_trs::env::github_token(&None::<String>)?;
+        let gh_token = env::github_token(&None::<String>)?;
         let branch = get_gh_pages_branch(&gh_token, "ddbj", "yevis-cli")?;
         assert_eq!(branch, "gh-pages");
         Ok(())
