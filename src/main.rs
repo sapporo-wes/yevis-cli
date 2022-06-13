@@ -5,16 +5,12 @@ mod github_api;
 mod inspect;
 mod io;
 mod logger;
-mod make_template;
 mod metadata;
 mod pr;
-mod publish;
-mod pull_request;
 mod raw_url;
 mod remote;
-mod test;
+mod sub_cmd;
 mod trs;
-mod validate;
 mod version;
 mod wes;
 mod zenodo;
@@ -48,7 +44,7 @@ fn main() -> Result<()> {
             ..
         } => {
             info!("{} make-template", "Running".green());
-            match make_template::make_template(
+            match sub_cmd::make_template::make_template(
                 &workflow_location,
                 &github_token,
                 &output,
@@ -71,7 +67,7 @@ fn main() -> Result<()> {
             ..
         } => {
             info!("{} validate", "Running".green());
-            match validate::validate(metadata_locations, &github_token, &repository) {
+            match sub_cmd::validate::validate(metadata_locations, &github_token, &repository) {
                 Ok(_) => info!("{} validate", "Success".green()),
                 Err(e) => {
                     error!("{} to validate with error: {}", "Failed".red(), e);
@@ -107,19 +103,20 @@ fn main() -> Result<()> {
             };
 
             info!("{} validate", "Running".green());
-            let configs = match validate::validate(metadata_locations, &github_token, &repository) {
-                Ok(configs) => {
-                    info!("{} validate", "Success".green());
-                    configs
-                }
-                Err(e) => {
-                    error!("{} to validate with error: {}", "Failed".red(), e);
-                    exit(1);
-                }
-            };
+            let metadata_vec =
+                match sub_cmd::validate::validate(metadata_locations, &github_token, &repository) {
+                    Ok(metadata_vec) => {
+                        info!("{} validate", "Success".green());
+                        metadata_vec
+                    }
+                    Err(e) => {
+                        error!("{} to validate with error: {}", "Failed".red(), e);
+                        exit(1);
+                    }
+                };
 
             info!("{} test", "Running".green());
-            match test::test(&configs, &wes_location, &docker_host) {
+            match sub_cmd::test::test(&metadata_vec, &wes_location, &docker_host) {
                 Ok(()) => info!("{} test", "Success".green()),
                 Err(e) => {
                     match wes::stop_wes(&docker_host) {
@@ -140,19 +137,20 @@ fn main() -> Result<()> {
             ..
         } => {
             info!("{} validate", "Running".green());
-            let configs = match validate::validate(metadata_locations, &github_token, &repository) {
-                Ok(configs) => {
-                    info!("{} validate", "Success".green());
-                    configs
-                }
-                Err(e) => {
-                    error!("{} to validate with error: {}", "Failed".red(), e);
-                    exit(1);
-                }
-            };
+            let metadata_vec =
+                match sub_cmd::validate::validate(metadata_locations, &github_token, &repository) {
+                    Ok(metadata_vec) => {
+                        info!("{} validate", "Success".green());
+                        metadata_vec
+                    }
+                    Err(e) => {
+                        error!("{} to validate with error: {}", "Failed".red(), e);
+                        exit(1);
+                    }
+                };
 
             info!("{} test", "Running".green());
-            match test::test(&configs, &wes_location, &docker_host) {
+            match sub_cmd::test::test(&metadata_vec, &wes_location, &docker_host) {
                 Ok(()) => info!("{} test", "Success".green()),
                 Err(e) => {
                     match wes::stop_wes(&docker_host) {
@@ -165,7 +163,7 @@ fn main() -> Result<()> {
             };
 
             info!("{} pull-request", "Running".green());
-            match pull_request::pull_request(&configs, &github_token, &repository) {
+            match sub_cmd::pull_request::pull_request(&metadata_vec, &github_token, &repository) {
                 Ok(()) => info!("{} pull-request", "Success".green()),
                 Err(e) => {
                     error!("{} to pull-request with error: {}", "Failed".red(), e);
@@ -212,7 +210,7 @@ fn main() -> Result<()> {
             let metadata_locations = if from_trs {
                 info!("Run yevis-cli publish in from_trs mode");
                 info!("TRS endpoint: {}", metadata_locations[0]);
-                match io::find_config_loc_recursively_from_trs(&metadata_locations[0]) {
+                match io::find_metadata_loc_recursively_from_trs(&metadata_locations[0]) {
                     Ok(metadata_locations) => metadata_locations,
                     Err(e) => {
                         error!(
@@ -228,11 +226,11 @@ fn main() -> Result<()> {
             };
 
             info!("{} validate", "Running".green());
-            let mut configs =
-                match validate::validate(metadata_locations, &github_token, &repository) {
-                    Ok(configs) => {
+            let mut metadata_vec =
+                match sub_cmd::validate::validate(metadata_locations, &github_token, &repository) {
+                    Ok(metadata_vec) => {
                         info!("{} validate", "Success".green());
-                        configs
+                        metadata_vec
                     }
                     Err(e) => {
                         error!("{} to validate with error: {}", "Failed".red(), e);
@@ -243,7 +241,7 @@ fn main() -> Result<()> {
             if upload_zenodo {
                 info!("{} upload_zenodo", "Running".green());
                 match zenodo::upload_and_commit_zenodo(
-                    &mut configs,
+                    &mut metadata_vec,
                     &github_token,
                     &repository,
                     &zenodo_community,
@@ -258,7 +256,7 @@ fn main() -> Result<()> {
 
             let verified = if with_test {
                 info!("{} test", "Running".green());
-                match test::test(&configs, &wes_location, &docker_host) {
+                match sub_cmd::test::test(&metadata_vec, &wes_location, &docker_host) {
                     Ok(()) => info!("{} test", "Success".green()),
                     Err(e) => {
                         match wes::stop_wes(&docker_host) {
@@ -277,7 +275,7 @@ fn main() -> Result<()> {
             };
 
             info!("{} publish", "Running".green());
-            match publish::publish(&configs, &github_token, &repository, verified) {
+            match sub_cmd::publish::publish(&metadata_vec, &github_token, &repository, verified) {
                 Ok(()) => info!("{} publish", "Success".green()),
                 Err(e) => {
                     error!("{} to publish with error: {}", "Failed".red(), e);

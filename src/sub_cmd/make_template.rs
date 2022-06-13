@@ -18,7 +18,7 @@ pub fn make_template(
 ) -> Result<()> {
     info!("Making a template from {}", wf_loc);
 
-    let config = generate_config(wf_loc, gh_token, url_type)?;
+    let config = generate_metadata(wf_loc, gh_token, url_type)?;
 
     debug!(
         "template metadata file:\n{}",
@@ -30,7 +30,7 @@ pub fn make_template(
     Ok(())
 }
 
-fn generate_config(
+fn generate_metadata(
     wf_loc: &Url,
     gh_token: &Option<impl AsRef<str>>,
     url_type: raw_url::UrlType,

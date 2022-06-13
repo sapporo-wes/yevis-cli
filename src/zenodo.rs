@@ -1,7 +1,7 @@
 use crate::env;
 use crate::github_api;
 use crate::metadata;
-use crate::pull_request;
+use crate::sub_cmd::pull_request;
 
 use anyhow::{anyhow, ensure, Result};
 use crypto::digest::Digest;
@@ -929,7 +929,7 @@ fn get_files_download_urls(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::validate;
+    use crate::sub_cmd::validate;
     // use uuid::Uuid;
 
     #[test]
