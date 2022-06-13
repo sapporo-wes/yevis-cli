@@ -1,6 +1,6 @@
-use crate::gh_trs::remote;
-use crate::gh_trs::trs;
 use crate::metadata;
+use crate::remote;
+use crate::trs;
 
 use anyhow::{bail, Result};
 use log::debug;

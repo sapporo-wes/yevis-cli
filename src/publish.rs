@@ -1,6 +1,7 @@
 use crate::env;
-use crate::gh_trs;
+use crate::github_api;
 use crate::metadata;
+use crate::trs;
 
 use anyhow::{anyhow, bail, Result};
 use log::info;
@@ -16,7 +17,7 @@ pub fn publish(
 ) -> Result<()> {
     let gh_token = env::github_token(gh_token)?;
 
-    let (owner, name) = gh_trs::github_api::parse_repo(repo)?;
+    let (owner, name) = github_api::parse_repo(repo)?;
     let branch = get_gh_pages_branch(&gh_token, &owner, &name)?;
 
     info!(
@@ -24,22 +25,22 @@ pub fn publish(
         &owner, &name, branch,
     );
 
-    if gh_trs::github_api::exists_branch(&gh_token, &owner, &name, &branch).is_err() {
+    if github_api::exists_branch(&gh_token, &owner, &name, &branch).is_err() {
         info!("Branch {} does not exist, creating it...", &branch);
-        gh_trs::github_api::create_empty_branch(&gh_token, &owner, &name, &branch)?;
+        github_api::create_empty_branch(&gh_token, &owner, &name, &branch)?;
         info!("Branch {} created", &branch);
     }
 
-    let branch_sha = gh_trs::github_api::get_branch_sha(&gh_token, &owner, &name, &branch)?;
+    let branch_sha = github_api::get_branch_sha(&gh_token, &owner, &name, &branch)?;
     let latest_commit_sha =
-        gh_trs::github_api::get_latest_commit_sha(&gh_token, &owner, &name, &branch, None)?;
-    let mut trs_response = gh_trs::trs::response::TrsResponse::new(&owner, &name)?;
+        github_api::get_latest_commit_sha(&gh_token, &owner, &name, &branch, None)?;
+    let mut trs_response = trs::response::TrsResponse::new(&owner, &name)?;
     for config in configs {
         trs_response.add(&owner, &name, config, verified)?;
     }
     let trs_contents = generate_trs_contents(trs_response)?;
     let new_tree_sha =
-        gh_trs::github_api::create_tree(&gh_token, &owner, &name, Some(&branch_sha), trs_contents)?;
+        github_api::create_tree(&gh_token, &owner, &name, Some(&branch_sha), trs_contents)?;
     let mut commit_message = if configs.len() == 1 {
         format!(
             "Publish workflow, id: {} version: {} by yevis",
@@ -51,7 +52,7 @@ pub fn publish(
     if env::in_ci() {
         commit_message.push_str(" in CI");
     }
-    let new_commit_sha = gh_trs::github_api::create_commit(
+    let new_commit_sha = github_api::create_commit(
         &gh_token,
         &owner,
         &name,
@@ -59,7 +60,7 @@ pub fn publish(
         &new_tree_sha,
         &commit_message,
     )?;
-    gh_trs::github_api::update_ref(&gh_token, &owner, &name, &branch, &new_commit_sha)?;
+    github_api::update_ref(&gh_token, &owner, &name, &branch, &new_commit_sha)?;
 
     info!(
         "Published to repo: {}/{}, branch: {}",
@@ -79,7 +80,7 @@ fn get_gh_pages_branch(
         owner.as_ref(),
         name.as_ref(),
     ))?;
-    let res = match gh_trs::github_api::get_request(gh_token, &url, &[]) {
+    let res = match github_api::get_request(gh_token, &url, &[]) {
         Ok(res) => res,
         Err(err) => {
             if err.to_string().contains("Not Found") {
@@ -102,9 +103,7 @@ fn get_gh_pages_branch(
 }
 
 /// modified from gh-trs::response::TrsResponse::generate_contents
-fn generate_trs_contents(
-    trs_res: gh_trs::trs::response::TrsResponse,
-) -> Result<HashMap<PathBuf, String>> {
+fn generate_trs_contents(trs_res: trs::response::TrsResponse) -> Result<HashMap<PathBuf, String>> {
     let mut map: HashMap<PathBuf, String> = HashMap::new();
     map.insert(
         PathBuf::from("service-info/index.json"),
@@ -179,7 +178,7 @@ fn generate_trs_contents(
                 "tools/{}/versions/{}/containerfile/index.json",
                 id, version
             )),
-            serde_json::to_string(&Vec::<gh_trs::trs::types::FileWrapper>::new())?,
+            serde_json::to_string(&Vec::<trs::types::FileWrapper>::new())?,
         );
     }
     Ok(map)

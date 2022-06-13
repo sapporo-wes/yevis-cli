@@ -1,16 +1,22 @@
 mod args;
 mod env;
 mod file_url;
-mod gh_trs;
+mod github_api;
+mod inspect;
 mod io;
+mod logger;
 mod make_template;
 mod metadata;
 mod pr;
 mod publish;
 mod pull_request;
+mod raw_url;
+mod remote;
 mod test;
+mod trs;
 mod validate;
 mod version;
+mod wes;
 mod zenodo;
 
 use anyhow::Result;
@@ -28,7 +34,7 @@ fn main() -> Result<()> {
         args::Args::PullRequest { verbose, .. } => verbose,
         args::Args::Publish { verbose, .. } => verbose,
     };
-    gh_trs::logger::init_logger(verbose);
+    logger::init_logger(verbose);
 
     info!("{} yevis", "Start".green());
     debug!("args: {:?}", args);
@@ -47,8 +53,8 @@ fn main() -> Result<()> {
                 &github_token,
                 &output,
                 match use_commit_url {
-                    true => gh_trs::raw_url::UrlType::Commit,
-                    false => gh_trs::raw_url::UrlType::Branch,
+                    true => raw_url::UrlType::Commit,
+                    false => raw_url::UrlType::Branch,
                 },
             ) {
                 Ok(()) => info!("{} make-template", "Success".green()),
@@ -116,7 +122,7 @@ fn main() -> Result<()> {
             match test::test(&configs, &wes_location, &docker_host) {
                 Ok(()) => info!("{} test", "Success".green()),
                 Err(e) => {
-                    match gh_trs::wes::stop_wes(&docker_host) {
+                    match wes::stop_wes(&docker_host) {
                         Ok(_) => {}
                         Err(e) => error!("{} to stop the WES with error: {}", "Failed".red(), e),
                     }
@@ -149,7 +155,7 @@ fn main() -> Result<()> {
             match test::test(&configs, &wes_location, &docker_host) {
                 Ok(()) => info!("{} test", "Success".green()),
                 Err(e) => {
-                    match gh_trs::wes::stop_wes(&docker_host) {
+                    match wes::stop_wes(&docker_host) {
                         Ok(_) => {}
                         Err(e) => error!("{} to stop the WES with error: {}", "Failed".red(), e),
                     }
@@ -255,7 +261,7 @@ fn main() -> Result<()> {
                 match test::test(&configs, &wes_location, &docker_host) {
                     Ok(()) => info!("{} test", "Success".green()),
                     Err(e) => {
-                        match gh_trs::wes::stop_wes(&docker_host) {
+                        match wes::stop_wes(&docker_host) {
                             Ok(_) => {}
                             Err(e) => {
                                 error!("{} to stop the WES with error: {}", "Failed".red(), e)

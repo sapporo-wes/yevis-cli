@@ -1,7 +1,9 @@
 use crate::env;
 use crate::file_url;
-use crate::gh_trs;
+use crate::github_api;
 use crate::metadata;
+use crate::raw_url;
+use crate::trs;
 use crate::version;
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
@@ -41,8 +43,8 @@ pub fn validate(
 fn validate_version(config: &metadata::types::Config, repo: impl AsRef<str>) -> Result<()> {
     let version =
         version::Version::from_str(&config.version).context("Invalid version, must be x.y.z")?;
-    let (owner, name) = gh_trs::github_api::parse_repo(&repo)?;
-    let trs_endpoint = gh_trs::trs::api::TrsEndpoint::new_gh_pages(&owner, &name)?;
+    let (owner, name) = github_api::parse_repo(&repo)?;
+    let trs_endpoint = trs::api::TrsEndpoint::new_gh_pages(&owner, &name)?;
     if trs_endpoint.is_valid().is_ok() {
         if let Ok(versions) = trs_endpoint.all_versions(&config.id.to_string()) {
             let versions = versions
@@ -119,7 +121,7 @@ fn update_url(
     commit_memo: Option<&mut HashMap<String, String>>,
 ) -> Result<Url> {
     let file_url = file_url::FileUrl::new(gh_token, url, branch_memo, commit_memo)?;
-    file_url.to_url(&gh_trs::raw_url::UrlType::Commit)
+    file_url.to_url(&raw_url::UrlType::Commit)
 }
 
 fn validate_and_update_workflow(
@@ -186,7 +188,7 @@ fn validate_with_github_license_api(
         "https://api.github.com/licenses/{}",
         license.as_ref()
     ))?;
-    let res = gh_trs::github_api::get_request(gh_token, &url, &[])?;
+    let res = github_api::get_request(gh_token, &url, &[])?;
     let err_msg = "`license` is not valid from GitHub license API";
     let permissions = res
         .get("permissions")

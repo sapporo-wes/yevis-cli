@@ -1,6 +1,6 @@
 use crate::env;
-use crate::gh_trs;
 use crate::metadata;
+use crate::wes;
 
 use anyhow::{anyhow, bail, ensure, Result};
 use log::{debug, info};
@@ -20,13 +20,13 @@ pub fn test(
     let wes_loc = match wes_loc {
         Some(wes_loc) => wes_loc.clone(),
         None => {
-            gh_trs::wes::start_wes(docker_host)?;
-            Url::parse(&gh_trs::wes::default_wes_location())?
+            wes::start_wes(docker_host)?;
+            Url::parse(&wes::default_wes_location())?
         }
     };
     info!("Use WES location: {} for testing", wes_loc);
 
-    let supported_wes_versions = gh_trs::wes::get_supported_wes_versions(&wes_loc)?;
+    let supported_wes_versions = wes::get_supported_wes_versions(&wes_loc)?;
     ensure!(
         supported_wes_versions
             .into_iter()
@@ -45,31 +45,30 @@ pub fn test(
         for test_case in &config.workflow.testing {
             info!("Testing test case: {}", test_case.id);
 
-            let form = gh_trs::wes::test_case_to_form(&config.workflow, test_case)?;
+            let form = wes::test_case_to_form(&config.workflow, test_case)?;
             debug!("Form:\n{:#?}", &form);
-            let run_id = gh_trs::wes::post_run(&wes_loc, form)?;
+            let run_id = wes::post_run(&wes_loc, form)?;
             info!("WES run_id: {}", run_id);
 
-            let mut status = gh_trs::wes::RunStatus::Running;
+            let mut status = wes::RunStatus::Running;
             let mut iter_num = 0;
-            while status == gh_trs::wes::RunStatus::Running {
+            while status == wes::RunStatus::Running {
                 sleep(iter_num);
-                status = gh_trs::wes::get_run_status(&wes_loc, &run_id)?;
+                status = wes::get_run_status(&wes_loc, &run_id)?;
                 debug!("WES run status: {:?}", status);
                 iter_num += 1;
             }
 
-            let run_log =
-                serde_json::to_string_pretty(&gh_trs::wes::get_run_log(&wes_loc, &run_id)?)?;
+            let run_log = serde_json::to_string_pretty(&wes::get_run_log(&wes_loc, &run_id)?)?;
             if in_ci {
                 write_test_log(&config.id, &config.version, &test_case.id, &run_log)?;
             }
             match status {
-                gh_trs::wes::RunStatus::Complete => {
+                wes::RunStatus::Complete => {
                     info!("Complete test case: {}", test_case.id);
                     debug!("Run log:\n{}", run_log);
                 }
-                gh_trs::wes::RunStatus::Failed => {
+                wes::RunStatus::Failed => {
                     info!(
                         "Failed test case: {} with run_log:\n{}",
                         test_case.id, run_log
@@ -93,13 +92,13 @@ pub fn test(
         };
     }
 
-    gh_trs::wes::stop_wes(docker_host)?;
+    wes::stop_wes(docker_host)?;
     Ok(())
 }
 
 struct TestResult {
     pub id: String,
-    pub status: gh_trs::wes::RunStatus,
+    pub status: wes::RunStatus,
 }
 
 fn write_test_log(
@@ -127,7 +126,7 @@ fn write_test_log(
 fn check_test_results(test_results: Vec<TestResult>) -> Result<()> {
     let failed_tests = test_results
         .iter()
-        .filter(|r| r.status == gh_trs::wes::RunStatus::Failed)
+        .filter(|r| r.status == wes::RunStatus::Failed)
         .collect::<Vec<_>>();
     if !failed_tests.is_empty() {
         bail!(

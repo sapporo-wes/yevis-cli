@@ -1,4 +1,4 @@
-use crate::gh_trs::trs;
+use crate::trs;
 use anyhow::Result;
 use log::debug;
 use url::Url;

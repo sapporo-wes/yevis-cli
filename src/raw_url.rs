@@ -1,4 +1,4 @@
-use crate::gh_trs::github_api;
+use crate::github_api;
 
 use anyhow::{anyhow, ensure, Result};
 use regex::Regex;

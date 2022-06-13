@@ -1,5 +1,5 @@
-use crate::gh_trs::remote;
 use crate::metadata;
+use crate::remote;
 
 use anyhow::{anyhow, Result};
 use colored::Colorize;

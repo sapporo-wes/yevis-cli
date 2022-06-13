@@ -1,6 +1,6 @@
-use crate::gh_trs::github_api;
-use crate::gh_trs::raw_url;
-use crate::gh_trs::remote;
+use crate::github_api;
+use crate::raw_url;
+use crate::remote;
 
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};

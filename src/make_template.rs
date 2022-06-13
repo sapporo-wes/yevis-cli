@@ -1,7 +1,9 @@
 use crate::env;
 use crate::file_url;
-use crate::gh_trs;
+use crate::inspect;
 use crate::metadata;
+use crate::raw_url;
+use crate::trs;
 use crate::version;
 
 use anyhow::{anyhow, bail, Result};
@@ -15,7 +17,7 @@ pub fn make_template(
     wf_loc: &Url,
     gh_token: &Option<impl AsRef<str>>,
     output: impl AsRef<Path>,
-    url_type: gh_trs::raw_url::UrlType,
+    url_type: raw_url::UrlType,
 ) -> Result<()> {
     info!("Making a template from {}", wf_loc);
 
@@ -49,7 +51,7 @@ fn tool_version_url_to_metadata_url(wf_loc: &Url) -> Result<Url> {
         Some(caps) => (caps.get(1).unwrap().as_str(), caps.get(2).unwrap().as_str()),
         None => bail!("Invalid TRS ToolVersion URL: {}", wf_loc),
     };
-    let trs_endpoint = gh_trs::trs::api::TrsEndpoint::new_from_tool_version_url(wf_loc)?;
+    let trs_endpoint = trs::api::TrsEndpoint::new_from_tool_version_url(wf_loc)?;
     trs_endpoint.is_valid()?;
     let metadata_url = Url::parse(&format!(
         "{}tools/{}/versions/{}/yevis-metadata.json",
@@ -63,7 +65,7 @@ fn tool_version_url_to_metadata_url(wf_loc: &Url) -> Result<Url> {
 fn generate_config(
     wf_loc: &Url,
     gh_token: &Option<impl AsRef<str>>,
-    url_type: gh_trs::raw_url::UrlType,
+    url_type: raw_url::UrlType,
 ) -> Result<metadata::types::Config> {
     let gh_token = env::github_token(gh_token)?;
     let primary_wf = file_url::FileUrl::new(&gh_token, wf_loc, None, None)?;
@@ -77,7 +79,7 @@ fn generate_config(
         workflow: metadata::types::Workflow {
             name: primary_wf.file_name()?,
             readme: primary_wf.readme(&gh_token, &url_type)?,
-            language: gh_trs::inspect::inspect_wf_type_version(&primary_wf.to_url(&url_type)?)?,
+            language: inspect::inspect_wf_type_version(&primary_wf.to_url(&url_type)?)?,
             files: primary_wf.wf_files(&gh_token, &url_type)?,
             testing: vec![metadata::types::Testing::default()],
         },

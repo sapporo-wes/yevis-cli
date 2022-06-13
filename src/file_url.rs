@@ -1,7 +1,7 @@
-use crate::gh_trs;
-use crate::gh_trs::raw_url;
-use crate::gh_trs::raw_url::RawUrl as GitHubUrl;
+use crate::github_api;
 use crate::metadata;
+use crate::raw_url;
+use crate::raw_url::RawUrl as GitHubUrl;
 
 use anyhow::{anyhow, bail, ensure, Result};
 use regex::Regex;
@@ -144,7 +144,7 @@ fn extract_gist_id(url: &Url) -> Result<String> {
 
 /// https://docs.github.com/ja/rest/gists/gists#get-a-gist
 fn get_gist(gh_token: impl AsRef<str>, gist_id: impl AsRef<str>) -> Result<Value> {
-    let res = gh_trs::github_api::get_request(
+    let res = github_api::get_request(
         gh_token,
         &Url::parse(&format!(
             "https://api.github.com/gists/{}",
@@ -254,15 +254,11 @@ impl FileUrl {
             .to_string())
     }
 
-    pub fn readme(
-        &self,
-        gh_token: impl AsRef<str>,
-        url_type: &gh_trs::raw_url::UrlType,
-    ) -> Result<Url> {
+    pub fn readme(&self, gh_token: impl AsRef<str>, url_type: &raw_url::UrlType) -> Result<Url> {
         let readme = match self {
-            Self::GitHub(url) => gh_trs::raw_url::RawUrl::new(
+            Self::GitHub(url) => raw_url::RawUrl::new(
                 &gh_token,
-                &gh_trs::github_api::get_readme_url(&gh_token, &url.owner, &url.name)?,
+                &github_api::get_readme_url(&gh_token, &url.owner, &url.name)?,
                 None,
                 None,
             )?
@@ -274,7 +270,7 @@ impl FileUrl {
         Ok(readme)
     }
 
-    pub fn to_url(&self, url_type: &gh_trs::raw_url::UrlType) -> Result<Url> {
+    pub fn to_url(&self, url_type: &raw_url::UrlType) -> Result<Url> {
         match self {
             Self::GitHub(url) => Ok(url.to_url(url_type)?),
             Self::Gist(url) => Ok(url.raw_url.clone()),
@@ -286,7 +282,7 @@ impl FileUrl {
     pub fn wf_files(
         &self,
         gh_token: impl AsRef<str>,
-        url_type: &gh_trs::raw_url::UrlType,
+        url_type: &raw_url::UrlType,
     ) -> Result<Vec<metadata::types::File>> {
         match self {
             Self::GitHub(url) => obtain_wf_files(&gh_token, url, url_type),
@@ -313,7 +309,7 @@ pub fn obtain_wf_files(
     let primary_wf_url = primary_wf.to_url(url_type)?;
     let base_dir = primary_wf.base_dir()?;
     let base_url = primary_wf.to_base_url(url_type)?;
-    let files = gh_trs::github_api::get_file_list_recursive(
+    let files = github_api::get_file_list_recursive(
         gh_token,
         &primary_wf.owner,
         &primary_wf.name,
