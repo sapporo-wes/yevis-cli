@@ -25,7 +25,7 @@ pub fn validate(
         validate_license(&mut config, &gh_token)?;
         validate_authors(&config)?;
         validate_language(&config)?;
-        gh_trs::command::validate::validate_wf_name(&config.workflow.name)?;
+        validate_wf_name(&config.workflow.name)?;
         validate_and_update_workflow(&mut config, &gh_token)?;
         debug!(
             "updated metadata file:\n{}",
@@ -223,6 +223,21 @@ fn validate_with_zenodo_license_api(license: impl AsRef<str>) -> Result<()> {
     Ok(())
 }
 
+/// allow characters
+/// - alphabet
+/// - number
+/// - ~!@#$%^&*()_+-={}[]|:;,.<>?
+/// - space
+pub fn validate_wf_name(wf_name: impl AsRef<str>) -> Result<()> {
+    let wf_name_re =
+        regex::Regex::new(r"^[a-zA-Z0-9\~!@\#\$%\^\&\*\(\)_\+\-=\{\}\[\]\|:;,\.<>\? ]+$")?;
+    ensure!(
+        wf_name_re.is_match(wf_name.as_ref()),
+        "Workflow name contains invalid characters, only alphanumeric, space and ~!@#$%^&*()_+-={{}}[]|:;,.<>? are allowed"
+    );
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,6 +258,17 @@ mod tests {
         validate_with_zenodo_license_api("mit")?;
         validate_with_zenodo_license_api("MIT")?;
         validate_with_zenodo_license_api("apache-2.0")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_validate_wf_name() -> Result<()> {
+        validate_wf_name("abc")?;
+        validate_wf_name("abcABC123")?;
+        validate_wf_name("abcABC123~!@#$%^&*()_+-={{}}[]|:;,.<>? ")?;
+        validate_wf_name("Workflow name: example_workflow-123.cwl (for example)")?;
+        let err = validate_wf_name("`");
+        assert!(err.is_err());
         Ok(())
     }
 }

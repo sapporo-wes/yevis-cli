@@ -1,4 +1,5 @@
 use crate::gh_trs;
+use crate::gh_trs::raw_url;
 use crate::gh_trs::raw_url::RawUrl as GitHubUrl;
 
 use anyhow::{anyhow, bail, ensure, Result};
@@ -287,9 +288,7 @@ impl FileUrl {
         url_type: &gh_trs::raw_url::UrlType,
     ) -> Result<Vec<gh_trs::config::types::File>> {
         match self {
-            Self::GitHub(url) => {
-                gh_trs::command::make_template::obtain_wf_files(&gh_token, url, url_type)
-            }
+            Self::GitHub(url) => obtain_wf_files(&gh_token, url, url_type),
             Self::Gist(url) => url.wf_files(&gh_token),
             Self::Zenodo(url) => Ok(vec![gh_trs::config::types::File::new(
                 url,
@@ -303,6 +302,36 @@ impl FileUrl {
             )?]),
         }
     }
+}
+
+pub fn obtain_wf_files(
+    gh_token: impl AsRef<str>,
+    primary_wf: &raw_url::RawUrl,
+    url_type: &raw_url::UrlType,
+) -> Result<Vec<gh_trs::config::types::File>> {
+    let primary_wf_url = primary_wf.to_url(url_type)?;
+    let base_dir = primary_wf.base_dir()?;
+    let base_url = primary_wf.to_base_url(url_type)?;
+    let files = gh_trs::github_api::get_file_list_recursive(
+        gh_token,
+        &primary_wf.owner,
+        &primary_wf.name,
+        &base_dir,
+        &primary_wf.commit,
+    )?;
+    files
+        .into_iter()
+        .map(|file| -> Result<gh_trs::config::types::File> {
+            let target = file.strip_prefix(&base_dir)?;
+            let url = base_url.join(target.to_str().ok_or_else(|| anyhow!("Invalid URL"))?)?;
+            let r#type = if url == primary_wf_url {
+                gh_trs::config::types::FileType::Primary
+            } else {
+                gh_trs::config::types::FileType::Secondary
+            };
+            gh_trs::config::types::File::new(&url, &Some(target), r#type)
+        })
+        .collect::<Result<Vec<_>>>()
 }
 
 #[cfg(test)]
@@ -393,6 +422,22 @@ mod tests {
         let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1/trimming_and_qc.cwl")?;
         let gist_url = GistUrl::new(&gh_token, &url)?;
         let files = gist_url.wf_files(&gh_token)?;
+        assert_eq!(files.len(), 3);
+        Ok(())
+    }
+
+    #[test]
+    fn test_obtain_wf_files() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let primary_wf = raw_url::RawUrl::new(
+            &gh_token,
+            &Url::parse(
+                "https://github.com/suecharo/gh-trs/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
+            )?,
+            None,
+            None,
+        )?;
+        let files = obtain_wf_files(&gh_token, &primary_wf, &raw_url::UrlType::Commit)?;
         assert_eq!(files.len(), 3);
         Ok(())
     }
