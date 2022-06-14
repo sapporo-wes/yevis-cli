@@ -1,4 +1,4 @@
-use crate::github_api;
+use crate::gh;
 
 use anyhow::{anyhow, ensure, Result};
 use regex::Regex;
@@ -70,18 +70,13 @@ impl RawUrl {
         let (branch, commit) = match is_commit_hash(&branch_or_commit) {
             Ok(_) => {
                 let commit = branch_or_commit.to_string();
-                let branch = github_api::get_default_branch(gh_token, &owner, &name, branch_memo)?;
+                let branch = gh::api::get_default_branch(gh_token, &owner, &name, branch_memo)?;
                 (branch, commit)
             }
             Err(_) => {
                 let branch = branch_or_commit.to_string();
-                let commit = github_api::get_latest_commit_sha(
-                    gh_token,
-                    &owner,
-                    &name,
-                    &branch,
-                    commit_memo,
-                )?;
+                let commit =
+                    gh::api::get_latest_commit_sha(gh_token, &owner, &name, &branch, commit_memo)?;
                 (branch, commit)
             }
         };

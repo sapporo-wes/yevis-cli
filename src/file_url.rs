@@ -1,11 +1,10 @@
-use crate::github_api;
+use crate::gh;
 use crate::metadata;
 use crate::raw_url;
 use crate::raw_url::RawUrl as GitHubUrl;
 
 use anyhow::{anyhow, bail, ensure, Result};
 use regex::Regex;
-use serde_json::Value;
 use std::collections::HashMap;
 use url::Url;
 
@@ -52,7 +51,7 @@ impl GistUrl {
             )
         } else {
             // Obtain raw URL from GitHub API
-            get_gist_raw_url(gh_token, &gist_id)?
+            gh::gist::get_gist_raw_url(gh_token, &gist_id)?
         };
         let raw_url = Url::parse(&raw_url)?;
         let owner = raw_url
@@ -79,7 +78,7 @@ impl GistUrl {
 
     pub fn wf_files(&self, gh_token: impl AsRef<str>) -> Result<Vec<metadata::types::File>> {
         let primary_target = self.file_stem()?;
-        let res = get_gist(gh_token, &self.id)?;
+        let res = gh::gist::get_gist(gh_token, &self.id)?;
         let err_msg = "Failed to parse raw_url when getting Gist";
         res.as_object()
             .ok_or_else(|| anyhow!(err_msg))?
@@ -139,45 +138,6 @@ fn extract_gist_id(url: &Url) -> Result<String> {
         None => {
             bail!(err_msg)
         }
-    }
-}
-
-/// https://docs.github.com/ja/rest/gists/gists#get-a-gist
-fn get_gist(gh_token: impl AsRef<str>, gist_id: impl AsRef<str>) -> Result<Value> {
-    let res = github_api::get_request(
-        gh_token,
-        &Url::parse(&format!(
-            "https://api.github.com/gists/{}",
-            gist_id.as_ref()
-        ))?,
-        &[],
-    )?;
-    Ok(res)
-}
-
-/// If Gist contains more than one file, an error is returned.
-fn get_gist_raw_url(gh_token: impl AsRef<str>, gist_id: impl AsRef<str>) -> Result<String> {
-    let res = get_gist(gh_token, gist_id.as_ref())?;
-    let err_msg = "Failed to parse raw_url when getting Gist";
-    let mut files = res
-        .as_object()
-        .ok_or_else(|| anyhow!(err_msg))?
-        .get("files")
-        .ok_or_else(|| anyhow!(err_msg))?
-        .as_object()
-        .ok_or_else(|| anyhow!(err_msg))?
-        .values();
-    if files.len() != 1 {
-        bail!("Gist ID {} contains more than one file; please specify the Gist raw URL containing the file path", gist_id.as_ref())
-    } else {
-        Ok(files
-            .next()
-            .ok_or_else(|| anyhow!(err_msg))?
-            .get("raw_url")
-            .ok_or_else(|| anyhow!(err_msg))?
-            .as_str()
-            .ok_or_else(|| anyhow!(err_msg))?
-            .to_string())
     }
 }
 
@@ -258,7 +218,7 @@ impl FileUrl {
         let readme = match self {
             Self::GitHub(url) => raw_url::RawUrl::new(
                 &gh_token,
-                &github_api::get_readme_url(&gh_token, &url.owner, &url.name)?,
+                &gh::api::get_readme_url(&gh_token, &url.owner, &url.name)?,
                 None,
                 None,
             )?
@@ -309,7 +269,7 @@ pub fn obtain_wf_files(
     let primary_wf_url = primary_wf.to_url(url_type)?;
     let base_dir = primary_wf.base_dir()?;
     let base_url = primary_wf.to_base_url(url_type)?;
-    let files = github_api::get_file_list_recursive(
+    let files = gh::api::get_file_list_recursive(
         gh_token,
         &primary_wf.owner,
         &primary_wf.name,
@@ -349,35 +309,6 @@ mod tests {
         assert_eq!(extract_gist_id(&url)?, "9c6aa4ba5d7464066d55175f59e428ac");
         let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1/trimming_and_qc.cwl")?;
         assert_eq!(extract_gist_id(&url)?, "9c6aa4ba5d7464066d55175f59e428ac");
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_gist() -> Result<()> {
-        let gh_token = env::github_token(&None::<String>)?;
-        let gist_id = "9c6aa4ba5d7464066d55175f59e428ac";
-        get_gist(gh_token, gist_id)?;
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_gist_raw_url_single() -> Result<()> {
-        let gh_token = env::github_token(&None::<String>)?;
-        let gist_id = "cdd4bcbb6f13ae797947cd7981e35b5f";
-        let raw_url = get_gist_raw_url(gh_token, gist_id)?;
-        assert_eq!(
-            raw_url,
-            "https://gist.githubusercontent.com/suecharo/cdd4bcbb6f13ae797947cd7981e35b5f/raw/330cd87f6b5dc90614cecfd36bca0c60f5c50622/trimming_and_qc.cwl"
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn test_get_gist_raw_url_multiple() -> Result<()> {
-        let gh_token = env::github_token(&None::<String>)?;
-        let gist_id = "9c6aa4ba5d7464066d55175f59e428ac";
-        let result = get_gist_raw_url(gh_token, gist_id);
-        assert!(result.is_err());
         Ok(())
     }
 

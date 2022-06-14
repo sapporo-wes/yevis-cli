@@ -1,6 +1,6 @@
 use crate::env;
 use crate::file_url;
-use crate::github_api;
+use crate::gh;
 use crate::metadata;
 use crate::raw_url;
 use crate::trs;
@@ -43,7 +43,7 @@ pub fn validate(
 fn validate_version(config: &metadata::types::Config, repo: impl AsRef<str>) -> Result<()> {
     let version =
         version::Version::from_str(&config.version).context("Invalid version, must be x.y.z")?;
-    let (owner, name) = github_api::parse_repo(&repo)?;
+    let (owner, name) = gh::parse_repo(&repo)?;
     let trs_endpoint = trs::api::TrsEndpoint::new_gh_pages(&owner, &name)?;
     if trs_endpoint.is_valid().is_ok() {
         if let Ok(versions) = trs_endpoint.all_versions(&config.id.to_string()) {
@@ -188,7 +188,7 @@ fn validate_with_github_license_api(
         "https://api.github.com/licenses/{}",
         license.as_ref()
     ))?;
-    let res = github_api::get_request(gh_token, &url, &[])?;
+    let res = gh::get_request(gh_token, &url, &[])?;
     let err_msg = "`license` is not valid from GitHub license API";
     let permissions = res
         .get("permissions")

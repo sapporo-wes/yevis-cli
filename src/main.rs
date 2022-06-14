@@ -1,12 +1,10 @@
 mod args;
 mod env;
 mod file_url;
-mod github_api;
+mod gh;
 mod inspect;
-mod io;
 mod logger;
 mod metadata;
-mod pr;
 mod raw_url;
 mod remote;
 mod sub_cmd;
@@ -44,7 +42,7 @@ fn main() -> Result<()> {
             ..
         } => {
             info!("{} make-template", "Running".green());
-            match sub_cmd::make_template::make_template(
+            match sub_cmd::make_template(
                 &workflow_location,
                 &github_token,
                 &output,
@@ -67,7 +65,7 @@ fn main() -> Result<()> {
             ..
         } => {
             info!("{} validate", "Running".green());
-            match sub_cmd::validate::validate(metadata_locations, &github_token, &repository) {
+            match sub_cmd::validate(metadata_locations, &github_token, &repository) {
                 Ok(_) => info!("{} validate", "Success".green()),
                 Err(e) => {
                     error!("{} to validate with error: {}", "Failed".red(), e);
@@ -87,7 +85,7 @@ fn main() -> Result<()> {
             let metadata_locations = if from_pr {
                 info!("Run yevis-cli test in from_pr mode");
                 info!("GitHub Pull Request URL: {}", metadata_locations[0]);
-                match pr::list_modified_files(&github_token, &metadata_locations[0]) {
+                match gh::pr::list_modified_files(&github_token, &metadata_locations[0]) {
                     Ok(files) => files,
                     Err(e) => {
                         error!(
@@ -104,7 +102,7 @@ fn main() -> Result<()> {
 
             info!("{} validate", "Running".green());
             let metadata_vec =
-                match sub_cmd::validate::validate(metadata_locations, &github_token, &repository) {
+                match sub_cmd::validate(metadata_locations, &github_token, &repository) {
                     Ok(metadata_vec) => {
                         info!("{} validate", "Success".green());
                         metadata_vec
@@ -116,7 +114,7 @@ fn main() -> Result<()> {
                 };
 
             info!("{} test", "Running".green());
-            match sub_cmd::test::test(&metadata_vec, &wes_location, &docker_host) {
+            match sub_cmd::test(&metadata_vec, &wes_location, &docker_host) {
                 Ok(()) => info!("{} test", "Success".green()),
                 Err(e) => {
                     match wes::stop_wes(&docker_host) {
@@ -138,7 +136,7 @@ fn main() -> Result<()> {
         } => {
             info!("{} validate", "Running".green());
             let metadata_vec =
-                match sub_cmd::validate::validate(metadata_locations, &github_token, &repository) {
+                match sub_cmd::validate(metadata_locations, &github_token, &repository) {
                     Ok(metadata_vec) => {
                         info!("{} validate", "Success".green());
                         metadata_vec
@@ -150,7 +148,7 @@ fn main() -> Result<()> {
                 };
 
             info!("{} test", "Running".green());
-            match sub_cmd::test::test(&metadata_vec, &wes_location, &docker_host) {
+            match sub_cmd::test(&metadata_vec, &wes_location, &docker_host) {
                 Ok(()) => info!("{} test", "Success".green()),
                 Err(e) => {
                     match wes::stop_wes(&docker_host) {
@@ -163,7 +161,7 @@ fn main() -> Result<()> {
             };
 
             info!("{} pull-request", "Running".green());
-            match sub_cmd::pull_request::pull_request(&metadata_vec, &github_token, &repository) {
+            match sub_cmd::pull_request(&metadata_vec, &github_token, &repository) {
                 Ok(()) => info!("{} pull-request", "Success".green()),
                 Err(e) => {
                     error!("{} to pull-request with error: {}", "Failed".red(), e);
@@ -192,7 +190,7 @@ fn main() -> Result<()> {
             let metadata_locations = if from_pr {
                 info!("Run yevis-cli test in from_pr mode");
                 info!("GitHub Pull Request URL: {}", metadata_locations[0]);
-                match pr::list_modified_files(&github_token, &metadata_locations[0]) {
+                match gh::pr::list_modified_files(&github_token, &metadata_locations[0]) {
                     Ok(files) => files,
                     Err(e) => {
                         error!(
@@ -210,7 +208,7 @@ fn main() -> Result<()> {
             let metadata_locations = if from_trs {
                 info!("Run yevis-cli publish in from_trs mode");
                 info!("TRS endpoint: {}", metadata_locations[0]);
-                match io::find_metadata_loc_recursively_from_trs(&metadata_locations[0]) {
+                match metadata::io::find_metadata_loc_recursively_from_trs(&metadata_locations[0]) {
                     Ok(metadata_locations) => metadata_locations,
                     Err(e) => {
                         error!(
@@ -227,7 +225,7 @@ fn main() -> Result<()> {
 
             info!("{} validate", "Running".green());
             let mut metadata_vec =
-                match sub_cmd::validate::validate(metadata_locations, &github_token, &repository) {
+                match sub_cmd::validate(metadata_locations, &github_token, &repository) {
                     Ok(metadata_vec) => {
                         info!("{} validate", "Success".green());
                         metadata_vec
@@ -256,7 +254,7 @@ fn main() -> Result<()> {
 
             let verified = if with_test {
                 info!("{} test", "Running".green());
-                match sub_cmd::test::test(&metadata_vec, &wes_location, &docker_host) {
+                match sub_cmd::test(&metadata_vec, &wes_location, &docker_host) {
                     Ok(()) => info!("{} test", "Success".green()),
                     Err(e) => {
                         match wes::stop_wes(&docker_host) {
@@ -275,7 +273,7 @@ fn main() -> Result<()> {
             };
 
             info!("{} publish", "Running".green());
-            match sub_cmd::publish::publish(&metadata_vec, &github_token, &repository, verified) {
+            match sub_cmd::publish(&metadata_vec, &github_token, &repository, verified) {
                 Ok(()) => info!("{} publish", "Success".green()),
                 Err(e) => {
                     error!("{} to publish with error: {}", "Failed".red(), e);

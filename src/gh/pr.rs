@@ -1,5 +1,5 @@
 use crate::env;
-use crate::github_api;
+use crate::gh;
 
 use anyhow::{anyhow, Result};
 use url::Url;
@@ -28,7 +28,7 @@ pub fn list_modified_files(
         "https://api.github.com/repos/{}/{}/pulls/{}/files",
         repo_owner, repo_name, pr_number
     ))?;
-    let res = github_api::get_request(gh_token, &url, &[])?;
+    let res = gh::get_request(gh_token, &url, &[])?;
     let err_msg = "Failed to parse the response when listing modified files";
     let raw_urls: Vec<String> = res
         .as_array()

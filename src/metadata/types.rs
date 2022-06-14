@@ -1,4 +1,4 @@
-use crate::github_api;
+use crate::gh;
 use crate::remote;
 
 use anyhow::{anyhow, Result};
@@ -31,7 +31,7 @@ pub struct Author {
 
 impl Author {
     pub fn new_from_api(gh_token: impl AsRef<str>) -> Result<Self> {
-        let (github_account, name, affiliation) = github_api::get_author_info(gh_token)?;
+        let (github_account, name, affiliation) = gh::api::get_author_info(gh_token)?;
         Ok(Self {
             github_account,
             name: Some(name),

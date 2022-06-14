@@ -1,111 +1,11 @@
-use anyhow::{anyhow, bail, ensure, Result};
-use regex::Regex;
+use crate::gh;
+
+use anyhow::{anyhow, bail, Result};
 use serde_json::json;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use url::Url;
-
-pub fn parse_repo(repo: impl AsRef<str>) -> Result<(String, String)> {
-    let re = Regex::new(r"^[\w-]+/[\w-]+$")?;
-    ensure!(
-        re.is_match(repo.as_ref()),
-        "Invalid repository name: {}. It should be in the format of `owner/name`.",
-        repo.as_ref()
-    );
-    let parts = repo.as_ref().split('/').collect::<Vec<_>>();
-    Ok((parts[0].to_string(), parts[1].to_string()))
-}
-
-pub fn get_request(gh_token: impl AsRef<str>, url: &Url, query: &[(&str, &str)]) -> Result<Value> {
-    let client = reqwest::blocking::Client::new();
-    let response = client
-        .get(url.as_str())
-        .header(reqwest::header::USER_AGENT, "yevis")
-        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
-        .header(
-            reqwest::header::AUTHORIZATION,
-            format!("token {}", gh_token.as_ref()),
-        )
-        .query(query)
-        .send()?;
-    let status = response.status();
-    let res_body = response.json::<Value>()?;
-    ensure!(
-        status != reqwest::StatusCode::UNAUTHORIZED,
-        "Failed to authenticate with GitHub. Please check your GitHub token."
-    );
-    ensure!(
-        status.is_success(),
-        "Failed to get request to {}. Response: {}",
-        url,
-        match res_body.get("message") {
-            Some(message) => message.as_str().unwrap_or_else(|| status.as_str()),
-            None => status.as_str(),
-        }
-    );
-    Ok(res_body)
-}
-
-pub fn post_request(gh_token: impl AsRef<str>, url: &Url, body: &Value) -> Result<Value> {
-    let client = reqwest::blocking::Client::new();
-    let response = client
-        .post(url.as_str())
-        .header(reqwest::header::USER_AGENT, "yevis")
-        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
-        .header(
-            reqwest::header::AUTHORIZATION,
-            format!("token {}", gh_token.as_ref()),
-        )
-        .json(body)
-        .send()?;
-    let status = response.status();
-    let res_body = response.json::<Value>()?;
-    ensure!(
-        status != reqwest::StatusCode::UNAUTHORIZED,
-        "Failed to authenticate with GitHub. Please check your GitHub token."
-    );
-    ensure!(
-        status.is_success(),
-        "Failed to post request to {}. Response: {}",
-        url,
-        match res_body.get("message") {
-            Some(message) => message.as_str().unwrap_or_else(|| status.as_str()),
-            None => status.as_str(),
-        }
-    );
-    Ok(res_body)
-}
-
-pub fn patch_request(gh_token: impl AsRef<str>, url: &Url, body: &Value) -> Result<Value> {
-    let client = reqwest::blocking::Client::new();
-    let response = client
-        .patch(url.as_str())
-        .header(reqwest::header::USER_AGENT, "yevis")
-        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
-        .header(
-            reqwest::header::AUTHORIZATION,
-            format!("token {}", gh_token.as_ref()),
-        )
-        .json(body)
-        .send()?;
-    let status = response.status();
-    let res_body = response.json::<Value>()?;
-    ensure!(
-        status != reqwest::StatusCode::UNAUTHORIZED,
-        "Failed to authenticate with GitHub. Please check your GitHub token."
-    );
-    ensure!(
-        status.is_success(),
-        "Failed to patch request to {}. Response: {}",
-        url,
-        match res_body.get("message") {
-            Some(message) => message.as_str().unwrap_or_else(|| status.as_str()),
-            None => status.as_str(),
-        }
-    );
-    Ok(res_body)
-}
 
 /// https://docs.github.com/ja/rest/reference/repos#get-a-repository
 pub fn get_repos(
@@ -118,7 +18,7 @@ pub fn get_repos(
         owner.as_ref(),
         name.as_ref()
     ))?;
-    get_request(gh_token, &url, &[])
+    gh::get_request(gh_token, &url, &[])
 }
 
 pub fn get_default_branch(
@@ -171,7 +71,7 @@ pub fn get_branches(
         name.as_ref(),
         branch_name.as_ref()
     ))?;
-    get_request(gh_token, &url, &[])
+    gh::get_request(gh_token, &url, &[])
 }
 
 pub fn get_latest_commit_sha(
@@ -224,7 +124,7 @@ pub fn get_latest_commit_sha(
 /// https://docs.github.com/ja/rest/reference/users#get-a-user
 pub fn get_user(gh_token: impl AsRef<str>) -> Result<Value> {
     let url = Url::parse("https://api.github.com/user")?;
-    get_request(gh_token, &url, &[])
+    gh::get_request(gh_token, &url, &[])
 }
 
 pub fn get_author_info(gh_token: impl AsRef<str>) -> Result<(String, String, String)> {
@@ -262,8 +162,8 @@ pub fn get_readme_url(
         owner.as_ref(),
         name.as_ref()
     ))?;
-    let res = get_request(gh_token, &url, &[])?;
-    let err_message = "Failed to parse the response to get a readme URL.";
+    let res = gh::get_request(gh_token, &url, &[])?;
+    let err_message = "Failed to parse the response to get the README URL.";
     Ok(Url::parse(
         res.get("html_url")
             .ok_or_else(|| anyhow!(err_message))?
@@ -286,7 +186,7 @@ pub fn get_contents(
         name.as_ref(),
         path.as_ref().display()
     ))?;
-    get_request(gh_token, &url, &[("ref", commit.as_ref())])
+    gh::get_request(gh_token, &url, &[("ref", commit.as_ref())])
 }
 
 pub fn get_file_list_recursive(
@@ -367,7 +267,7 @@ pub fn get_ref(
         name.as_ref(),
         r#ref.as_ref()
     ))?;
-    get_request(gh_token, &url, &[])
+    gh::get_request(gh_token, &url, &[])
 }
 
 pub fn get_branch_sha(
@@ -410,7 +310,7 @@ pub fn create_ref(
         "ref": r#ref.as_ref(),
         "sha": sha.as_ref(),
     });
-    post_request(gh_token, &url, &body)
+    gh::post_request(gh_token, &url, &body)
 }
 
 /// https://docs.github.com/en/rest/reference/git#update-a-reference
@@ -430,7 +330,7 @@ pub fn update_ref(
     let body = json!({
         "sha": sha.as_ref(),
     });
-    patch_request(gh_token, &url, &body)?;
+    gh::patch_request(gh_token, &url, &body)?;
     Ok(())
 }
 
@@ -443,9 +343,9 @@ pub fn create_empty_branch(
     let mut empty_contents: HashMap<PathBuf, String> = HashMap::new();
 
     let readme_content = r#"
-# GA4GH Tool Registry Service generated by Yevis
+# GA4GH Tool Registry Service (TRS) API generated by Yevis
 
-## Docs
+Please see:
 
 - [GitHub - ddbj/yevis-cli](https://github.com/ddbj/yevis-cli)
 - [GA4GH - Tool Registry Service API](https://www.ga4gh.org/news/tool-registry-service-api-enabling-an-interoperable-library-of-genomics-analysis-tools/)
@@ -509,7 +409,7 @@ pub fn create_tree(
             })
         }
     };
-    let res = post_request(gh_token, &url, &body)?;
+    let res = gh::post_request(gh_token, &url, &body)?;
     let err_message = "Failed to parse the response to create a tree.";
     Ok(res
         .get("sha")
@@ -548,7 +448,7 @@ pub fn create_commit(
             })
         }
     };
-    let res = post_request(gh_token, &url, &body)?;
+    let res = gh::post_request(gh_token, &url, &body)?;
     let err_message = "Failed to parse the response to create a commit.";
     Ok(res
         .get("sha")

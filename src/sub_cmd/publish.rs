@@ -1,5 +1,5 @@
 use crate::env;
-use crate::github_api;
+use crate::gh;
 use crate::metadata;
 use crate::trs;
 
@@ -17,7 +17,7 @@ pub fn publish(
 ) -> Result<()> {
     let gh_token = env::github_token(gh_token)?;
 
-    let (owner, name) = github_api::parse_repo(repo)?;
+    let (owner, name) = gh::parse_repo(repo)?;
     let branch = get_gh_pages_branch(&gh_token, &owner, &name)?;
 
     info!(
@@ -25,22 +25,22 @@ pub fn publish(
         &owner, &name, branch,
     );
 
-    if github_api::exists_branch(&gh_token, &owner, &name, &branch).is_err() {
+    if gh::api::exists_branch(&gh_token, &owner, &name, &branch).is_err() {
         info!("Branch {} does not exist, creating it...", &branch);
-        github_api::create_empty_branch(&gh_token, &owner, &name, &branch)?;
+        gh::api::create_empty_branch(&gh_token, &owner, &name, &branch)?;
         info!("Branch {} created", &branch);
     }
 
-    let branch_sha = github_api::get_branch_sha(&gh_token, &owner, &name, &branch)?;
+    let branch_sha = gh::api::get_branch_sha(&gh_token, &owner, &name, &branch)?;
     let latest_commit_sha =
-        github_api::get_latest_commit_sha(&gh_token, &owner, &name, &branch, None)?;
+        gh::api::get_latest_commit_sha(&gh_token, &owner, &name, &branch, None)?;
     let mut trs_response = trs::response::TrsResponse::new(&owner, &name)?;
     for config in configs {
         trs_response.add(&owner, &name, config, verified)?;
     }
     let trs_contents = generate_trs_contents(trs_response)?;
     let new_tree_sha =
-        github_api::create_tree(&gh_token, &owner, &name, Some(&branch_sha), trs_contents)?;
+        gh::api::create_tree(&gh_token, &owner, &name, Some(&branch_sha), trs_contents)?;
     let mut commit_message = if configs.len() == 1 {
         format!(
             "Publish workflow, id: {} version: {} by yevis",
@@ -52,7 +52,7 @@ pub fn publish(
     if env::in_ci() {
         commit_message.push_str(" in CI");
     }
-    let new_commit_sha = github_api::create_commit(
+    let new_commit_sha = gh::api::create_commit(
         &gh_token,
         &owner,
         &name,
@@ -60,7 +60,7 @@ pub fn publish(
         &new_tree_sha,
         &commit_message,
     )?;
-    github_api::update_ref(&gh_token, &owner, &name, &branch, &new_commit_sha)?;
+    gh::api::update_ref(&gh_token, &owner, &name, &branch, &new_commit_sha)?;
 
     info!(
         "Published to repo: {}/{}, branch: {}",
@@ -80,7 +80,7 @@ fn get_gh_pages_branch(
         owner.as_ref(),
         name.as_ref(),
     ))?;
-    let res = match github_api::get_request(gh_token, &url, &[]) {
+    let res = match gh::get_request(gh_token, &url, &[]) {
         Ok(res) => res,
         Err(err) => {
             if err.to_string().contains("Not Found") {

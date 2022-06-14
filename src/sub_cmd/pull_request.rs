@@ -1,5 +1,5 @@
 use crate::env;
-use crate::github_api;
+use crate::gh;
 use crate::metadata;
 
 use anyhow::{anyhow, bail, ensure, Result};
@@ -17,11 +17,11 @@ pub fn pull_request(
 ) -> Result<()> {
     let gh_token = env::github_token(gh_token)?;
 
-    let (user, _, _) = github_api::get_author_info(&gh_token)?;
-    let (repo_owner, repo_name) = github_api::parse_repo(&repo)?;
-    let default_branch = github_api::get_default_branch(&gh_token, &repo_owner, &repo_name, None)?;
+    let (user, _, _) = gh::api::get_author_info(&gh_token)?;
+    let (repo_owner, repo_name) = gh::parse_repo(&repo)?;
+    let default_branch = gh::api::get_default_branch(&gh_token, &repo_owner, &repo_name, None)?;
     let default_branch_sha =
-        github_api::get_branch_sha(&gh_token, &repo_owner, &repo_name, &default_branch)?;
+        gh::api::get_branch_sha(&gh_token, &repo_owner, &repo_name, &default_branch)?;
     if user != repo_owner {
         fork_repository(&gh_token, &user, &repo_owner, &repo_name, &default_branch)?;
     }
@@ -115,7 +115,7 @@ fn has_forked_repo(
     ori_repo_owner: impl AsRef<str>,
     ori_repo_name: impl AsRef<str>,
 ) -> bool {
-    let res = match github_api::get_repos(&gh_token, &user, &ori_repo_name) {
+    let res = match gh::api::get_repos(&gh_token, &user, &ori_repo_name) {
         Ok(res) => res,
         Err(_) => return false,
     };
@@ -191,7 +191,7 @@ fn synk_fork_from_upstream(
     let body = json!({
         "branch": branch.as_ref(),
     });
-    github_api::post_request(gh_token, &url, &body)?;
+    gh::post_request(gh_token, &url, &body)?;
     Ok(())
 }
 
@@ -207,7 +207,7 @@ fn create_fork(
         name.as_ref(),
     ))?;
     let body = json!({});
-    github_api::post_request(gh_token, &url, &body)?;
+    gh::post_request(gh_token, &url, &body)?;
     Ok(())
 }
 
@@ -219,7 +219,7 @@ fn create_branch(
     default_branch_sha: impl AsRef<str>,
 ) -> Result<()> {
     info!("Creating branch {}", branch.as_ref());
-    match github_api::create_ref(
+    match gh::api::create_ref(
         &gh_token,
         &owner,
         &name,
@@ -324,7 +324,7 @@ fn get_contents_blob_sha(
     path: impl AsRef<Path>,
     branch: impl AsRef<str>,
 ) -> Result<Blob> {
-    let res = github_api::get_contents(&gh_token, &owner, &name, &path, &branch)?;
+    let res = gh::api::get_contents(&gh_token, &owner, &name, &path, &branch)?;
     let err_msg = "Failed to parse the response when getting contents";
     let content = res
         .get("content")
@@ -418,7 +418,7 @@ pub fn post_pulls(
         "base": base.as_ref(),
         "maintainer_can_modify": true
     });
-    let res = github_api::post_request(gh_token, &url, &body)?;
+    let res = gh::post_request(gh_token, &url, &body)?;
     let err_msg = "Failed to parse the response when positing pull request";
     Ok(res
         .get("url")

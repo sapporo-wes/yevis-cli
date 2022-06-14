@@ -1,5 +1,5 @@
 use crate::env;
-use crate::github_api;
+use crate::gh;
 use crate::metadata;
 use crate::sub_cmd::pull_request;
 
@@ -34,8 +34,8 @@ pub fn upload_and_commit_zenodo(
         // push modified metadata file to GitHub default branch
         info!("Pushing modified workflow metadata file to GitHub");
         let gh_token = env::github_token(gh_token)?;
-        let (owner, name) = github_api::parse_repo(&repo)?;
-        let default_branch = github_api::get_default_branch(&gh_token, &owner, &name, None)?;
+        let (owner, name) = gh::parse_repo(&repo)?;
+        let default_branch = gh::api::get_default_branch(&gh_token, &owner, &name, None)?;
         let config_path = PathBuf::from(format!(
             "{}/yevis-metadata-{}.yml",
             &config.id, &config.version
