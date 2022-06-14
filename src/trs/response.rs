@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct TrsResponse {
-    pub gh_trs_config: HashMap<(Uuid, String), metadata::types::Config>,
+    pub gh_trs_meta: HashMap<(Uuid, String), metadata::types::Config>,
     pub service_info: trs::types::ServiceInfo,
     pub tool_classes: Vec<trs::types::ToolClass>,
     pub tools: Vec<trs::types::Tool>,
@@ -34,7 +34,7 @@ impl TrsResponse {
         };
 
         Ok(Self {
-            gh_trs_config: HashMap::new(),
+            gh_trs_meta: HashMap::new(),
             service_info,
             tool_classes,
             tools,
@@ -48,33 +48,31 @@ impl TrsResponse {
         &mut self,
         owner: impl AsRef<str>,
         name: impl AsRef<str>,
-        config: &metadata::types::Config,
+        meta: &metadata::types::Config,
         verified: bool,
     ) -> Result<()> {
-        match self.tools.iter_mut().find(|t| t.id == config.id) {
+        match self.tools.iter_mut().find(|t| t.id == meta.id) {
             Some(tool) => {
                 // update tool
-                tool.add_new_tool_version(config, &owner, &name, verified)?;
+                tool.add_new_tool_version(meta, &owner, &name, verified)?;
             }
             None => {
                 // create tool and add
-                let mut tool = trs::types::Tool::new(config, &owner, &name)?;
-                tool.add_new_tool_version(config, &owner, &name, verified)?;
+                let mut tool = trs::types::Tool::new(meta, &owner, &name)?;
+                tool.add_new_tool_version(meta, &owner, &name, verified)?;
                 self.tools.push(tool);
             }
         };
 
-        self.tools_descriptor.insert(
-            (config.id, config.version.clone()),
-            generate_descriptor(config)?,
-        );
+        self.tools_descriptor
+            .insert((meta.id, meta.version.clone()), generate_descriptor(meta)?);
         self.tools_files
-            .insert((config.id, config.version.clone()), generate_files(config)?);
+            .insert((meta.id, meta.version.clone()), generate_files(meta)?);
         self.tools_tests
-            .insert((config.id, config.version.clone()), generate_tests(config)?);
+            .insert((meta.id, meta.version.clone()), generate_tests(meta)?);
 
-        self.gh_trs_config
-            .insert((config.id, config.version.clone()), config.clone());
+        self.gh_trs_meta
+            .insert((meta.id, meta.version.clone()), meta.clone());
 
         Ok(())
     }
@@ -97,8 +95,8 @@ pub fn generate_tool_classes(
     }
 }
 
-pub fn generate_descriptor(config: &metadata::types::Config) -> Result<trs::types::FileWrapper> {
-    let primary_wf = config.workflow.primary_wf()?;
+pub fn generate_descriptor(meta: &metadata::types::Config) -> Result<trs::types::FileWrapper> {
+    let primary_wf = meta.workflow.primary_wf()?;
     let (content, checksum) = match remote::fetch_raw_content(&primary_wf.url) {
         Ok(content) => {
             let checksum = trs::types::Checksum::new_from_string(content.clone());
@@ -113,8 +111,8 @@ pub fn generate_descriptor(config: &metadata::types::Config) -> Result<trs::type
     })
 }
 
-pub fn generate_files(config: &metadata::types::Config) -> Result<Vec<trs::types::ToolFile>> {
-    Ok(config
+pub fn generate_files(meta: &metadata::types::Config) -> Result<Vec<trs::types::ToolFile>> {
+    Ok(meta
         .workflow
         .files
         .iter()
@@ -132,9 +130,8 @@ pub fn generate_files(config: &metadata::types::Config) -> Result<Vec<trs::types
         .collect())
 }
 
-pub fn generate_tests(config: &metadata::types::Config) -> Result<Vec<trs::types::FileWrapper>> {
-    config
-        .workflow
+pub fn generate_tests(meta: &metadata::types::Config) -> Result<Vec<trs::types::FileWrapper>> {
+    meta.workflow
         .testing
         .iter()
         .map(|t| {
@@ -179,15 +176,15 @@ mod tests {
 
     #[test]
     fn test_generate_descriptor() -> Result<()> {
-        let config = metadata::io::read_config("./tests/test_config_CWL_validated.yml")?;
-        generate_descriptor(&config)?;
+        let meta = metadata::io::read_local("./tests/test_metadata_CWL_validated.yml")?;
+        generate_descriptor(&meta)?;
         Ok(())
     }
 
     #[test]
     fn test_generate_files() -> Result<()> {
-        let config = metadata::io::read_config("./tests/test_config_CWL_validated.yml")?;
-        let files = generate_files(&config)?;
+        let meta = metadata::io::read_local("./tests/test_metadata_CWL_validated.yml")?;
+        let files = generate_files(&meta)?;
         let expect = serde_json::from_str::<Vec<trs::types::ToolFile>>(
             r#"
 [
@@ -223,8 +220,8 @@ mod tests {
 
     #[test]
     fn test_generate_tests() -> Result<()> {
-        let config = metadata::io::read_config("./tests/test_config_CWL_validated.yml")?;
-        let tests = generate_tests(&config)?;
+        let meta = metadata::io::read_local("./tests/test_metadata_CWL_validated.yml")?;
+        let tests = generate_tests(&meta)?;
         let expect = serde_json::from_str::<Vec<trs::types::FileWrapper>>(
             r#"
 [

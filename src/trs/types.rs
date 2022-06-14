@@ -218,11 +218,11 @@ pub struct Tool {
 
 impl Tool {
     pub fn new(
-        config: &metadata::types::Config,
+        meta: &metadata::types::Config,
         owner: impl AsRef<str>,
         name: impl AsRef<str>,
     ) -> Result<Self> {
-        let organization = config
+        let organization = meta
             .authors
             .iter()
             .map(|a| format!("@{}", a.github_account))
@@ -233,14 +233,14 @@ impl Tool {
                 "https://{}.github.io/{}/tools/{}",
                 owner.as_ref(),
                 name.as_ref(),
-                config.id,
+                meta.id,
             ))?,
-            id: config.id,
+            id: meta.id,
             aliases: None,
             organization,
-            name: Some(config.workflow.name.clone()),
+            name: Some(meta.workflow.name.clone()),
             tool_class: ToolClass::default(),
-            description: Some(config.workflow.readme.clone()),
+            description: Some(meta.workflow.readme.clone()),
             meta_version: None,
             has_checker: Some(true),
             checker_url: Some(Url::parse("https://github.com/ddbj/yevis")?),
@@ -248,11 +248,11 @@ impl Tool {
         })
     }
 
-    /// Scans for versions field and updates them based on the version of the config.
+    /// Scans for versions field and updates them based on the version of the meta.
     /// If the same version already exists, it will be overwritten.
     pub fn add_new_tool_version(
         &mut self,
-        config: &metadata::types::Config,
+        meta: &metadata::types::Config,
         owner: impl AsRef<str>,
         name: impl AsRef<str>,
         verified: bool,
@@ -261,22 +261,22 @@ impl Tool {
             .versions
             .clone()
             .into_iter()
-            .filter(|v| v.version() != config.version)
+            .filter(|v| v.version() != meta.version)
             .collect::<Vec<ToolVersion>>();
-        let has_same_version = self.versions.iter().any(|v| v.version() == config.version);
+        let has_same_version = self.versions.iter().any(|v| v.version() == meta.version);
         if has_same_version {
             // update
             let mut same_version = self
                 .versions
                 .iter()
-                .find(|v| v.version() == config.version)
+                .find(|v| v.version() == meta.version)
                 .unwrap()
                 .clone();
-            same_version.update(config, &owner, &name, verified)?;
+            same_version.update(meta, &owner, &name, verified)?;
             versions.push(same_version);
         } else {
             // new
-            versions.push(ToolVersion::new(config, &owner, &name, verified)?);
+            versions.push(ToolVersion::new(meta, &owner, &name, verified)?);
         }
         self.versions = versions;
         Ok(())
@@ -303,7 +303,7 @@ pub struct ToolVersion {
 
 impl ToolVersion {
     pub fn new(
-        config: &metadata::types::Config,
+        meta: &metadata::types::Config,
         owner: impl AsRef<str>,
         name: impl AsRef<str>,
         verified: bool,
@@ -323,25 +323,24 @@ impl ToolVersion {
 
         Ok(Self {
             author: Some(
-                config
-                    .authors
+                meta.authors
                     .iter()
                     .map(|a| a.github_account.clone())
                     .collect::<Vec<String>>(),
             ),
-            name: Some(config.workflow.name.clone()),
+            name: Some(meta.workflow.name.clone()),
             url: Url::parse(&format!(
                 "https://{}.github.io/{}/tools/{}/versions/{}",
                 owner.as_ref(),
                 name.as_ref(),
-                config.id,
-                &config.version
+                meta.id,
+                &meta.version
             ))?,
-            id: config.id,
+            id: meta.id,
             is_production: None,
             images: None,
             descriptor_type: Some(vec![DescriptorType::new(
-                &config
+                &meta
                     .workflow
                     .language
                     .r#type
@@ -359,7 +358,7 @@ impl ToolVersion {
 
     pub fn update(
         &mut self,
-        config: &metadata::types::Config,
+        meta: &metadata::types::Config,
         owner: impl AsRef<str>,
         name: impl AsRef<str>,
         verified: bool,
@@ -384,23 +383,22 @@ impl ToolVersion {
         };
 
         self.author = Some(
-            config
-                .authors
+            meta.authors
                 .iter()
                 .map(|a| a.github_account.clone())
                 .collect::<Vec<String>>(),
         );
-        self.name = Some(config.workflow.name.clone());
+        self.name = Some(meta.workflow.name.clone());
         self.url = Url::parse(&format!(
             "https://{}.github.io/{}/tools/{}/versions/{}",
             owner.as_ref(),
             name.as_ref(),
-            config.id,
-            &config.version
+            meta.id,
+            &meta.version
         ))?;
-        self.id = config.id;
+        self.id = meta.id;
         self.descriptor_type = Some(vec![DescriptorType::new(
-            &config
+            &meta
                 .workflow
                 .language
                 .r#type
@@ -544,8 +542,8 @@ mod tests {
 
     #[test]
     fn test_tool_new() -> Result<()> {
-        let config = metadata::io::read_config("./tests/test_config_CWL_validated.yml")?;
-        let tool = Tool::new(&config, "test_owner", "test_name")?;
+        let meta = metadata::io::read_local("./tests/test_metadata_CWL_validated.yml")?;
+        let tool = Tool::new(&meta, "test_owner", "test_name")?;
 
         let expect = serde_json::from_str::<Tool>(
             r#"
@@ -572,11 +570,11 @@ mod tests {
 
     #[test]
     fn test_tool_add_new_tool_version() -> Result<()> {
-        let config = metadata::io::read_config("./tests/test_config_CWL_validated.yml")?;
-        let mut tool = Tool::new(&config, "test_owner", "test_name")?;
-        tool.add_new_tool_version(&config, "test_owner", "test_name", true)?;
+        let meta = metadata::io::read_local("./tests/test_metadata_CWL_validated.yml")?;
+        let mut tool = Tool::new(&meta, "test_owner", "test_name")?;
+        tool.add_new_tool_version(&meta, "test_owner", "test_name", true)?;
         assert_eq!(tool.versions.len(), 1);
-        tool.add_new_tool_version(&config, "test_owner", "test_name", true)?;
+        tool.add_new_tool_version(&meta, "test_owner", "test_name", true)?;
         assert_eq!(tool.versions.len(), 1);
 
         //         let expect = serde_json::from_str::<Tool>(
@@ -616,8 +614,8 @@ mod tests {
 
     #[test]
     fn test_tool_version_new() -> Result<()> {
-        let config = metadata::io::read_config("./tests/test_config_CWL_validated.yml")?;
-        ToolVersion::new(&config, "test_owner", "test_name", true)?;
+        let meta = metadata::io::read_local("./tests/test_metadata_CWL_validated.yml")?;
+        ToolVersion::new(&meta, "test_owner", "test_name", true)?;
         //         let expect = serde_json::from_str::<ToolVersion>(
         //             r#"
         // {
@@ -639,8 +637,8 @@ mod tests {
 
     #[test]
     fn test_tool_version_version() -> Result<()> {
-        let config = metadata::io::read_config("./tests/test_config_CWL_validated.yml")?;
-        let tool_version = ToolVersion::new(&config, "test_owner", "test_name", true)?;
+        let meta = metadata::io::read_local("./tests/test_metadata_CWL_validated.yml")?;
+        let tool_version = ToolVersion::new(&meta, "test_owner", "test_name", true)?;
         let version = tool_version.version();
         assert_eq!(version, "1.0.0");
         Ok(())

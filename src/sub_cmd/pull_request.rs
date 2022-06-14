@@ -11,7 +11,7 @@ use std::time;
 use url::Url;
 
 pub fn pull_request(
-    configs: &Vec<metadata::types::Config>,
+    meta_vec: &Vec<metadata::types::Config>,
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
 ) -> Result<()> {
@@ -26,26 +26,26 @@ pub fn pull_request(
         fork_repository(&gh_token, &user, &repo_owner, &repo_name, &default_branch)?;
     }
 
-    for config in configs {
+    for meta in meta_vec {
         info!(
             "Creating a pull request based on workflow_id: {}, version: {}",
-            config.id, config.version
+            meta.id, meta.version
         );
         create_branch(
             &gh_token,
             &user,
             &repo_name,
-            &config.id.to_string(),
+            &meta.id.to_string(),
             &default_branch_sha,
         )?;
-        commit_config(&gh_token, &user, &repo_name, config)?;
+        commit_meta(&gh_token, &user, &repo_name, meta)?;
         create_pull_request(
             &gh_token,
             &user,
             &repo_owner,
             &repo_name,
             &default_branch,
-            config,
+            meta,
         )?;
     }
     Ok(())
@@ -342,29 +342,23 @@ fn get_contents_blob_sha(
     })
 }
 
-fn commit_config(
+fn commit_meta(
     gh_token: impl AsRef<str>,
     owner: impl AsRef<str>,
     name: impl AsRef<str>,
-    config: &metadata::types::Config,
+    meta: &metadata::types::Config,
 ) -> Result<()> {
-    let config_path = PathBuf::from(format!(
-        "{}/yevis-metadata-{}.yml",
-        &config.id, &config.version
-    ));
-    let config_content = serde_yaml::to_string(&config)?;
-    let commit_message = format!(
-        "Add workflow, id: {} version: {}",
-        &config.id, &config.version
-    );
+    let meta_path = PathBuf::from(format!("{}/yevis-metadata-{}.yml", &meta.id, &meta.version));
+    let meta_content = serde_yaml::to_string(&meta)?;
+    let commit_message = format!("Add workflow, id: {} version: {}", &meta.id, &meta.version);
     create_or_update_file(
         &gh_token,
         &owner,
         &name,
-        &config_path,
+        &meta_path,
         &commit_message,
-        &config_content,
-        &config.id.to_string(),
+        &meta_content,
+        &meta.id.to_string(),
     )?;
     Ok(())
 }
@@ -375,10 +369,10 @@ fn create_pull_request(
     owner: impl AsRef<str>,
     name: impl AsRef<str>,
     branch: impl AsRef<str>,
-    config: &metadata::types::Config,
+    meta: &metadata::types::Config,
 ) -> Result<()> {
-    let title = format!("Add workflow: {}", config.workflow.name);
-    let head = format!("{}:{}", user.as_ref(), &config.id);
+    let title = format!("Add workflow: {}", meta.workflow.name);
+    let head = format!("{}:{}", user.as_ref(), &meta.id);
     info!(
         "Creating pull request to {}/{}",
         owner.as_ref(),

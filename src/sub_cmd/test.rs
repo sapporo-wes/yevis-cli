@@ -13,7 +13,7 @@ use url::Url;
 use uuid::Uuid;
 
 pub fn test(
-    configs: &Vec<metadata::types::Config>,
+    meta_vec: &Vec<metadata::types::Config>,
     wes_loc: &Option<Url>,
     docker_host: &Url,
 ) -> Result<()> {
@@ -36,16 +36,13 @@ pub fn test(
 
     let in_ci = env::in_ci();
 
-    for config in configs {
-        info!(
-            "Test workflow_id: {}, version: {}",
-            config.id, config.version
-        );
+    for meta in meta_vec {
+        info!("Test workflow_id: {}, version: {}", meta.id, meta.version);
         let mut test_results = vec![];
-        for test_case in &config.workflow.testing {
+        for test_case in &meta.workflow.testing {
             info!("Testing test case: {}", test_case.id);
 
-            let form = wes::test_case_to_form(&config.workflow, test_case)?;
+            let form = wes::test_case_to_form(&meta.workflow, test_case)?;
             debug!("Form:\n{:#?}", &form);
             let run_id = wes::post_run(&wes_loc, form)?;
             info!("WES run_id: {}", run_id);
@@ -61,7 +58,7 @@ pub fn test(
 
             let run_log = serde_json::to_string_pretty(&wes::get_run_log(&wes_loc, &run_id)?)?;
             if in_ci {
-                write_test_log(&config.id, &config.version, &test_case.id, &run_log)?;
+                write_test_log(&meta.id, &meta.version, &test_case.id, &run_log)?;
             }
             match status {
                 wes::RunStatus::Complete => {
@@ -86,7 +83,7 @@ pub fn test(
         match check_test_results(test_results) {
             Ok(()) => info!(
                 "Passed all test cases in workflow_id: {}, version: {}",
-                config.id, config.version
+                meta.id, meta.version
             ),
             Err(e) => bail!(e),
         };

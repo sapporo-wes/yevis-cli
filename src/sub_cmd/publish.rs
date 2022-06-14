@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use url::Url;
 
 pub fn publish(
-    configs: &Vec<metadata::types::Config>,
+    meta_vec: &Vec<metadata::types::Config>,
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
     verified: bool,
@@ -35,16 +35,16 @@ pub fn publish(
     let latest_commit_sha =
         gh::api::get_latest_commit_sha(&gh_token, &owner, &name, &branch, None)?;
     let mut trs_response = trs::response::TrsResponse::new(&owner, &name)?;
-    for config in configs {
-        trs_response.add(&owner, &name, config, verified)?;
+    for meta in meta_vec {
+        trs_response.add(&owner, &name, meta, verified)?;
     }
     let trs_contents = generate_trs_contents(trs_response)?;
     let new_tree_sha =
         gh::api::create_tree(&gh_token, &owner, &name, Some(&branch_sha), trs_contents)?;
-    let mut commit_message = if configs.len() == 1 {
+    let mut commit_message = if meta_vec.len() == 1 {
         format!(
             "Publish workflow, id: {} version: {} by yevis",
-            configs[0].id, configs[0].version,
+            meta_vec[0].id, meta_vec[0].version,
         )
     } else {
         "Publish multiple workflows by yevis".to_string()
@@ -116,7 +116,7 @@ fn generate_trs_contents(trs_res: trs::response::TrsResponse) -> Result<HashMap<
         PathBuf::from("tools/index.json"),
         serde_json::to_string(&trs_res.tools)?,
     );
-    for ((id, version), config) in trs_res.gh_trs_config.iter() {
+    for ((id, version), meta) in trs_res.gh_trs_meta.iter() {
         let tools_id = trs_res.tools.iter().find(|t| &t.id == id).unwrap();
         let tools_id_versions = tools_id.versions.clone();
         let tools_id_versions_version = tools_id_versions
@@ -130,14 +130,14 @@ fn generate_trs_contents(trs_res: trs::response::TrsResponse) -> Result<HashMap<
         let tools_files = trs_res.tools_files.get(&(*id, version.clone())).unwrap();
         let tools_tests = trs_res.tools_tests.get(&(*id, version.clone())).unwrap();
 
-        let desc_type = config.workflow.language.r#type.clone().unwrap().to_string();
+        let desc_type = meta.workflow.language.r#type.clone().unwrap().to_string();
 
         map.insert(
             PathBuf::from(format!(
                 "tools/{}/versions/{}/yevis-metadata.json",
                 id, version
             )),
-            serde_json::to_string(&config)?,
+            serde_json::to_string(&meta)?,
         );
         map.insert(
             PathBuf::from(format!("tools/{}/index.json", id)),

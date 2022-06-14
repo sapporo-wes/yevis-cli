@@ -18,15 +18,12 @@ pub fn make_template(
 ) -> Result<()> {
     info!("Making a template from {}", wf_loc);
 
-    let config = generate_metadata(wf_loc, gh_token, url_type)?;
+    let meta = generate_metadata(wf_loc, gh_token, url_type)?;
 
-    debug!(
-        "template metadata file:\n{}",
-        serde_yaml::to_string(&config)?
-    );
+    debug!("template metadata file:\n{}", serde_yaml::to_string(&meta)?);
 
     let file_ext = metadata::io::parse_file_ext(&output)?;
-    metadata::io::write_config(&config, &output, &file_ext)?;
+    metadata::io::write_local(&meta, &output, &file_ext)?;
     Ok(())
 }
 

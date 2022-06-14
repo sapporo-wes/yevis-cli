@@ -14,39 +14,36 @@ use std::str::FromStr;
 use url::Url;
 
 pub fn validate(
-    config_locs: Vec<impl AsRef<str>>,
+    meta_locs: Vec<impl AsRef<str>>,
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
 ) -> Result<Vec<metadata::types::Config>> {
     let gh_token = env::github_token(gh_token)?;
 
-    let mut configs = vec![];
-    for config_loc in config_locs {
-        info!("Validating {}", config_loc.as_ref());
-        let mut config = metadata::io::read_config(config_loc.as_ref())?;
-        validate_version(&config, &repo)?;
-        validate_license(&mut config, &gh_token)?;
-        validate_authors(&config)?;
-        validate_language(&config)?;
-        validate_wf_name(&config.workflow.name)?;
-        validate_and_update_workflow(&mut config, &gh_token)?;
-        debug!(
-            "updated metadata file:\n{}",
-            serde_yaml::to_string(&config)?
-        );
-        configs.push(config);
+    let mut meta_vec = vec![];
+    for meta_loc in meta_locs {
+        info!("Validating {}", meta_loc.as_ref());
+        let mut meta = metadata::io::read_local(meta_loc.as_ref())?;
+        validate_version(&meta, &repo)?;
+        validate_license(&mut meta, &gh_token)?;
+        validate_authors(&meta)?;
+        validate_language(&meta)?;
+        validate_wf_name(&meta.workflow.name)?;
+        validate_and_update_workflow(&mut meta, &gh_token)?;
+        debug!("updated metadata file:\n{}", serde_yaml::to_string(&meta)?);
+        meta_vec.push(meta);
     }
 
-    Ok(configs)
+    Ok(meta_vec)
 }
 
-fn validate_version(config: &metadata::types::Config, repo: impl AsRef<str>) -> Result<()> {
+fn validate_version(meta: &metadata::types::Config, repo: impl AsRef<str>) -> Result<()> {
     let version =
-        version::Version::from_str(&config.version).context("Invalid version, must be x.y.z")?;
+        version::Version::from_str(&meta.version).context("Invalid version, must be x.y.z")?;
     let (owner, name) = gh::parse_repo(&repo)?;
     let trs_endpoint = trs::api::TrsEndpoint::new_gh_pages(&owner, &name)?;
     if trs_endpoint.is_valid().is_ok() {
-        if let Ok(versions) = trs_endpoint.all_versions(&config.id.to_string()) {
+        if let Ok(versions) = trs_endpoint.all_versions(&meta.id.to_string()) {
             let versions = versions
                 .iter()
                 .map(|v| version::Version::from_str(v))
@@ -69,22 +66,22 @@ fn validate_version(config: &metadata::types::Config, repo: impl AsRef<str>) -> 
 /// Contact GitHub API and Zenodo API to confirm.
 /// Change the license to `spdx_id`
 /// e.g., `apache-2.0` -> `Apache-2.0`
-fn validate_license(config: &mut metadata::types::Config, gh_token: impl AsRef<str>) -> Result<()> {
-    match &config.license {
+fn validate_license(meta: &mut metadata::types::Config, gh_token: impl AsRef<str>) -> Result<()> {
+    match &meta.license {
         Some(license) => {
             let spdx_id = validate_with_github_license_api(gh_token, license)?;
             validate_with_zenodo_license_api(&spdx_id)?;
-            config.license = Some(spdx_id);
+            meta.license = Some(spdx_id);
         },
         None => bail!("`license` is not specified. In Yevis, `license` must be a distributable license such as `CC0-1.0` or `MIT`"),
     };
     Ok(())
 }
 
-fn validate_authors(config: &metadata::types::Config) -> Result<()> {
+fn validate_authors(meta: &metadata::types::Config) -> Result<()> {
     let orcid_re = Regex::new(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")?;
     let mut account_set: HashSet<&str> = HashSet::new();
-    for author in &config.authors {
+    for author in &meta.authors {
         ensure!(author.name.is_some(), "`authors[].name` is not specified",);
         if let Some(orcid) = &author.orcid {
             ensure!(orcid_re.is_match(orcid), "`authors[].orcid` is not valid",);
@@ -96,19 +93,19 @@ fn validate_authors(config: &metadata::types::Config) -> Result<()> {
         account_set.insert(author.github_account.as_str());
     }
     ensure!(
-        !config.authors.is_empty(),
+        !meta.authors.is_empty(),
         "`authors` must have more than one author",
     );
     Ok(())
 }
 
-fn validate_language(config: &metadata::types::Config) -> Result<()> {
+fn validate_language(meta: &metadata::types::Config) -> Result<()> {
     ensure!(
-        config.workflow.language.r#type.is_some(),
+        meta.workflow.language.r#type.is_some(),
         "`workflow.language.type` is not specified",
     );
     ensure!(
-        config.workflow.language.version.is_some(),
+        meta.workflow.language.version.is_some(),
         "`workflow.language.version` is not specified",
     );
     Ok(())
@@ -125,26 +122,26 @@ fn update_url(
 }
 
 fn validate_and_update_workflow(
-    config: &mut metadata::types::Config,
+    meta: &mut metadata::types::Config,
     gh_token: impl AsRef<str>,
 ) -> Result<()> {
     let mut branch_memo = HashMap::new();
     let mut commit_memo = HashMap::new();
 
-    config.workflow.readme = update_url(
+    meta.workflow.readme = update_url(
         &gh_token,
-        &config.workflow.readme,
+        &meta.workflow.readme,
         Some(&mut branch_memo),
         Some(&mut commit_memo),
     )
     .map_err(|e| anyhow!("Invalid `workflow.readme`: {}", e))?;
 
     ensure!(
-        config.workflow.primary_wf().is_ok(),
+        meta.workflow.primary_wf().is_ok(),
         "One `primary` needs to be specified in the `workflow.files[].type` field",
     );
 
-    for file in &mut config.workflow.files {
+    for file in &mut meta.workflow.files {
         file.url = update_url(
             &gh_token,
             &file.url,
@@ -156,7 +153,7 @@ fn validate_and_update_workflow(
     }
 
     let mut test_id_set: HashSet<&str> = HashSet::new();
-    for testing in &mut config.workflow.testing {
+    for testing in &mut meta.workflow.testing {
         ensure!(
             !test_id_set.contains(testing.id.as_str()),
             "`workflow.testing[].id` is not unique, duplicated id: {}",

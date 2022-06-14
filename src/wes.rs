@@ -479,8 +479,8 @@ mod tests {
         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
         start_wes(&docker_host)?;
         let wes_loc = Url::parse(&default_wes_location())?;
-        let config = metadata::io::read_config("./tests/test_config_CWL_validated.yml")?;
-        let form = test_case_to_form(&config.workflow, &config.workflow.testing[0])?;
+        let meta = metadata::io::read_local("./tests/test_metadata_CWL_validated.yml")?;
+        let form = test_case_to_form(&meta.workflow, &meta.workflow.testing[0])?;
         let run_id = post_run(&wes_loc, form)?;
         assert!(!run_id.is_empty());
         stop_wes(&docker_host)?;

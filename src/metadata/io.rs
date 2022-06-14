@@ -30,14 +30,14 @@ pub fn parse_file_ext(path: impl AsRef<Path>) -> Result<FileExt> {
     }
 }
 
-pub fn write_config(
-    config: &metadata::types::Config,
+pub fn write_local(
+    meta: &metadata::types::Config,
     path: impl AsRef<Path>,
     ext: &FileExt,
 ) -> Result<()> {
     let content = match ext {
-        FileExt::Yaml => serde_yaml::to_string(&config)?,
-        FileExt::Json => serde_json::to_string_pretty(&config)?,
+        FileExt::Yaml => serde_yaml::to_string(&meta)?,
+        FileExt::Json => serde_json::to_string_pretty(&meta)?,
     };
     let mut buffer = BufWriter::new(fs::File::create(path)?);
     buffer.write_all(content.as_bytes())?;
@@ -45,7 +45,7 @@ pub fn write_config(
     Ok(())
 }
 
-pub fn read_config(location: impl AsRef<str>) -> Result<metadata::types::Config> {
+pub fn read_local(location: impl AsRef<str>) -> Result<metadata::types::Config> {
     match Url::parse(location.as_ref()) {
         Ok(url) => {
             // as remote url
