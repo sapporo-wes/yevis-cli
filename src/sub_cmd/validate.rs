@@ -1,64 +1,39 @@
-use crate::env;
-use crate::file_url;
 use crate::gh;
 use crate::metadata;
-use crate::raw_url;
-use crate::trs;
-use crate::version;
+use crate::remote;
 
-use anyhow::{anyhow, bail, ensure, Context, Result};
-use log::{debug, info};
+use anyhow::{anyhow, bail, ensure, Result};
+use log::debug;
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
-use std::str::FromStr;
 use url::Url;
 
 pub fn validate(
-    meta_locs: Vec<impl AsRef<str>>,
-    gh_token: &Option<impl AsRef<str>>,
-    repo: impl AsRef<str>,
-) -> Result<Vec<metadata::types::Config>> {
-    let gh_token = env::github_token(gh_token)?;
-
-    let mut meta_vec = vec![];
-    for meta_loc in meta_locs {
-        info!("Validating {}", meta_loc.as_ref());
-        let mut meta = metadata::io::read_local(meta_loc.as_ref())?;
-        validate_version(&meta, &repo)?;
-        validate_license(&mut meta, &gh_token)?;
-        validate_authors(&meta)?;
-        validate_language(&meta)?;
-        validate_wf_name(&meta.workflow.name)?;
-        validate_and_update_workflow(&mut meta, &gh_token)?;
-        debug!("updated metadata file:\n{}", serde_yaml::to_string(&meta)?);
-        meta_vec.push(meta);
-    }
-
-    Ok(meta_vec)
+    meta_loc: impl AsRef<str>,
+    gh_token: impl AsRef<str>,
+) -> Result<metadata::types::Metadata> {
+    let mut meta = metadata::io::read(meta_loc.as_ref(), &gh_token)?;
+    validate_version(&meta.version)?;
+    validate_license(&mut meta, &gh_token)?;
+    validate_authors(&meta)?;
+    validate_language(&meta)?;
+    validate_wf_name(&meta.workflow.name)?;
+    validate_and_update_workflow(&mut meta, &gh_token)?;
+    debug!("updated metadata file:\n{}", serde_yaml::to_string(&meta)?);
+    Ok(meta)
 }
 
-fn validate_version(meta: &metadata::types::Config, repo: impl AsRef<str>) -> Result<()> {
-    let version =
-        version::Version::from_str(&meta.version).context("Invalid version, must be x.y.z")?;
-    let (owner, name) = gh::parse_repo(&repo)?;
-    let trs_endpoint = trs::api::TrsEndpoint::new_gh_pages(&owner, &name)?;
-    if trs_endpoint.is_valid().is_ok() {
-        if let Ok(versions) = trs_endpoint.all_versions(&meta.id.to_string()) {
-            let versions = versions
-                .iter()
-                .map(|v| version::Version::from_str(v))
-                .collect::<Result<Vec<version::Version>>>();
-            if let Ok(versions) = versions {
-                let latest_version = versions.into_iter().max().unwrap();
-                ensure!(
-                    version > latest_version,
-                    "Version {} is less than the latest version {}",
-                    version.to_string(),
-                    latest_version.to_string()
-                );
-            }
-        }
-    };
+/// allow characters
+/// - alphabet
+/// - number
+/// - ~!@#$%^&()_+-={}[];,.
+/// - space
+pub fn validate_version(version: impl AsRef<str>) -> Result<()> {
+    let version_re = regex::Regex::new(r"^[a-zA-Z0-9\~!@\#\$%\^\&\(\)_\+\-=\{\}\[\];,\. ]+$")?;
+    ensure!(
+        version_re.is_match(version.as_ref()),
+        "The version field contains invalid characters, only alphanumeric, space and ~!@#$%^&()_+-={{}}[];,. are allowed"
+    );
     Ok(())
 }
 
@@ -66,112 +41,10 @@ fn validate_version(meta: &metadata::types::Config, repo: impl AsRef<str>) -> Re
 /// Contact GitHub API and Zenodo API to confirm.
 /// Change the license to `spdx_id`
 /// e.g., `apache-2.0` -> `Apache-2.0`
-fn validate_license(meta: &mut metadata::types::Config, gh_token: impl AsRef<str>) -> Result<()> {
-    match &meta.license {
-        Some(license) => {
-            let spdx_id = validate_with_github_license_api(gh_token, license)?;
-            validate_with_zenodo_license_api(&spdx_id)?;
-            meta.license = Some(spdx_id);
-        },
-        None => bail!("`license` is not specified. In Yevis, `license` must be a distributable license such as `CC0-1.0` or `MIT`"),
-    };
-    Ok(())
-}
-
-fn validate_authors(meta: &metadata::types::Config) -> Result<()> {
-    let orcid_re = Regex::new(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")?;
-    let mut account_set: HashSet<&str> = HashSet::new();
-    for author in &meta.authors {
-        ensure!(author.name.is_some(), "`authors[].name` is not specified",);
-        if let Some(orcid) = &author.orcid {
-            ensure!(orcid_re.is_match(orcid), "`authors[].orcid` is not valid",);
-        };
-        ensure!(
-            !account_set.contains(author.github_account.as_str()),
-            "`authors[].github_account` is not unique",
-        );
-        account_set.insert(author.github_account.as_str());
-    }
-    ensure!(
-        !meta.authors.is_empty(),
-        "`authors` must have more than one author",
-    );
-    Ok(())
-}
-
-fn validate_language(meta: &metadata::types::Config) -> Result<()> {
-    ensure!(
-        meta.workflow.language.r#type.is_some(),
-        "`workflow.language.type` is not specified",
-    );
-    ensure!(
-        meta.workflow.language.version.is_some(),
-        "`workflow.language.version` is not specified",
-    );
-    Ok(())
-}
-
-fn update_url(
-    gh_token: impl AsRef<str>,
-    url: &Url,
-    branch_memo: Option<&mut HashMap<String, String>>,
-    commit_memo: Option<&mut HashMap<String, String>>,
-) -> Result<Url> {
-    let file_url = file_url::FileUrl::new(gh_token, url, branch_memo, commit_memo)?;
-    file_url.to_url(&raw_url::UrlType::Commit)
-}
-
-fn validate_and_update_workflow(
-    meta: &mut metadata::types::Config,
-    gh_token: impl AsRef<str>,
-) -> Result<()> {
-    let mut branch_memo = HashMap::new();
-    let mut commit_memo = HashMap::new();
-
-    meta.workflow.readme = update_url(
-        &gh_token,
-        &meta.workflow.readme,
-        Some(&mut branch_memo),
-        Some(&mut commit_memo),
-    )
-    .map_err(|e| anyhow!("Invalid `workflow.readme`: {}", e))?;
-
-    ensure!(
-        meta.workflow.primary_wf().is_ok(),
-        "One `primary` needs to be specified in the `workflow.files[].type` field",
-    );
-
-    for file in &mut meta.workflow.files {
-        file.url = update_url(
-            &gh_token,
-            &file.url,
-            Some(&mut branch_memo),
-            Some(&mut commit_memo),
-        )
-        .map_err(|e| anyhow!("Invalid `workflow.files[].url`: {}", e))?;
-        file.complement_target()?;
-    }
-
-    let mut test_id_set: HashSet<&str> = HashSet::new();
-    for testing in &mut meta.workflow.testing {
-        ensure!(
-            !test_id_set.contains(testing.id.as_str()),
-            "`workflow.testing[].id` is not unique, duplicated id: {}",
-            testing.id.as_str()
-        );
-        test_id_set.insert(testing.id.as_str());
-
-        for file in &mut testing.files {
-            file.url = update_url(
-                &gh_token,
-                &file.url,
-                Some(&mut branch_memo),
-                Some(&mut commit_memo),
-            )
-            .map_err(|e| anyhow!("Invalid `workflow.testing[].files[].url`: {}", e))?;
-            file.complement_target()?;
-        }
-    }
+fn validate_license(meta: &mut metadata::types::Metadata, gh_token: impl AsRef<str>) -> Result<()> {
+    let spdx_id = validate_with_github_license_api(gh_token, &meta.license)?;
+    validate_with_zenodo_license_api(&spdx_id)?;
+    meta.license = spdx_id;
     Ok(())
 }
 
@@ -220,6 +93,35 @@ fn validate_with_zenodo_license_api(license: impl AsRef<str>) -> Result<()> {
     Ok(())
 }
 
+fn validate_authors(meta: &metadata::types::Metadata) -> Result<()> {
+    let orcid_re = Regex::new(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")?;
+    let mut account_set: HashSet<&str> = HashSet::new();
+    for author in &meta.authors {
+        if let Some(orcid) = &author.orcid {
+            ensure!(orcid_re.is_match(orcid), "`authors[].orcid` is not valid",);
+        };
+        ensure!(
+            !account_set.contains(author.github_account.as_str()),
+            "`authors[].github_account` is not unique",
+        );
+        account_set.insert(author.github_account.as_str());
+    }
+    ensure!(
+        !meta.authors.is_empty(),
+        "`authors` must have more than one author",
+    );
+    Ok(())
+}
+
+fn validate_language(meta: &metadata::types::Metadata) -> Result<()> {
+    match meta.workflow.language.r#type {
+        metadata::types::LanguageType::Unknown => {
+            bail!("`language.type` is not specified. Please specify `CWL`, `WDL`, `NFL` or `SMK`")
+        }
+        _ => Ok(()),
+    }
+}
+
 /// allow characters
 /// - alphabet
 /// - number
@@ -235,37 +137,101 @@ pub fn validate_wf_name(wf_name: impl AsRef<str>) -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_validate_with_github_license_api() -> Result<()> {
-        let gh_token = env::github_token(&None::<String>)?;
-        validate_with_github_license_api(&gh_token, "cc0-1.0")?;
-        validate_with_github_license_api(&gh_token, "mit")?;
-        validate_with_github_license_api(&gh_token, "MIT")?;
-        validate_with_github_license_api(&gh_token, "apache-2.0")?;
-        Ok(())
-    }
-
-    #[test]
-    fn test_validate_with_zenodo_license_api() -> Result<()> {
-        validate_with_zenodo_license_api("cc0-1.0")?;
-        validate_with_zenodo_license_api("mit")?;
-        validate_with_zenodo_license_api("MIT")?;
-        validate_with_zenodo_license_api("apache-2.0")?;
-        Ok(())
-    }
-
-    #[test]
-    fn test_validate_wf_name() -> Result<()> {
-        validate_wf_name("abc")?;
-        validate_wf_name("abcABC123")?;
-        validate_wf_name("abcABC123~!@#$%^&*()_+-={{}}[]|:;,.<>? ")?;
-        validate_wf_name("Workflow name: example_workflow-123.cwl (for example)")?;
-        let err = validate_wf_name("`");
-        assert!(err.is_err());
-        Ok(())
-    }
+fn update_url(
+    url: &Url,
+    gh_token: impl AsRef<str>,
+    branch_memo: Option<&mut HashMap<String, String>>,
+    commit_memo: Option<&mut HashMap<String, String>>,
+) -> Result<Url> {
+    let remote = remote::Remote::new(url, gh_token, branch_memo, commit_memo)?;
+    remote.to_typed_url(&remote::UrlType::Commit)
 }
+
+fn validate_and_update_workflow(
+    meta: &mut metadata::types::Metadata,
+    gh_token: impl AsRef<str>,
+) -> Result<()> {
+    let mut branch_memo = HashMap::new();
+    let mut commit_memo = HashMap::new();
+
+    meta.workflow.readme = update_url(
+        &meta.workflow.readme,
+        &gh_token,
+        Some(&mut branch_memo),
+        Some(&mut commit_memo),
+    )
+    .map_err(|e| anyhow!("Invalid `workflow.readme`: {}", e))?;
+
+    ensure!(
+        meta.workflow.primary_wf().is_ok(),
+        "One `primary` needs to be specified in the `workflow.files[].type` field",
+    );
+
+    for file in &mut meta.workflow.files {
+        file.url = update_url(
+            &file.url,
+            &gh_token,
+            Some(&mut branch_memo),
+            Some(&mut commit_memo),
+        )
+        .map_err(|e| anyhow!("Invalid `workflow.files[].url`: {}", e))?;
+        file.complement_target()?;
+    }
+
+    let mut test_id_set: HashSet<&str> = HashSet::new();
+    for testing in &mut meta.workflow.testing {
+        ensure!(
+            !test_id_set.contains(testing.id.as_str()),
+            "`workflow.testing[].id` is not unique, duplicated id: {}",
+            testing.id.as_str()
+        );
+        test_id_set.insert(testing.id.as_str());
+
+        for file in &mut testing.files {
+            file.url = update_url(
+                &file.url,
+                &gh_token,
+                Some(&mut branch_memo),
+                Some(&mut commit_memo),
+            )
+            .map_err(|e| anyhow!("Invalid `workflow.testing[].files[].url`: {}", e))?;
+            file.complement_target()?;
+        }
+    }
+    Ok(())
+}
+
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+
+//     #[test]
+//     fn test_validate_with_github_license_api() -> Result<()> {
+//         let gh_token = env::github_token(&None::<String>)?;
+//         validate_with_github_license_api(&gh_token, "cc0-1.0")?;
+//         validate_with_github_license_api(&gh_token, "mit")?;
+//         validate_with_github_license_api(&gh_token, "MIT")?;
+//         validate_with_github_license_api(&gh_token, "apache-2.0")?;
+//         Ok(())
+//     }
+
+//     #[test]
+//     fn test_validate_with_zenodo_license_api() -> Result<()> {
+//         validate_with_zenodo_license_api("cc0-1.0")?;
+//         validate_with_zenodo_license_api("mit")?;
+//         validate_with_zenodo_license_api("MIT")?;
+//         validate_with_zenodo_license_api("apache-2.0")?;
+//         Ok(())
+//     }
+
+//     #[test]
+//     fn test_validate_wf_name() -> Result<()> {
+//         validate_wf_name("abc")?;
+//         validate_wf_name("abcABC123")?;
+//         validate_wf_name("abcABC123~!@#$%^&*()_+-={{}}[]|:;,.<>? ")?;
+//         validate_wf_name("Workflow name: example_workflow-123.cwl (for example)")?;
+//         let err = validate_wf_name("`");
+//         assert!(err.is_err());
+//         Ok(())
+//     }
+// }

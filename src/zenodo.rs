@@ -18,7 +18,7 @@ use std::time;
 use url::Url;
 
 pub fn upload_and_commit_zenodo(
-    meta_vec: &mut Vec<metadata::types::Config>,
+    meta_vec: &mut Vec<metadata::types::Metadata>,
     gh_token: &Option<impl AsRef<str>>,
     repo: impl AsRef<str>,
     zenodo_community: &Option<impl AsRef<str>>,
@@ -58,7 +58,7 @@ pub fn upload_and_commit_zenodo(
 fn upload_zenodo(
     host: impl AsRef<str>,
     token: impl AsRef<str>,
-    meta: &mut metadata::types::Config,
+    meta: &mut metadata::types::Metadata,
     repo: impl AsRef<str>,
     zenodo_community: &Option<impl AsRef<str>>,
 ) -> Result<()> {
@@ -291,34 +291,35 @@ struct Deposition {
 
 impl Deposition {
     fn new(
-        meta: &metadata::types::Config,
+        meta: &metadata::types::Metadata,
         repo: impl AsRef<str>,
         zenodo_community: &Option<impl AsRef<str>>,
     ) -> Result<Self> {
-        let communities = match zenodo_community {
-            Some(zenodo_community) => vec![Community {
-                identifier: zenodo_community.as_ref().to_string(),
-            }],
-            None => vec![],
-        };
-        Ok(Self {
-            upload_type: "dataset".to_string(),
-            title: meta.id.to_string(),
-            creators: meta.authors.iter().map(Creator::new).collect(),
-            description: format!(
-                r#"These data sets are one of the workflows of <a href="https://github.com/{}">{}</a>."#,
-                repo.as_ref(),
-                repo.as_ref()
-            ),
-            access_right: "open".to_string(),
-            license: meta
-                .license
-                .clone()
-                .unwrap_or_else(|| "cc0-1.0".to_string()),
-            keywords: vec!["yevis-workflow".to_string()],
-            communities,
-            version: meta.version.clone(),
-        })
+        unimplemented!()
+        // let communities = match zenodo_community {
+        //     Some(zenodo_community) => vec![Community {
+        //         identifier: zenodo_community.as_ref().to_string(),
+        //     }],
+        //     None => vec![],
+        // };
+        // Ok(Self {
+        //     upload_type: "dataset".to_string(),
+        //     title: meta.id.to_string(),
+        //     creators: meta.authors.iter().map(Creator::new).collect(),
+        //     description: format!(
+        //         r#"These data sets are one of the workflows of <a href="https://github.com/{}">{}</a>."#,
+        //         repo.as_ref(),
+        //         repo.as_ref()
+        //     ),
+        //     access_right: "open".to_string(),
+        //     license: meta
+        //         .license
+        //         .clone()
+        //         .unwrap_or_else(|| "cc0-1.0".to_string()),
+        //     keywords: vec!["yevis-workflow".to_string()],
+        //     communities,
+        //     version: meta.version.clone(),
+        // })
     }
 }
 
@@ -333,15 +334,16 @@ struct Creator {
 
 impl Creator {
     fn new(author: &metadata::types::Author) -> Self {
-        let name = match author.name.clone() {
-            Some(name) => name,
-            None => author.github_account.clone(),
-        };
-        Self {
-            name,
-            affiliation: author.affiliation.clone(),
-            orcid: author.orcid.clone(),
-        }
+        unimplemented!()
+        // let name = match author.name.clone() {
+        //     Some(name) => name,
+        //     None => author.github_account.clone(),
+        // };
+        // Self {
+        //     name,
+        //     affiliation: author.affiliation.clone(),
+        //     orcid: author.orcid.clone(),
+        // }
     }
 }
 
@@ -355,7 +357,7 @@ struct Community {
 fn create_deposition(
     host: impl AsRef<str>,
     token: impl AsRef<str>,
-    meta: &metadata::types::Config,
+    meta: &metadata::types::Metadata,
     repo: impl AsRef<str>,
     zenodo_community: &Option<impl AsRef<str>>,
 ) -> Result<u64> {
@@ -384,7 +386,7 @@ fn update_deposition(
     host: impl AsRef<str>,
     token: impl AsRef<str>,
     deposition_id: &u64,
-    meta: &metadata::types::Config,
+    meta: &metadata::types::Metadata,
     repo: impl AsRef<str>,
     zenodo_community: &Option<impl AsRef<str>>,
 ) -> Result<()> {
@@ -642,7 +644,7 @@ fn update_deposition_files(
     Ok(())
 }
 
-fn metadata_to_files(meta: &metadata::types::Config) -> Result<Vec<ConfigFile>> {
+fn metadata_to_files(meta: &metadata::types::Metadata) -> Result<Vec<ConfigFile>> {
     let mut files = vec![];
     files.push(ConfigFile::new_from_str(
         serde_yaml::to_string(&meta)?,
@@ -747,7 +749,7 @@ fn delete_deposition_file(
 fn delete_unpublished_depositions(
     host: impl AsRef<str>,
     token: impl AsRef<str>,
-    meta: &metadata::types::Config,
+    meta: &metadata::types::Metadata,
 ) -> Result<()> {
     let draft_deposition_ids =
         list_depositions(&host, &token, &meta.id.to_string(), DepositionStatus::Draft)?;
@@ -767,7 +769,7 @@ fn delete_unpublished_depositions(
 fn update_metadata_files(
     host: impl AsRef<str>,
     token: impl AsRef<str>,
-    meta: &mut metadata::types::Config,
+    meta: &mut metadata::types::Metadata,
 ) -> Result<()> {
     let deposition_id = meta
         .zenodo
@@ -913,281 +915,281 @@ fn get_files_download_urls(
     Ok(files_map)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::sub_cmd::validate;
-    // use uuid::Uuid;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
+//     use crate::sub_cmd::validate;
+//     // use uuid::Uuid;
 
-    #[test]
-    #[ignore]
-    fn test_list_depositions() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        let ids = list_depositions(&host, &token, &meta.id.to_string(), DepositionStatus::Draft)?;
-        dbg!(&ids);
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_list_depositions() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         let ids = list_depositions(&host, &token, &meta.id.to_string(), DepositionStatus::Draft)?;
+//         dbg!(&ids);
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_new_deposition() -> Result<()> {
-        let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        Deposition::new(&meta, "ddbj/workflow-registry-dev", &None::<String>)?;
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_new_deposition() -> Result<()> {
+//         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         Deposition::new(&meta, "ddbj/workflow-registry-dev", &None::<String>)?;
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_create_deposition() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        create_deposition(
-            &host,
-            &token,
-            &meta,
-            "ddbj/workflow-registry-dev",
-            &None::<String>,
-        )?;
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_create_deposition() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         create_deposition(
+//             &host,
+//             &token,
+//             &meta,
+//             "ddbj/workflow-registry-dev",
+//             &None::<String>,
+//         )?;
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_delete_draft_deposition() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        let ids = list_depositions(&host, &token, &meta.id.to_string(), DepositionStatus::Draft)?;
-        if !ids.is_empty() {
-            let id = ids[0];
-            delete_deposition(&host, &token, &id)?;
-        }
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_delete_draft_deposition() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         let ids = list_depositions(&host, &token, &meta.id.to_string(), DepositionStatus::Draft)?;
+//         if !ids.is_empty() {
+//             let id = ids[0];
+//             delete_deposition(&host, &token, &id)?;
+//         }
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_update_deposition() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        let ids = list_depositions(&host, &token, &meta.id.to_string(), DepositionStatus::Draft)?;
-        if !ids.is_empty() {
-            let id = ids[0];
-            update_deposition(
-                &host,
-                &token,
-                &id,
-                &meta,
-                "ddbj/workflow-registry-dev",
-                &None::<String>,
-            )?;
-        }
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_update_deposition() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         let ids = list_depositions(&host, &token, &meta.id.to_string(), DepositionStatus::Draft)?;
+//         if !ids.is_empty() {
+//             let id = ids[0];
+//             update_deposition(
+//                 &host,
+//                 &token,
+//                 &id,
+//                 &meta,
+//                 "ddbj/workflow-registry-dev",
+//                 &None::<String>,
+//             )?;
+//         }
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_update_deposition_new_version() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let mut meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        meta.version = "1.0.1".to_string();
-        let id = 1018767;
-        update_deposition(
-            &host,
-            &token,
-            &id,
-            &meta,
-            "ddbj/workflow-registry-dev",
-            &None::<String>,
-        )?;
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_update_deposition_new_version() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let mut meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         meta.version = "1.0.1".to_string();
+//         let id = 1018767;
+//         update_deposition(
+//             &host,
+//             &token,
+//             &id,
+//             &meta,
+//             "ddbj/workflow-registry-dev",
+//             &None::<String>,
+//         )?;
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_metadata_to_files() -> Result<()> {
-        let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        let files = metadata_to_files(&meta)?;
-        dbg!(&files);
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_metadata_to_files() -> Result<()> {
+//         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         let files = metadata_to_files(&meta)?;
+//         dbg!(&files);
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_get_bucket_url() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let deposition_id = 1064212;
-        let bucket_url = get_bucket_url(&host, &token, &deposition_id)?;
-        dbg!(&bucket_url);
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_get_bucket_url() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let deposition_id = 1064212;
+//         let bucket_url = get_bucket_url(&host, &token, &deposition_id)?;
+//         dbg!(&bucket_url);
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_update_deposition_files() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let meta = validate::validate(
-            vec!["./yevis-metadata_gatk-workflows_mitochondria-pipeline.yml"],
-            &None::<String>,
-            "ddbj/workflow-registry",
-        )?;
-        // let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        let meta_files = metadata_to_files(&meta[0])?;
-        // let meta_files = vec![];
-        // let ids = list_depositions(
-        //     &host,
-        //     &token,
-        //     &meta.id.to_string(),
-        //     DepositionStatus::Draft,
-        // )?;
-        // let id = ids[0];
-        let id = 1064212;
-        let deposition_files = get_files_list(&host, &token, &id)?;
-        // let deposition_files = vec![];
-        update_deposition_files(&host, &token, &id, deposition_files, meta_files)?;
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_update_deposition_files() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let meta = validate::validate(
+//             vec!["./yevis-metadata_gatk-workflows_mitochondria-pipeline.yml"],
+//             &None::<String>,
+//             "ddbj/workflow-registry",
+//         )?;
+//         // let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         let meta_files = metadata_to_files(&meta[0])?;
+//         // let meta_files = vec![];
+//         // let ids = list_depositions(
+//         //     &host,
+//         //     &token,
+//         //     &meta.id.to_string(),
+//         //     DepositionStatus::Draft,
+//         // )?;
+//         // let id = ids[0];
+//         let id = 1064212;
+//         let deposition_files = get_files_list(&host, &token, &id)?;
+//         // let deposition_files = vec![];
+//         update_deposition_files(&host, &token, &id, deposition_files, meta_files)?;
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_get_files_list() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        let ids = list_depositions(
-            &host,
-            &token,
-            &meta.id.to_string(),
-            DepositionStatus::Published,
-        )?;
-        if !ids.is_empty() {
-            // let id = ids[0];
-            let id = 1018767;
-            let list = get_files_list(&host, &token, &id)?;
-            dbg!(&list);
-        }
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_get_files_list() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         let ids = list_depositions(
+//             &host,
+//             &token,
+//             &meta.id.to_string(),
+//             DepositionStatus::Published,
+//         )?;
+//         if !ids.is_empty() {
+//             // let id = ids[0];
+//             let id = 1018767;
+//             let list = get_files_list(&host, &token, &id)?;
+//             dbg!(&list);
+//         }
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_publish_deposition() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        let ids = list_depositions(&host, &token, &meta.id.to_string(), DepositionStatus::Draft)?;
-        if !ids.is_empty() {
-            let id = ids[0];
-            publish_deposition(&host, &token, &id)?;
-        }
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_publish_deposition() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         let ids = list_depositions(&host, &token, &meta.id.to_string(), DepositionStatus::Draft)?;
+//         if !ids.is_empty() {
+//             let id = ids[0];
+//             publish_deposition(&host, &token, &id)?;
+//         }
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_new_version_deposition() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        let ids = list_depositions(
-            &host,
-            &token,
-            &meta.id.to_string(),
-            DepositionStatus::Published,
-        )?;
-        if !ids.is_empty() {
-            let id = ids[0];
-            new_version_deposition(&host, &token, &id)?;
-        }
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_new_version_deposition() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         let ids = list_depositions(
+//             &host,
+//             &token,
+//             &meta.id.to_string(),
+//             DepositionStatus::Published,
+//         )?;
+//         if !ids.is_empty() {
+//             let id = ids[0];
+//             new_version_deposition(&host, &token, &id)?;
+//         }
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_upload_zenodo() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let mut meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        // meta.id = Uuid::new_v4();
-        upload_zenodo(
-            &host,
-            &token,
-            &mut meta,
-            "ddbj/workflow-registry-dev",
-            &None::<String>,
-        )?;
-        // update_metadata_files(&host, &token, &mut meta)?;
-        // println!("{}", serde_yaml::to_string(&meta)?);
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_upload_zenodo() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let mut meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         // meta.id = Uuid::new_v4();
+//         upload_zenodo(
+//             &host,
+//             &token,
+//             &mut meta,
+//             "ddbj/workflow-registry-dev",
+//             &None::<String>,
+//         )?;
+//         // update_metadata_files(&host, &token, &mut meta)?;
+//         // println!("{}", serde_yaml::to_string(&meta)?);
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_retrieve_record() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        let ids = list_depositions(
-            &host,
-            &token,
-            &meta.id.to_string(),
-            DepositionStatus::Published,
-        )?;
-        if !ids.is_empty() {
-            let id = ids[0];
-            let (zenodo, version) = retrieve_record(&host, &token, &id)?;
-            dbg!(&zenodo);
-            dbg!(&version);
-        }
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_retrieve_record() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         let ids = list_depositions(
+//             &host,
+//             &token,
+//             &meta.id.to_string(),
+//             DepositionStatus::Published,
+//         )?;
+//         if !ids.is_empty() {
+//             let id = ids[0];
+//             let (zenodo, version) = retrieve_record(&host, &token, &id)?;
+//             dbg!(&zenodo);
+//             dbg!(&version);
+//         }
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_update_metadata_files() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let mut meta = validate::validate(
-            vec!["./tests/test-metadata-SMK.yml"],
-            &None::<String>,
-            "ddbj/workflow-registry-dev",
-        )?[0]
-            .clone();
-        let zenodo = metadata::types::Zenodo {
-            concept_doi: "10.5072/zenodo.1018220".to_string(),
-            doi: "10.5072/zenodo.1018220".to_string(),
-            id: 1018220,
-            url: Url::parse("https://sandbox.zenodo.org/record/1018220")?,
-        };
-        meta.zenodo = Some(zenodo);
-        update_metadata_files(&host, &token, &mut meta)?;
-        Ok(())
-    }
+//     #[test]
+//     #[ignore]
+//     fn test_update_metadata_files() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let mut meta = validate::validate(
+//             vec!["./tests/test-metadata-SMK.yml"],
+//             &None::<String>,
+//             "ddbj/workflow-registry-dev",
+//         )?[0]
+//             .clone();
+//         let zenodo = metadata::types::Zenodo {
+//             concept_doi: "10.5072/zenodo.1018220".to_string(),
+//             doi: "10.5072/zenodo.1018220".to_string(),
+//             id: 1018220,
+//             url: Url::parse("https://sandbox.zenodo.org/record/1018220")?,
+//         };
+//         meta.zenodo = Some(zenodo);
+//         update_metadata_files(&host, &token, &mut meta)?;
+//         Ok(())
+//     }
 
-    #[test]
-    #[ignore]
-    fn test_get_files_download_urls() -> Result<()> {
-        let host = env::zenodo_host();
-        let token = env::zenodo_token()?;
-        let meta = metadata::io::read_local("./tests/test-metadata-CWL-validated.yml")?;
-        let ids = list_depositions(
-            &host,
-            &token,
-            &meta.id.to_string(),
-            DepositionStatus::Published,
-        )?;
-        if !ids.is_empty() {
-            let id = ids[0];
-            let files_map = get_files_download_urls(&host, &token, &id)?;
-            dbg!(&files_map);
-        }
-        Ok(())
-    }
-}
+//     #[test]
+//     #[ignore]
+//     fn test_get_files_download_urls() -> Result<()> {
+//         let host = env::zenodo_host();
+//         let token = env::zenodo_token()?;
+//         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml")?;
+//         let ids = list_depositions(
+//             &host,
+//             &token,
+//             &meta.id.to_string(),
+//             DepositionStatus::Published,
+//         )?;
+//         if !ids.is_empty() {
+//             let id = ids[0];
+//             let files_map = get_files_download_urls(&host, &token, &id)?;
+//             dbg!(&files_map);
+//         }
+//         Ok(())
+//     }
+// }

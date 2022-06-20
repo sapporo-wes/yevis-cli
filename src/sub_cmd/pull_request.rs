@@ -1,4 +1,3 @@
-use crate::env;
 use crate::gh;
 use crate::metadata;
 
@@ -11,12 +10,10 @@ use std::time;
 use url::Url;
 
 pub fn pull_request(
-    meta_vec: &Vec<metadata::types::Config>,
-    gh_token: &Option<impl AsRef<str>>,
+    meta_vec: &Vec<metadata::types::Metadata>,
+    gh_token: impl AsRef<str>,
     repo: impl AsRef<str>,
 ) -> Result<()> {
-    let gh_token = env::github_token(gh_token)?;
-
     let (user, _, _) = gh::api::get_author_info(&gh_token)?;
     let (repo_owner, repo_name) = gh::parse_repo(&repo)?;
     let default_branch = gh::api::get_default_branch(&gh_token, &repo_owner, &repo_name, None)?;
@@ -346,7 +343,7 @@ fn commit_meta(
     gh_token: impl AsRef<str>,
     owner: impl AsRef<str>,
     name: impl AsRef<str>,
-    meta: &metadata::types::Config,
+    meta: &metadata::types::Metadata,
 ) -> Result<()> {
     let meta_path = PathBuf::from(format!("{}/yevis-metadata-{}.yml", &meta.id, &meta.version));
     let meta_content = serde_yaml::to_string(&meta)?;
@@ -369,7 +366,7 @@ fn create_pull_request(
     owner: impl AsRef<str>,
     name: impl AsRef<str>,
     branch: impl AsRef<str>,
-    meta: &metadata::types::Config,
+    meta: &metadata::types::Metadata,
 ) -> Result<()> {
     let title = format!("Add workflow: {}", meta.workflow.name);
     let head = format!("{}:{}", user.as_ref(), &meta.id);

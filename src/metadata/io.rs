@@ -31,7 +31,7 @@ pub fn parse_file_ext(path: impl AsRef<Path>) -> Result<FileExt> {
 }
 
 pub fn write_local(
-    meta: &metadata::types::Config,
+    meta: &metadata::types::Metadata,
     path: impl AsRef<Path>,
     ext: &FileExt,
 ) -> Result<()> {
@@ -45,12 +45,17 @@ pub fn write_local(
     Ok(())
 }
 
-pub fn read_local(location: impl AsRef<str>) -> Result<metadata::types::Config> {
+pub fn read(
+    location: impl AsRef<str>,
+    gh_token: impl AsRef<str>,
+) -> Result<metadata::types::Metadata> {
     match Url::parse(location.as_ref()) {
         Ok(url) => {
             // as remote url
-            // Even json can be read with yaml reader
+            let remote = remote::Remote::new(&url, &gh_token, None, None)?;
+            let url = remote.to_url()?;
             let content = remote::fetch_json_content(&url)?;
+            // Even json can be read with yaml reader
             Ok(serde_yaml::from_str(&content)?)
         }
         Err(_) => {
@@ -61,15 +66,15 @@ pub fn read_local(location: impl AsRef<str>) -> Result<metadata::types::Config> 
     }
 }
 
-pub fn find_metadata_loc_recursively_from_trs(trs_loc: impl AsRef<str>) -> Result<Vec<String>> {
-    let trs_endpoint = trs::api::TrsEndpoint::new_from_url(&Url::parse(trs_loc.as_ref())?)?;
-    trs_endpoint.is_valid()?;
-    let metadata_locs: Vec<String> = trs::api::get_tools(&trs_endpoint)?
-        .into_iter()
-        .flat_map(|tool| tool.versions)
-        .map(|version| version.url)
-        .map(|url| format!("{}/yevis-metadata.json", url.as_str()))
-        .collect();
-    debug!("Found Yevis metadata file locations: {:?}", metadata_locs);
-    Ok(metadata_locs)
-}
+// pub fn find_metadata_loc_recursively_from_trs(trs_loc: impl AsRef<str>) -> Result<Vec<String>> {
+//     let trs_endpoint = trs::api::TrsEndpoint::new_from_url(&Url::parse(trs_loc.as_ref())?)?;
+//     trs_endpoint.is_valid()?;
+//     let metadata_locs: Vec<String> = trs::api::get_tools(&trs_endpoint)?
+//         .into_iter()
+//         .flat_map(|tool| tool.versions)
+//         .map(|version| version.url)
+//         .map(|url| format!("{}/yevis-metadata.json", url.as_str()))
+//         .collect();
+//     debug!("Found Yevis metadata file locations: {:?}", metadata_locs);
+//     Ok(metadata_locs)
+// }

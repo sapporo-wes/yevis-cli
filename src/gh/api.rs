@@ -189,6 +189,8 @@ pub fn get_contents(
     gh::get_request(gh_token, &url, &[("ref", commit.as_ref())])
 }
 
+/// if called - path: src
+/// return: src/main.rs, src/lib.rs, src/test.rs
 pub fn get_file_list_recursive(
     gh_token: impl AsRef<str>,
     owner: impl AsRef<str>,

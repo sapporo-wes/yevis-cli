@@ -10,13 +10,11 @@ use std::path::PathBuf;
 use url::Url;
 
 pub fn publish(
-    meta_vec: &Vec<metadata::types::Config>,
-    gh_token: &Option<impl AsRef<str>>,
+    meta_vec: &Vec<metadata::types::Metadata>,
+    gh_token: impl AsRef<str>,
     repo: impl AsRef<str>,
     verified: bool,
 ) -> Result<()> {
-    let gh_token = env::github_token(gh_token)?;
-
     let (owner, name) = gh::parse_repo(repo)?;
     let branch = get_gh_pages_branch(&gh_token, &owner, &name)?;
 
@@ -130,7 +128,7 @@ fn generate_trs_contents(trs_res: trs::response::TrsResponse) -> Result<HashMap<
         let tools_files = trs_res.tools_files.get(&(*id, version.clone())).unwrap();
         let tools_tests = trs_res.tools_tests.get(&(*id, version.clone())).unwrap();
 
-        let desc_type = meta.workflow.language.r#type.clone().unwrap().to_string();
+        let desc_type = meta.workflow.language.r#type.clone().to_string();
 
         map.insert(
             PathBuf::from(format!(

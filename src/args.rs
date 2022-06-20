@@ -45,10 +45,6 @@ pub enum Args {
         #[structopt(long = "gh-token")]
         github_token: Option<String>,
 
-        /// GitHub repository that published TRS responses (format: <owner>/<repo>, this option is used for version validation).
-        #[structopt(short, long)]
-        repository: String,
-
         /// Verbose mode.
         #[structopt(short, long)]
         verbose: bool,
@@ -64,10 +60,6 @@ pub enum Args {
         /// GitHub Personal Access Token.
         #[structopt(long = "gh-token")]
         github_token: Option<String>,
-
-        /// GitHub repository to which the pull request will be sent (format: <owner>/<repo>).
-        #[structopt(short, long)]
-        repository: String,
 
         /// WES location where the test will be run.
         /// If not specified, `sapporo-service` will be started.
@@ -170,4 +162,26 @@ pub enum Args {
         #[structopt(short, long)]
         verbose: bool,
     },
+}
+
+impl Args {
+    pub fn verbose(&self) -> bool {
+        match self {
+            Args::MakeTemplate { verbose, .. } => *verbose,
+            Args::Validate { verbose, .. } => *verbose,
+            Args::Test { verbose, .. } => *verbose,
+            Args::PullRequest { verbose, .. } => *verbose,
+            Args::Publish { verbose, .. } => *verbose,
+        }
+    }
+
+    pub fn gh_token(&self) -> Option<String> {
+        match self {
+            Args::MakeTemplate { github_token, .. } => github_token.clone(),
+            Args::Validate { github_token, .. } => github_token.clone(),
+            Args::Test { github_token, .. } => github_token.clone(),
+            Args::PullRequest { github_token, .. } => github_token.clone(),
+            Args::Publish { github_token, .. } => github_token.clone(),
+        }
+    }
 }

@@ -13,19 +13,10 @@ use url::Url;
 use uuid::Uuid;
 
 pub fn test(
-    meta_vec: &Vec<metadata::types::Config>,
+    meta_vec: &Vec<metadata::types::Metadata>,
     wes_loc: &Option<Url>,
     docker_host: &Url,
 ) -> Result<()> {
-    let wes_loc = match wes_loc {
-        Some(wes_loc) => wes_loc.clone(),
-        None => {
-            wes::start_wes(docker_host)?;
-            Url::parse(&wes::default_wes_location())?
-        }
-    };
-    info!("Use WES location: {} for testing", wes_loc);
-
     let supported_wes_versions = wes::get_supported_wes_versions(&wes_loc)?;
     ensure!(
         supported_wes_versions
