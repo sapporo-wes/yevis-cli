@@ -1,8 +1,7 @@
-use crate::env;
 use crate::metadata;
 use crate::wes;
 
-use anyhow::{anyhow, bail, ensure, Result};
+use anyhow::{anyhow, bail, Result};
 use log::{debug, info};
 use std::env::current_dir;
 use std::fs;
@@ -12,81 +11,62 @@ use std::time;
 use url::Url;
 use uuid::Uuid;
 
-pub fn test(
-    meta_vec: &Vec<metadata::types::Metadata>,
-    wes_loc: &Option<Url>,
-    docker_host: &Url,
-) -> Result<()> {
-    let supported_wes_versions = wes::get_supported_wes_versions(&wes_loc)?;
-    ensure!(
-        supported_wes_versions
-            .into_iter()
-            .any(|v| &v == "sapporo-wes-1.0.1"),
-        "yevis only supports WES version `sapporo-wes-1.0.1`"
-    );
+pub fn test(meta: &metadata::types::Metadata, wes_loc: &Url, write_log: bool) -> Result<()> {
+    let mut test_results = vec![];
+    for test_case in &meta.workflow.testing {
+        info!("Testing test case: {}", test_case.id);
 
-    let in_ci = env::in_ci();
+        let form = wes::api::test_case_to_form(&meta.workflow, test_case)?;
+        debug!("Form:\n{:#?}", &form);
+        let run_id = wes::api::post_run(wes_loc, form)?;
+        info!("WES run_id: {}", run_id);
 
-    for meta in meta_vec {
-        info!("Test workflow_id: {}, version: {}", meta.id, meta.version);
-        let mut test_results = vec![];
-        for test_case in &meta.workflow.testing {
-            info!("Testing test case: {}", test_case.id);
-
-            let form = wes::test_case_to_form(&meta.workflow, test_case)?;
-            debug!("Form:\n{:#?}", &form);
-            let run_id = wes::post_run(&wes_loc, form)?;
-            info!("WES run_id: {}", run_id);
-
-            let mut status = wes::RunStatus::Running;
-            let mut iter_num = 0;
-            while status == wes::RunStatus::Running {
-                sleep(iter_num);
-                status = wes::get_run_status(&wes_loc, &run_id)?;
-                debug!("WES run status: {:?}", status);
-                iter_num += 1;
-            }
-
-            let run_log = serde_json::to_string_pretty(&wes::get_run_log(&wes_loc, &run_id)?)?;
-            if in_ci {
-                write_test_log(&meta.id, &meta.version, &test_case.id, &run_log)?;
-            }
-            match status {
-                wes::RunStatus::Complete => {
-                    info!("Complete test case: {}", test_case.id);
-                    debug!("Run log:\n{}", run_log);
-                }
-                wes::RunStatus::Failed => {
-                    info!(
-                        "Failed test case: {} with run_log:\n{}",
-                        test_case.id, run_log
-                    );
-                }
-                _ => {
-                    unreachable!("WES run status: {:?}", status);
-                }
-            }
-            test_results.push(TestResult {
-                id: test_case.id.clone(),
-                status,
-            });
+        let mut status = wes::api::RunStatus::Running;
+        let mut iter_num = 0;
+        while status == wes::api::RunStatus::Running {
+            sleep(iter_num);
+            status = wes::api::get_run_status(wes_loc, &run_id)?;
+            debug!("WES run status: {:?}", status);
+            iter_num += 1;
         }
-        match check_test_results(test_results) {
-            Ok(()) => info!(
-                "Passed all test cases in workflow_id: {}, version: {}",
-                meta.id, meta.version
-            ),
-            Err(e) => bail!(e),
-        };
-    }
 
-    wes::stop_wes(docker_host)?;
+        let run_log = serde_json::to_string_pretty(&wes::api::get_run_log(wes_loc, &run_id)?)?;
+        if write_log {
+            write_test_log(&meta.id, &meta.version, &test_case.id, &run_log)?;
+        }
+        match status {
+            wes::api::RunStatus::Complete => {
+                info!("Complete test case: {}", test_case.id);
+                debug!("Run log:\n{}", run_log);
+            }
+            wes::api::RunStatus::Failed => {
+                info!(
+                    "Failed test case: {} with run_log:\n{}",
+                    test_case.id, run_log
+                );
+            }
+            _ => {
+                unreachable!("WES run status: {:?}", status);
+            }
+        }
+        test_results.push(TestResult {
+            id: test_case.id.clone(),
+            status,
+        });
+    }
+    match check_test_results(test_results) {
+        Ok(()) => info!(
+            "Passed all test cases in workflow_id: {}, version: {}",
+            meta.id, meta.version
+        ),
+        Err(e) => bail!(e),
+    };
     Ok(())
 }
 
 struct TestResult {
     pub id: String,
-    pub status: wes::RunStatus,
+    pub status: wes::api::RunStatus,
 }
 
 fn write_test_log(
@@ -114,7 +94,7 @@ fn write_test_log(
 fn check_test_results(test_results: Vec<TestResult>) -> Result<()> {
     let failed_tests = test_results
         .iter()
-        .filter(|r| r.status == wes::RunStatus::Failed)
+        .filter(|r| r.status == wes::api::RunStatus::Failed)
         .collect::<Vec<_>>();
     if !failed_tests.is_empty() {
         bail!(

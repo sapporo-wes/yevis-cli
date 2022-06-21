@@ -1,4 +1,3 @@
-use crate::env;
 use crate::gh;
 
 use anyhow::{anyhow, Result};

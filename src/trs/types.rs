@@ -1,7 +1,7 @@
 use crate::env;
 use crate::metadata;
 
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{ensure, Result};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
@@ -243,7 +243,7 @@ impl Tool {
             description: Some(meta.workflow.readme.clone()),
             meta_version: None,
             has_checker: Some(true),
-            checker_url: Some(Url::parse("https://github.com/ddbj/yevis")?),
+            checker_url: Some(Url::parse("https://github.com/ddbj/yevis-cli")?),
             versions: vec![],
         })
     }
@@ -308,53 +308,45 @@ impl ToolVersion {
         name: impl AsRef<str>,
         verified: bool,
     ) -> Result<Self> {
-        unimplemented!()
-        // let verified_source = if verified {
-        //     if env::in_ci() {
-        //         match env::gh_actions_url() {
-        //             Ok(url) => Some(vec![url.to_string()]),
-        //             Err(_) => None,
-        //         }
-        //     } else {
-        //         None
-        //     }
-        // } else {
-        //     None
-        // };
+        let verified_source = if verified {
+            if env::in_ci() {
+                match env::gh_actions_url() {
+                    Ok(url) => Some(vec![url.to_string()]),
+                    Err(_) => None,
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
 
-        // Ok(Self {
-        //     author: Some(
-        //         meta.authors
-        //             .iter()
-        //             .map(|a| a.github_account.clone())
-        //             .collect::<Vec<String>>(),
-        //     ),
-        //     name: Some(meta.workflow.name.clone()),
-        //     url: Url::parse(&format!(
-        //         "https://{}.github.io/{}/tools/{}/versions/{}",
-        //         owner.as_ref(),
-        //         name.as_ref(),
-        //         meta.id,
-        //         &meta.version
-        //     ))?,
-        //     id: meta.id,
-        //     is_production: None,
-        //     images: None,
-        //     descriptor_type: Some(vec![DescriptorType::new(
-        //         &meta
-        //             .workflow
-        //             .language
-        //             .r#type
-        //             .clone()
-        //             .ok_or_else(|| anyhow!("No language type"))?,
-        //     )]),
-        //     containerfile: None,
-        //     meta_version: None,
-        //     verified: Some(verified),
-        //     verified_source,
-        //     signed: None,
-        //     included_apps: None,
-        // })
+        Ok(Self {
+            author: Some(
+                meta.authors
+                    .iter()
+                    .map(|a| a.github_account.clone())
+                    .collect::<Vec<String>>(),
+            ),
+            name: Some(meta.workflow.name.clone()),
+            url: Url::parse(&format!(
+                "https://{}.github.io/{}/tools/{}/versions/{}",
+                owner.as_ref(),
+                name.as_ref(),
+                meta.id,
+                &meta.version
+            ))?,
+            id: meta.id,
+            is_production: None,
+            images: None,
+            descriptor_type: Some(vec![DescriptorType::new(&meta.workflow.language.r#type)]),
+            containerfile: None,
+            meta_version: None,
+            verified: Some(verified),
+            verified_source,
+            signed: None,
+            included_apps: None,
+        })
     }
 
     pub fn update(
@@ -364,55 +356,47 @@ impl ToolVersion {
         name: impl AsRef<str>,
         verified: bool,
     ) -> Result<()> {
-        unimplemented!()
-        // let new_verified_source = if verified {
-        //     if env::in_ci() {
-        //         match env::gh_actions_url() {
-        //             Ok(url) => Some(vec![url.to_string()]),
-        //             Err(_) => None,
-        //         }
-        //     } else {
-        //         None
-        //     }
-        // } else {
-        //     None
-        // };
-        // let merged_verified_source = match (self.verified_source.clone(), new_verified_source) {
-        //     (Some(prev), Some(new)) => Some(prev.into_iter().chain(new).collect()),
-        //     (Some(prev), None) => Some(prev),
-        //     (None, Some(new)) => Some(new),
-        //     (None, None) => None,
-        // };
+        let new_verified_source = if verified {
+            if env::in_ci() {
+                match env::gh_actions_url() {
+                    Ok(url) => Some(vec![url.to_string()]),
+                    Err(_) => None,
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let merged_verified_source = match (self.verified_source.clone(), new_verified_source) {
+            (Some(prev), Some(new)) => Some(prev.into_iter().chain(new).collect()),
+            (Some(prev), None) => Some(prev),
+            (None, Some(new)) => Some(new),
+            (None, None) => None,
+        };
 
-        // self.author = Some(
-        //     meta.authors
-        //         .iter()
-        //         .map(|a| a.github_account.clone())
-        //         .collect::<Vec<String>>(),
-        // );
-        // self.name = Some(meta.workflow.name.clone());
-        // self.url = Url::parse(&format!(
-        //     "https://{}.github.io/{}/tools/{}/versions/{}",
-        //     owner.as_ref(),
-        //     name.as_ref(),
-        //     meta.id,
-        //     &meta.version
-        // ))?;
-        // self.id = meta.id;
-        // self.descriptor_type = Some(vec![DescriptorType::new(
-        //     &meta
-        //         .workflow
-        //         .language
-        //         .r#type
-        //         .clone()
-        //         .ok_or_else(|| anyhow!("No language type"))?,
-        // )]);
-        // self.verified = match merged_verified_source {
-        //     Some(_) => Some(true),
-        //     None => Some(false),
-        // };
-        // self.verified_source = merged_verified_source;
-        // Ok(())
+        self.author = Some(
+            meta.authors
+                .iter()
+                .map(|a| a.github_account.clone())
+                .collect::<Vec<String>>(),
+        );
+        self.name = Some(meta.workflow.name.clone());
+        self.url = Url::parse(&format!(
+            "https://{}.github.io/{}/tools/{}/versions/{}",
+            owner.as_ref(),
+            name.as_ref(),
+            meta.id,
+            &meta.version
+        ))?;
+        self.id = meta.id;
+        self.descriptor_type = Some(vec![DescriptorType::new(&meta.workflow.language.r#type)]);
+        self.verified = match merged_verified_source {
+            Some(_) => Some(true),
+            None => Some(false),
+        };
+        self.verified_source = merged_verified_source;
+        Ok(())
     }
 
     pub fn version(&self) -> String {
@@ -447,17 +431,18 @@ pub enum DescriptorType {
     Nfl,
     Smk,
     Galaxy,
+    Unknown,
 }
 
 impl DescriptorType {
     pub fn new(wf_type: &metadata::types::LanguageType) -> Self {
-        unimplemented!()
-        // match wf_type {
-        //     metadata::types::LanguageType::Cwl => DescriptorType::Cwl,
-        //     metadata::types::LanguageType::Wdl => DescriptorType::Wdl,
-        //     metadata::types::LanguageType::Nfl => DescriptorType::Nfl,
-        //     metadata::types::LanguageType::Smk => DescriptorType::Smk,
-        // }
+        match wf_type {
+            metadata::types::LanguageType::Cwl => DescriptorType::Cwl,
+            metadata::types::LanguageType::Wdl => DescriptorType::Wdl,
+            metadata::types::LanguageType::Nfl => DescriptorType::Nfl,
+            metadata::types::LanguageType::Smk => DescriptorType::Smk,
+            metadata::types::LanguageType::Unknown => DescriptorType::Unknown,
+        }
     }
 }
 

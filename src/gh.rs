@@ -107,3 +107,33 @@ pub fn patch_request(gh_token: impl AsRef<str>, url: &Url, body: &Value) -> Resu
     );
     Ok(res_body)
 }
+
+fn put_request(gh_token: impl AsRef<str>, url: &Url, body: &Value) -> Result<Value> {
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .put(url.as_str())
+        .header(reqwest::header::USER_AGENT, "yevis")
+        .header(reqwest::header::ACCEPT, "application/vnd.github.v3+json")
+        .header(
+            reqwest::header::AUTHORIZATION,
+            format!("token {}", gh_token.as_ref()),
+        )
+        .json(body)
+        .send()?;
+    let status = response.status();
+    let res_body = response.json::<Value>()?;
+    ensure!(
+        status != reqwest::StatusCode::UNAUTHORIZED,
+        "Failed to authenticate with GitHub. Please check your GitHub token."
+    );
+    ensure!(
+        status.is_success(),
+        "Failed to patch request to {}. Response: {}",
+        url,
+        match res_body.get("message") {
+            Some(message) => message.as_str().unwrap_or_else(|| status.as_str()),
+            None => status.as_str(),
+        }
+    );
+    Ok(res_body)
+}

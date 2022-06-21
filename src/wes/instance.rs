@@ -2,7 +2,8 @@ use crate::env;
 use crate::wes;
 
 use anyhow::{anyhow, bail, ensure, Context, Result};
-use log::info;
+use colored::Colorize;
+use log::{error, info};
 use std::env as std_env;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -131,6 +132,15 @@ pub fn stop_wes(docker_host: &Url) -> Result<()> {
     );
     thread::sleep(time::Duration::from_secs(3));
     Ok(())
+}
+
+pub fn stop_wes_no_result(docker_host: &Url) {
+    match stop_wes(docker_host) {
+        Ok(_) => {}
+        Err(e) => {
+            error!("{} to stop WES instance with error: {}", "Failed".red(), e);
+        }
+    };
 }
 
 pub fn check_wes_running(docker_host: &Url) -> Result<bool> {

@@ -1,6 +1,6 @@
 use crate::trs;
 
-use anyhow::{anyhow, ensure, Result};
+use anyhow::{ensure, Result};
 use reqwest;
 use url::Url;
 
@@ -27,11 +27,6 @@ pub struct TrsEndpoint {
 }
 
 impl TrsEndpoint {
-    pub fn new_from_url(url: &Url) -> Result<Self> {
-        let url = Url::parse(&format!("{}/", url.as_str().trim().trim_matches('/')))?;
-        Ok(TrsEndpoint { url })
-    }
-
     pub fn new_gh_pages(owner: impl AsRef<str>, name: impl AsRef<str>) -> Result<Self> {
         let url = Url::parse(&format!(
             "https://{}.github.io/{}/",
@@ -39,35 +34,6 @@ impl TrsEndpoint {
             name.as_ref()
         ))?;
         Ok(TrsEndpoint { url })
-    }
-
-    pub fn is_valid(&self) -> Result<()> {
-        let service_info = get_service_info(self)?;
-        ensure!(
-            service_info.r#type.artifact == "yevis" && service_info.r#type.version == "2.0.1",
-            "Yevis only supports yevis 2.0.1 as a TRS endpoint"
-        );
-        Ok(())
-    }
-
-    pub fn all_versions(&self, wf_id: impl AsRef<str>) -> Result<Vec<String>> {
-        let tool = get_tool(self, wf_id.as_ref())?;
-        let versions: Vec<String> = tool
-            .versions
-            .into_iter()
-            .map(|v| {
-                v.url
-                    .path_segments()
-                    .ok_or_else(|| anyhow!("Invalid url: {}", v.url))
-                    .and_then(|segments| {
-                        segments
-                            .last()
-                            .ok_or_else(|| anyhow!("Invalid url: {}", v.url))
-                    })
-                    .map(|s| s.to_string())
-            })
-            .collect::<Result<Vec<_>>>()?;
-        Ok(versions)
     }
 }
 
@@ -102,18 +68,6 @@ pub fn get_tools(trs_endpoint: &TrsEndpoint) -> Result<Vec<trs::types::Tool>> {
     let body = get_request(&url)?;
     let tools: Vec<trs::types::Tool> = serde_json::from_str(&body)?;
     Ok(tools)
-}
-
-/// /tools/<wf_id> -> trs::types::Tool
-pub fn get_tool(trs_endpoint: &TrsEndpoint, wf_id: impl AsRef<str>) -> Result<trs::types::Tool> {
-    let url = Url::parse(&format!(
-        "{}/tools/{}",
-        trs_endpoint.url.as_str().trim().trim_matches('/'),
-        wf_id.as_ref()
-    ))?;
-    let body = get_request(&url)?;
-    let tool: trs::types::Tool = serde_json::from_str(&body)?;
-    Ok(tool)
 }
 
 #[cfg(test)]

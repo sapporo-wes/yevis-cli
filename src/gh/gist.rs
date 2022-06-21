@@ -1,6 +1,6 @@
 use crate::gh;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use serde_json::Value;
 use url::Url;
 

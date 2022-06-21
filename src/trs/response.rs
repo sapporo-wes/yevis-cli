@@ -96,20 +96,19 @@ pub fn generate_tool_classes(
 }
 
 pub fn generate_descriptor(meta: &metadata::types::Metadata) -> Result<trs::types::FileWrapper> {
-    unimplemented!()
-    // let primary_wf = meta.workflow.primary_wf()?;
-    // let (content, checksum) = match remote::fetch_raw_content(&primary_wf.url) {
-    //     Ok(content) => {
-    //         let checksum = trs::types::Checksum::new_from_string(content.clone());
-    //         (Some(content), Some(vec![checksum]))
-    //     }
-    //     Err(_) => (None, None),
-    // };
-    // Ok(trs::types::FileWrapper {
-    //     content,
-    //     checksum,
-    //     url: Some(primary_wf.url),
-    // })
+    let primary_wf = meta.workflow.primary_wf()?;
+    let (content, checksum) = match remote::fetch_raw_content(&primary_wf.url) {
+        Ok(content) => {
+            let checksum = trs::types::Checksum::new_from_string(content.clone());
+            (Some(content), Some(vec![checksum]))
+        }
+        Err(_) => (None, None),
+    };
+    Ok(trs::types::FileWrapper {
+        content,
+        checksum,
+        url: Some(primary_wf.url),
+    })
 }
 
 pub fn generate_files(meta: &metadata::types::Metadata) -> Result<Vec<trs::types::ToolFile>> {

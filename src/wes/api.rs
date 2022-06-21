@@ -25,7 +25,7 @@ pub fn get_service_info(wes_loc: &Url) -> Result<Value> {
     ensure!(
         status.is_success(),
         "Failed to get service-info with status: {}. Response: {}",
-        response.status(),
+        status,
         res_body
     );
     Ok(res_body)
@@ -59,7 +59,7 @@ pub fn test_case_to_form(
 ) -> Result<multipart::Form> {
     let form = multipart::Form::new()
         .text("workflow_type", wf.language.r#type.to_string())
-        .text("workflow_type_version", wf.language.version)
+        .text("workflow_type_version", wf.language.version.clone())
         .text("workflow_url", wf_url(wf)?)
         .text(
             "workflow_engine_name",

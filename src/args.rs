@@ -138,12 +138,6 @@ pub enum Args {
         #[structopt(short, long, default_value = "unix:///var/run/docker.sock")]
         docker_host: Url,
 
-        /// Recursively get the Yevis metadata files from the TRS endpoint and publish them.
-        /// This option is used in the CI environment.
-        /// When using this option, specify the TRS endpoint (e.g., https://ddbj.github.io/yevis-workflows/) as `metadata_locations`.
-        #[structopt(long)]
-        from_trs: bool,
-
         /// Get modified files from GitHub Pull Request.
         /// This option is used for pull request events in the CI environment.
         /// When using this option, specify GitHub Pull Request URL (e.g., `${{ github.event.pull_request._links.html.href }}`) as `metadata_locations`.

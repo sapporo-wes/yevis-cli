@@ -127,6 +127,7 @@ pub fn get_user(gh_token: impl AsRef<str>) -> Result<Value> {
     gh::get_request(gh_token, &url, &[])
 }
 
+/// Return: (owner, name, affiliation)
 pub fn get_author_info(gh_token: impl AsRef<str>) -> Result<(String, String, String)> {
     let res = get_user(gh_token)?;
     let err_message = "Failed to parse the response to get the author";
@@ -457,6 +458,239 @@ pub fn create_commit(
         .ok_or_else(|| anyhow!(err_message))?
         .as_str()
         .ok_or_else(|| anyhow!(err_message))?
+        .to_string())
+}
+
+/// https://docs.github.com/en/rest/reference/branches#sync-a-fork-branch-with-the-upstream-repository
+pub fn merge_upstream(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    branch: impl AsRef<str>,
+) -> Result<()> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/merge-upstream",
+        owner.as_ref(),
+        name.as_ref(),
+    ))?;
+    let body = json!({
+        "branch": branch.as_ref(),
+    });
+    gh::post_request(gh_token, &url, &body)?;
+    Ok(())
+}
+
+pub fn has_forked_repo(
+    gh_token: impl AsRef<str>,
+    user: impl AsRef<str>,
+    ori_repo_owner: impl AsRef<str>,
+    ori_repo_name: impl AsRef<str>,
+) -> bool {
+    let res = match gh::api::get_repos(&gh_token, &user, &ori_repo_name) {
+        Ok(res) => res,
+        Err(_) => return false,
+    };
+    match parse_fork_response(res) {
+        Ok(fork) => match fork.fork {
+            true => {
+                fork.fork_parent.owner.as_str() == ori_repo_owner.as_ref()
+                    && fork.fork_parent.name.as_str() == ori_repo_name.as_ref()
+            }
+            false => false,
+        },
+        Err(_) => false,
+    }
+}
+
+struct Fork {
+    pub fork: bool,
+    pub fork_parent: ForkParent,
+}
+
+struct ForkParent {
+    pub owner: String,
+    pub name: String,
+}
+
+fn parse_fork_response(res: Value) -> Result<Fork> {
+    let err_msg = "Failed to parse the response when getting repo info";
+    let fork = res
+        .get("fork")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_bool()
+        .ok_or_else(|| anyhow!(err_msg))?;
+    let fork_parent = res
+        .get("parent")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_object()
+        .ok_or_else(|| anyhow!(err_msg))?;
+    let fork_parent_owner = fork_parent
+        .get("owner")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_object()
+        .ok_or_else(|| anyhow!(err_msg))?
+        .get("login")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_str()
+        .ok_or_else(|| anyhow!(err_msg))?;
+    let fork_parent_name = fork_parent
+        .get("name")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_str()
+        .ok_or_else(|| anyhow!(err_msg))?;
+    Ok(Fork {
+        fork,
+        fork_parent: ForkParent {
+            owner: fork_parent_owner.to_string(),
+            name: fork_parent_name.to_string(),
+        },
+    })
+}
+
+/// https://docs.github.com/en/rest/reference/repos#create-a-fork
+pub fn create_fork(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+) -> Result<()> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/forks",
+        owner.as_ref(),
+        name.as_ref(),
+    ))?;
+    let body = json!({});
+    gh::post_request(gh_token, &url, &body)?;
+    Ok(())
+}
+
+pub fn create_branch(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    branch: impl AsRef<str>,
+    default_branch_sha: impl AsRef<str>,
+) -> Result<()> {
+    gh::api::create_ref(
+        &gh_token,
+        &owner,
+        &name,
+        format!("refs/heads/{}", branch.as_ref()),
+        &default_branch_sha,
+    )?;
+    Ok(())
+}
+
+/// https://docs.github.com/en/rest/reference/repos#create-or-update-file-contents
+pub fn create_or_update_file(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    path: impl AsRef<Path>,
+    message: impl AsRef<str>,
+    content: impl AsRef<str>,
+    branch: impl AsRef<str>,
+) -> Result<()> {
+    let encoded_content = base64::encode(content.as_ref());
+    let body = match get_contents_blob_sha(&gh_token, &owner, &name, &path, &branch) {
+        Ok(blob) => {
+            // If the file already exists, update it
+            if blob.content == encoded_content {
+                // If the file already exists and the content is the same, do nothing
+                return Ok(());
+            }
+            json!({
+                "message": message.as_ref(),
+                "content": encoded_content,
+                "sha": blob.sha,
+                "branch": branch.as_ref()
+            })
+        }
+        Err(e) => {
+            // If the file does not exist, create it
+            if e.to_string().contains("Not Found") {
+                json!({
+                    "message": message.as_ref(),
+                    "content": encoded_content,
+                    "branch": branch.as_ref()
+                })
+            } else {
+                bail!(e)
+            }
+        }
+    };
+
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/contents/{}",
+        owner.as_ref(),
+        name.as_ref(),
+        path.as_ref().display(),
+    ))?;
+    gh::put_request(&gh_token, &url, &body)?;
+    Ok(())
+}
+
+struct Blob {
+    pub content: String,
+    pub sha: String,
+}
+
+/// https://docs.github.com/en/rest/reference/repos#get-repository-content
+fn get_contents_blob_sha(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    path: impl AsRef<Path>,
+    branch: impl AsRef<str>,
+) -> Result<Blob> {
+    let res = gh::api::get_contents(&gh_token, &owner, &name, &path, &branch)?;
+    let err_msg = "Failed to parse the response when getting contents";
+    let content = res
+        .get("content")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_str()
+        .ok_or_else(|| anyhow!(err_msg))?;
+    let sha = res
+        .get("sha")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_str()
+        .ok_or_else(|| anyhow!(err_msg))?;
+    Ok(Blob {
+        content: content.to_string(),
+        sha: sha.to_string(),
+    })
+}
+
+/// https://docs.github.com/en/rest/reference/pulls#create-a-pull-request
+/// head: the branch to merge from
+/// base: the branch to merge into
+///
+/// return -> pull_request_url
+pub fn post_pulls(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    title: impl AsRef<str>,
+    head: impl AsRef<str>,
+    base: impl AsRef<str>,
+) -> Result<String> {
+    let url = Url::parse(&format!(
+        "https://api.github.com/repos/{}/{}/pulls",
+        owner.as_ref(),
+        name.as_ref(),
+    ))?;
+    let body = json!({
+        "title": title.as_ref(),
+        "head": head.as_ref(),
+        "base": base.as_ref(),
+        "maintainer_can_modify": true
+    });
+    let res = gh::post_request(gh_token, &url, &body)?;
+    let err_msg = "Failed to parse the response when positing pull request";
+    Ok(res
+        .get("url")
+        .ok_or_else(|| anyhow!(err_msg))?
+        .as_str()
+        .ok_or_else(|| anyhow!(err_msg))?
         .to_string())
 }
 

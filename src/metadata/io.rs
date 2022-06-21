@@ -1,9 +1,7 @@
 use crate::metadata;
 use crate::remote;
-use crate::trs;
 
 use anyhow::{bail, Result};
-use log::debug;
 use serde_json;
 use serde_yaml;
 use std::fs;
