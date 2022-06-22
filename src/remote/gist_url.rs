@@ -118,6 +118,7 @@ impl GistUrl {
 }
 
 /// gist_id example: 9c6aa4ba5d7464066d55175f59e428ac
+/// Return: (owner, gist_id)
 fn extract_gist_id(url: &Url) -> Result<(Option<String>, String)> {
     let gist_id_re = Regex::new(r"^[a-f0-9]{32}$")?;
     let path_segments = url
@@ -151,82 +152,93 @@ fn extract_gist_id(url: &Url) -> Result<(Option<String>, String)> {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::env;
+#[cfg(test)]
+#[cfg(not(tarpaulin_include))]
+mod tests {
+    use super::*;
+    use crate::env;
 
-//     #[test]
-//     fn test_extract_gist_id() -> Result<()> {
-//         let url = Url::parse("https://gist.github.com/9c6aa4ba5d7464066d55175f59e428ac")?;
-//         assert_eq!(extract_gist_id(&url)?, "9c6aa4ba5d7464066d55175f59e428ac");
-//         let url = Url::parse("https://gist.github.com/9c6aa4ba5d7464066d55175f59e428ac/raw/")?;
-//         assert_eq!(extract_gist_id(&url)?, "9c6aa4ba5d7464066d55175f59e428ac");
-//         let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac")?;
-//         assert_eq!(extract_gist_id(&url)?, "9c6aa4ba5d7464066d55175f59e428ac");
-//         let url =
-//             Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/")?;
-//         assert_eq!(extract_gist_id(&url)?, "9c6aa4ba5d7464066d55175f59e428ac");
-//         let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1/trimming_and_qc.cwl")?;
-//         assert_eq!(extract_gist_id(&url)?, "9c6aa4ba5d7464066d55175f59e428ac");
-//         Ok(())
-//     }
+    #[test]
+    fn test_extract_gist_id() -> Result<()> {
+        let url = Url::parse("https://gist.github.com/9c6aa4ba5d7464066d55175f59e428ac")?;
+        assert_eq!(
+            extract_gist_id(&url)?,
+            (None, "9c6aa4ba5d7464066d55175f59e428ac".to_string())
+        );
+        let url = Url::parse("https://gist.github.com/9c6aa4ba5d7464066d55175f59e428ac/raw/")?;
+        assert_eq!(
+            extract_gist_id(&url)?,
+            (None, "9c6aa4ba5d7464066d55175f59e428ac".to_string())
+        );
+        let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac")?;
+        assert_eq!(
+            extract_gist_id(&url)?,
+            (
+                Some("suecharo".to_string()),
+                "9c6aa4ba5d7464066d55175f59e428ac".to_string()
+            )
+        );
+        let url =
+            Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/")?;
+        assert_eq!(
+            extract_gist_id(&url)?,
+            (
+                Some("suecharo".to_string()),
+                "9c6aa4ba5d7464066d55175f59e428ac".to_string()
+            )
+        );
+        let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1/trimming_and_qc.cwl")?;
+        assert_eq!(
+            extract_gist_id(&url)?,
+            (
+                Some("suecharo".to_string()),
+                "9c6aa4ba5d7464066d55175f59e428ac".to_string()
+            )
+        );
+        Ok(())
+    }
 
-//     #[test]
-//     fn test_gist_url_new_single() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let url = Url::parse("https://gist.github.com/cdd4bcbb6f13ae797947cd7981e35b5f")?;
-//         let gist_url = GistUrl::new(gh_token, &url)?;
-//         assert_eq!(
-//             gist_url,
-//             GistUrl {
-//                  id: "cdd4bcbb6f13ae797947cd7981e35b5f".to_string(),
-//                  owner: "suecharo".to_string(),
-//                  raw_url: Url::parse("https://gist.githubusercontent.com/suecharo/cdd4bcbb6f13ae797947cd7981e35b5f/raw/330cd87f6b5dc90614cecfd36bca0c60f5c50622/trimming_and_qc.cwl")?,
-//             }
-//         );
-//         Ok(())
-//     }
+    #[test]
+    fn test_gist_url_new_single() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let url = Url::parse("https://gist.github.com/cdd4bcbb6f13ae797947cd7981e35b5f")?;
+        let gist_url = GistUrl::new(&url, gh_token)?;
+        assert_eq!(
+            gist_url,
+            GistUrl {
+                id: "cdd4bcbb6f13ae797947cd7981e35b5f".to_string(),
+                owner: "suecharo".to_string(),
+                version: "8aa64e99bb2e8fc0bc56e486f798197363854074".to_string(),
+                file_path: PathBuf::from("trimming_and_qc.cwl"),
+            }
+        );
+        Ok(())
+    }
 
-//     #[test]
-//     fn test_gist_url_new_multiple() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1/trimming_and_qc.cwl")?;
-//         let gist_url = GistUrl::new(gh_token, &url)?;
-//         assert_eq!(
-//             gist_url,
-//             GistUrl {
-//                  id: "9c6aa4ba5d7464066d55175f59e428ac".to_string(),
-//                  owner: "suecharo".to_string(),
-//                  raw_url: Url::parse("https://gist.githubusercontent.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1/trimming_and_qc.cwl")?,
-//             }
-//         );
-//         Ok(())
-//     }
+    #[test]
+    fn test_gist_url_new_multiple() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1/trimming_and_qc.cwl")?;
+        let gist_url = GistUrl::new(&url, gh_token)?;
+        assert_eq!(
+            gist_url,
+            GistUrl {
+                id: "9c6aa4ba5d7464066d55175f59e428ac".to_string(),
+                owner: "suecharo".to_string(),
+                version: "a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1".to_string(),
+                file_path: PathBuf::from("trimming_and_qc.cwl"),
+            }
+        );
+        Ok(())
+    }
 
-//     #[test]
-//     fn test_gist_url_wf_files() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1/trimming_and_qc.cwl")?;
-//         let gist_url = GistUrl::new(&gh_token, &url)?;
-//         let files = gist_url.wf_files(&gh_token)?;
-//         assert_eq!(files.len(), 3);
-//         Ok(())
-//     }
-
-//     #[test]
-//     fn test_obtain_wf_files() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let primary_wf = raw_url::RawUrl::new(
-//             &gh_token,
-//             &Url::parse(
-//                 "https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl",
-//             )?,
-//             None,
-//             None,
-//         )?;
-//         let files = obtain_wf_files(&gh_token, &primary_wf, &raw_url::UrlType::Commit)?;
-//         assert_eq!(files.len(), 3);
-//         Ok(())
-//     }
-// }
+    #[test]
+    fn test_gist_url_wf_files() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let url = Url::parse("https://gist.github.com/suecharo/9c6aa4ba5d7464066d55175f59e428ac/raw/a8848dfc4c4b8d5dc07bf286d6076e0846b2c7d1/trimming_and_qc.cwl")?;
+        let gist_url = GistUrl::new(&url, &gh_token)?;
+        let files = gist_url.wf_files(&gh_token)?;
+        assert_eq!(files.len(), 3);
+        Ok(())
+    }
+}

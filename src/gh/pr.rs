@@ -44,15 +44,17 @@ pub fn list_modified_files(
     Ok(raw_urls)
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+#[cfg(not(tarpaulin_include))]
+mod tests {
+    use super::*;
+    use crate::env;
 
-//     #[test]
-//     #[ignore]
-//     fn test_list_modified_files() -> Result<()> {
-//         let pr_url = Url::parse("https://github.com/ddbj/workflow-registry-dev/pull/15")?;
-//         list_modified_files(&None::<String>, &pr_url)?;
-//         Ok(())
-//     }
-// }
+    #[test]
+    fn test_list_modified_files() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let pr_url = Url::parse("https://github.com/ddbj/workflow-registry/pull/13")?;
+        list_modified_files(&gh_token, &pr_url)?;
+        Ok(())
+    }
+}

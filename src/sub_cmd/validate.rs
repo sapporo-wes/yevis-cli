@@ -201,37 +201,39 @@ fn validate_and_update_workflow(
     Ok(())
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+#[cfg(not(tarpaulin_include))]
+mod tests {
+    use super::*;
+    use crate::env;
 
-//     #[test]
-//     fn test_validate_with_github_license_api() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         validate_with_github_license_api(&gh_token, "cc0-1.0")?;
-//         validate_with_github_license_api(&gh_token, "mit")?;
-//         validate_with_github_license_api(&gh_token, "MIT")?;
-//         validate_with_github_license_api(&gh_token, "apache-2.0")?;
-//         Ok(())
-//     }
+    #[test]
+    fn test_validate_with_github_license_api() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        validate_with_github_license_api(&gh_token, "cc0-1.0")?;
+        validate_with_github_license_api(&gh_token, "mit")?;
+        validate_with_github_license_api(&gh_token, "MIT")?;
+        validate_with_github_license_api(&gh_token, "apache-2.0")?;
+        Ok(())
+    }
 
-//     #[test]
-//     fn test_validate_with_zenodo_license_api() -> Result<()> {
-//         validate_with_zenodo_license_api("cc0-1.0")?;
-//         validate_with_zenodo_license_api("mit")?;
-//         validate_with_zenodo_license_api("MIT")?;
-//         validate_with_zenodo_license_api("apache-2.0")?;
-//         Ok(())
-//     }
+    #[test]
+    fn test_validate_with_zenodo_license_api() -> Result<()> {
+        validate_with_zenodo_license_api("cc0-1.0")?;
+        validate_with_zenodo_license_api("mit")?;
+        validate_with_zenodo_license_api("MIT")?;
+        validate_with_zenodo_license_api("apache-2.0")?;
+        Ok(())
+    }
 
-//     #[test]
-//     fn test_validate_wf_name() -> Result<()> {
-//         validate_wf_name("abc")?;
-//         validate_wf_name("abcABC123")?;
-//         validate_wf_name("abcABC123~!@#$%^&*()_+-={{}}[]|:;,.<>? ")?;
-//         validate_wf_name("Workflow name: example_workflow-123.cwl (for example)")?;
-//         let err = validate_wf_name("`");
-//         assert!(err.is_err());
-//         Ok(())
-//     }
-// }
+    #[test]
+    fn test_validate_wf_name() -> Result<()> {
+        validate_wf_name("abc")?;
+        validate_wf_name("abcABC123")?;
+        validate_wf_name("abcABC123~!@#$%^&*()_+-={{}}[]|:;,.<>? ")?;
+        validate_wf_name("Workflow name: example_workflow-123.cwl (for example)")?;
+        let err = validate_wf_name("`");
+        assert!(err.is_err());
+        Ok(())
+    }
+}

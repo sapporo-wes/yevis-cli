@@ -145,98 +145,102 @@ pub fn generate_tests(meta: &metadata::types::Metadata) -> Result<Vec<trs::types
         .collect::<Result<Vec<_>>>()
 }
 
-// #[cfg(test)]
-// #[cfg(not(tarpaulin_include))]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+#[cfg(not(tarpaulin_include))]
+mod tests {
+    use super::*;
+    use crate::env;
 
-//     #[test]
-//     fn test_trs_response_new() -> Result<()> {
-//         TrsResponse::new("test_owner", "test_name")?;
-//         Ok(())
-//     }
+    #[test]
+    fn test_trs_response_new() -> Result<()> {
+        TrsResponse::new("test_owner", "test_name")?;
+        Ok(())
+    }
 
-//     #[test]
-//     fn test_generate_tool_classes() -> Result<()> {
-//         let trs_endpoint = trs::api::TrsEndpoint::new_gh_pages("test_owner", "test_name")?;
-//         let tool_classes = generate_tool_classes(&trs_endpoint)?;
-//         let expect = serde_json::from_str::<Vec<trs::types::ToolClass>>(
-//             r#"
-// [
-//   {
-//     "id": "workflow",
-//     "name": "Workflow",
-//     "description": "A computational workflow"
-//   }
-// ]"#,
-//         )?;
-//         assert_eq!(tool_classes, expect);
-//         Ok(())
-//     }
+    #[test]
+    fn test_generate_tool_classes() -> Result<()> {
+        let trs_endpoint = trs::api::TrsEndpoint::new_gh_pages("test_owner", "test_name")?;
+        let tool_classes = generate_tool_classes(&trs_endpoint)?;
+        let expect = serde_json::from_str::<Vec<trs::types::ToolClass>>(
+            r#"
+[
+  {
+    "id": "workflow",
+    "name": "Workflow",
+    "description": "A computational workflow"
+  }
+]"#,
+        )?;
+        assert_eq!(tool_classes, expect);
+        Ok(())
+    }
 
-//     #[test]
-//     fn test_generate_descriptor() -> Result<()> {
-//         let meta = metadata::io::read("./tests/test_metadata_CWL_validated.yml")?;
-//         generate_descriptor(&meta)?;
-//         Ok(())
-//     }
+    #[test]
+    fn test_generate_descriptor() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml", &gh_token)?;
+        generate_descriptor(&meta)?;
+        Ok(())
+    }
 
-//     #[test]
-//     fn test_generate_files() -> Result<()> {
-//         let meta = metadata::io::read("./tests/test_metadata_CWL_validated.yml")?;
-//         let files = generate_files(&meta)?;
-//         let expect = serde_json::from_str::<Vec<trs::types::ToolFile>>(
-//             r#"
-// [
-//   {
-//     "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/458d0524e667f2442a5effb730b523c1f15748d4/tests/CWL/wf/fastqc.cwl",
-//     "file_type": "SECONDARY_DESCRIPTOR",
-//     "checksum": {
-//       "checksum": "1bd771a51336a782b695db8334872e00f305cd7c49c4978e7e58786ea4714437",
-//       "type": "sha256"
-//     }
-//   },
-//   {
-//     "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/458d0524e667f2442a5effb730b523c1f15748d4/tests/CWL/wf/trimming_and_qc.cwl",
-//     "file_type": "PRIMARY_DESCRIPTOR",
-//     "checksum": {
-//       "checksum": "33ef70b2d5ee38cb394c5ca6354243f44a85118271026eb9fc61365a703e730b",
-//       "type": "sha256"
-//     }
-//   },
-//   {
-//     "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/458d0524e667f2442a5effb730b523c1f15748d4/tests/CWL/wf/trimmomatic_pe.cwl",
-//     "file_type": "SECONDARY_DESCRIPTOR",
-//     "checksum": {
-//       "checksum": "531d0a38116347cade971c211056334f7cae48e1293e2bb0e334894e55636f8e",
-//       "type": "sha256"
-//     }
-//   }
-// ]"#,
-//         )?;
-//         assert_eq!(files, expect);
-//         Ok(())
-//     }
+    #[test]
+    fn test_generate_files() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml", &gh_token)?;
+        let files = generate_files(&meta)?;
+        let expect = serde_json::from_str::<Vec<trs::types::ToolFile>>(
+            r#"
+[
+  {
+    "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/wf/fastqc.cwl",
+    "file_type": "SECONDARY_DESCRIPTOR",
+    "checksum": {
+      "checksum": "1bd771a51336a782b695db8334872e00f305cd7c49c4978e7e58786ea4714437",
+      "type": "sha256"
+    }
+  },
+  {
+    "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/wf/trimming_and_qc.cwl",
+    "file_type": "PRIMARY_DESCRIPTOR",
+    "checksum": {
+      "checksum": "33ef70b2d5ee38cb394c5ca6354243f44a85118271026eb9fc61365a703e730b",
+      "type": "sha256"
+    }
+  },
+  {
+    "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/wf/trimmomatic_pe.cwl",
+    "file_type": "SECONDARY_DESCRIPTOR",
+    "checksum": {
+      "checksum": "531d0a38116347cade971c211056334f7cae48e1293e2bb0e334894e55636f8e",
+      "type": "sha256"
+    }
+  }
+]"#,
+        )?;
+        assert_eq!(files, expect);
+        Ok(())
+    }
 
-//     #[test]
-//     fn test_generate_tests() -> Result<()> {
-//         let meta = metadata::io::read("./tests/test_metadata_CWL_validated.yml")?;
-//         let tests = generate_tests(&meta)?;
-//         let expect = serde_json::from_str::<Vec<trs::types::FileWrapper>>(
-//             r#"
-// [
-//   {
-//     "content": "{\"id\":\"test_1\",\"files\":[{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/4e7e2e3ddb42bdaaf5e294f4bf67319f23c4eaa4/tests/CWL/test/wf_params.json\",\"target\":\"wf_params.json\",\"type\":\"wf_params\"},{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/4e7e2e3ddb42bdaaf5e294f4bf67319f23c4eaa4/tests/CWL/test/ERR034597_1.small.fq.gz\",\"target\":\"ERR034597_1.small.fq.gz\",\"type\":\"other\"},{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/4e7e2e3ddb42bdaaf5e294f4bf67319f23c4eaa4/tests/CWL/test/ERR034597_2.small.fq.gz\",\"target\":\"ERR034597_2.small.fq.gz\",\"type\":\"other\"}]}",
-//     "checksum": [
-//       {
-//         "checksum": "e6de556f3d71919d6e678d319231f9cf8d240bec594b09d1eff137c8de4dd9e9",
-//         "type": "sha256"
-//       }
-//     ]
-//   }
-// ]"#,
-//         )?;
-//         assert_eq!(tests, expect);
-//         Ok(())
-//     }
-// }
+    #[test]
+    fn test_generate_tests() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml", &gh_token)?;
+        let tests = generate_tests(&meta)?;
+        let expect = serde_json::from_str::<Vec<trs::types::FileWrapper>>(
+            r#"
+[
+  {
+    "content": "{\"id\":\"test_1\",\"files\":[{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/test/wf_params.json\",\"target\":\"wf_params.json\",\"type\":\"wf_params\"},{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/test/ERR034597_1.small.fq.gz\",\"target\":\"ERR034597_1.small.fq.gz\",\"type\":\"other\"},{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/test/ERR034597_2.small.fq.gz\",\"target\":\"ERR034597_2.small.fq.gz\",\"type\":\"other\"}]}",
+    "checksum": [
+      {
+        "checksum": "243f87fe67d5abb9555069ca658e5f9709c3554001845d5dca3b73011237e4ec",
+        "type": "sha256"
+      }
+    ]
+  }
+]"#,
+        )?;
+        assert_eq!(tests, expect);
+        Ok(())
+    }
+}

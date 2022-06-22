@@ -91,37 +91,17 @@ pub fn get_gist_files(
     Ok(file_names)
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::env;
+#[cfg(test)]
+#[cfg(not(tarpaulin_include))]
+mod tests {
+    use super::*;
+    use crate::env;
 
-//     #[test]
-//     fn test_get_gist() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let id = "9c6aa4ba5d7464066d55175f59e428ac";
-//         get_gist(gh_token, id)?;
-//         Ok(())
-//     }
-
-//     #[test]
-//     fn test_get_gist_raw_url_single() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let id = "cdd4bcbb6f13ae797947cd7981e35b5f";
-//         let raw_url = get_gist_raw_url(gh_token, id)?;
-//         assert_eq!(
-//             raw_url,
-//             "https://gist.githubusercontent.com/suecharo/cdd4bcbb6f13ae797947cd7981e35b5f/raw/330cd87f6b5dc90614cecfd36bca0c60f5c50622/trimming_and_qc.cwl"
-//         );
-//         Ok(())
-//     }
-
-//     #[test]
-//     fn test_get_gist_raw_url_multiple() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let id = "9c6aa4ba5d7464066d55175f59e428ac";
-//         let result = get_gist_raw_url(gh_token, id);
-//         assert!(result.is_err());
-//         Ok(())
-//     }
-// }
+    #[test]
+    fn test_get_gist() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let id = "9c6aa4ba5d7464066d55175f59e428ac";
+        get_gist(gh_token, id)?;
+        Ok(())
+    }
+}

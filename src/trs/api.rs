@@ -76,16 +76,15 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore]
     fn test_get_request() -> Result<()> {
-        let url = Url::parse("https://suecharo.github.io/gh-pages-rest-api-hosting/foo")?;
+        let url = Url::parse("https://ddbj.github.io/workflow-registry/service-info")?;
         get_request(&url)?;
         Ok(())
     }
 
     #[test]
     fn test_get_request_not_found() -> Result<()> {
-        let url = Url::parse("https://ddbj.github.io/yevis-cli/invalid_path")?;
+        let url = Url::parse("https://ddbj.github.io/workflow-registry/invalid_path")?;
         let res = get_request(&url);
         assert!(res.is_err());
         assert!(res.unwrap_err().to_string().contains("404"));

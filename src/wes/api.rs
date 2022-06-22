@@ -253,67 +253,35 @@ pub fn get_run_log(wes_loc: &Url, run_id: impl AsRef<str>) -> Result<Value> {
     Ok(res_body)
 }
 
-// // #[cfg(test)]
-// // mod tests {
-// //     use super::*;
+#[cfg(test)]
+#[cfg(not(tarpaulin_include))]
+mod tests {
+    use super::*;
+    use crate::env;
+    use crate::wes;
 
-// //     #[test]
-// //     fn test_start_wes() -> Result<()> {
-// //         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
-// //         assert!(start_wes(&docker_host).is_ok());
-// //         stop_wes(&docker_host)?;
-// //         Ok(())
-// //     }
+    #[test]
+    fn test_get_supported_wes_versions() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        wes::instance::start_wes(&docker_host)?;
+        let wes_loc = wes::instance::default_wes_location();
+        let supported_wes_versions = get_supported_wes_versions(&wes_loc)?;
+        assert!(!supported_wes_versions.is_empty());
+        wes::instance::stop_wes(&docker_host)?;
+        Ok(())
+    }
 
-// //     #[test]
-// //     fn test_stop_wes() -> Result<()> {
-// //         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
-// //         start_wes(&docker_host)?;
-// //         assert!(stop_wes(&docker_host).is_ok());
-// //         Ok(())
-// //     }
-
-// //     #[test]
-// //     fn test_check_wes_running() -> Result<()> {
-// //         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
-// //         start_wes(&docker_host)?;
-// //         assert!(check_wes_running(&docker_host)?);
-// //         Ok(())
-// //     }
-
-// //     #[test]
-// //     fn test_check_wes_running_with_invalid_docker_host() -> Result<()> {
-// //         let docker_host = Url::parse("unix:///var/run/invalid")?;
-// //         let result = check_wes_running(&docker_host);
-// //         assert!(result.is_err());
-// //         assert!(result
-// //             .unwrap_err()
-// //             .to_string()
-// //             .contains("Cannot connect to the Docker daemon"));
-// //         Ok(())
-// //     }
-
-// //     #[test]
-// //     fn test_get_supported_wes_versions() -> Result<()> {
-// //         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
-// //         start_wes(&docker_host)?;
-// //         let wes_loc = Url::parse(&default_wes_location())?;
-// //         let supported_wes_versions = get_supported_wes_versions(&wes_loc)?;
-// //         assert!(!supported_wes_versions.is_empty());
-// //         stop_wes(&docker_host)?;
-// //         Ok(())
-// //     }
-
-// //     #[test]
-// //     fn test_post_run() -> Result<()> {
-// //         let docker_host = Url::parse("unix:///var/run/docker.sock")?;
-// //         start_wes(&docker_host)?;
-// //         let wes_loc = Url::parse(&default_wes_location())?;
-// //         let meta = metadata::io::read("./tests/test_metadata_CWL_validated.yml")?;
-// //         let form = test_case_to_form(&meta.workflow, &meta.workflow.testing[0])?;
-// //         let run_id = post_run(&wes_loc, form)?;
-// //         assert!(!run_id.is_empty());
-// //         stop_wes(&docker_host)?;
-// //         Ok(())
-// //     }
-// // }
+    #[test]
+    fn test_post_run() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        wes::instance::start_wes(&docker_host)?;
+        let wes_loc = wes::instance::default_wes_location();
+        let gh_token = env::github_token(&None::<String>)?;
+        let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml", &gh_token)?;
+        let form = test_case_to_form(&meta.workflow, &meta.workflow.testing[0])?;
+        let run_id = post_run(&wes_loc, form)?;
+        assert!(!run_id.is_empty());
+        wes::instance::stop_wes(&docker_host)?;
+        Ok(())
+    }
+}

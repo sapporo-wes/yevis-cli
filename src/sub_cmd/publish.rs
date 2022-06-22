@@ -182,13 +182,14 @@ fn generate_trs_contents(trs_res: trs::response::TrsResponse) -> Result<HashMap<
 }
 
 #[cfg(test)]
+#[cfg(not(tarpaulin_include))]
 mod tests {
     use super::*;
 
     #[test]
     fn test_get_gh_pages_branch() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
-        let branch = get_gh_pages_branch(&gh_token, "ddbj", "workflow-registry-dev")?;
+        let branch = get_gh_pages_branch(&gh_token, "ddbj", "workflow-registry")?;
         assert_eq!(branch, "gh-pages");
         Ok(())
     }
@@ -197,7 +198,7 @@ mod tests {
     fn test_get_gh_pages_branch_no_branch() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
         let branch = get_gh_pages_branch(&gh_token, "ddbj", "yevis-cli")?;
-        assert_eq!(branch, "gh-pages");
+        assert_eq!(branch, "main");
         Ok(())
     }
 }

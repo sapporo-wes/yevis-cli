@@ -25,7 +25,6 @@ pub fn zenodo_host() -> String {
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 pub fn github_token(arg_token: &Option<impl AsRef<str>>) -> Result<String> {
     dotenv().ok();
     match arg_token {
@@ -37,7 +36,6 @@ pub fn github_token(arg_token: &Option<impl AsRef<str>>) -> Result<String> {
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 pub fn sapporo_run_dir() -> Result<String> {
     dotenv().ok();
     match env::var("SAPPORO_RUN_DIR") {
@@ -53,13 +51,11 @@ pub fn sapporo_run_dir() -> Result<String> {
     }
 }
 
-#[cfg(not(tarpaulin_include))]
 pub fn in_ci() -> bool {
     dotenv().ok();
     env::var("CI").is_ok()
 }
 
-#[cfg(not(tarpaulin_include))]
 pub fn gh_actions_url() -> Result<Url> {
     dotenv().ok();
     let gh_server_url = env::var("GITHUB_SERVER_URL")?;

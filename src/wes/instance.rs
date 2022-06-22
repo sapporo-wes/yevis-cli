@@ -171,3 +171,45 @@ pub fn check_wes_running(docker_host: &Url) -> Result<bool> {
         );
     }
 }
+
+#[cfg(test)]
+#[cfg(not(tarpaulin_include))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_start_wes() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        assert!(start_wes(&docker_host).is_ok());
+        stop_wes(&docker_host)?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_stop_wes() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        start_wes(&docker_host)?;
+        assert!(stop_wes(&docker_host).is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_check_wes_running() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/docker.sock")?;
+        start_wes(&docker_host)?;
+        assert!(check_wes_running(&docker_host)?);
+        Ok(())
+    }
+
+    #[test]
+    fn test_check_wes_running_with_invalid_docker_host() -> Result<()> {
+        let docker_host = Url::parse("unix:///var/run/invalid")?;
+        let result = check_wes_running(&docker_host);
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Cannot connect to the Docker daemon"));
+        Ok(())
+    }
+}

@@ -174,192 +174,142 @@ pub fn is_commit_hash(hash: impl AsRef<str>) -> Result<bool> {
     Ok(re.is_match(hash.as_ref()))
 }
 
-// #[cfg(test)]
-// #[cfg(not(tarpaulin_include))]
-// mod tests {
-//     use super::*;
-//     use crate::env;
+#[cfg(test)]
+#[cfg(not(tarpaulin_include))]
+mod tests {
+    use super::*;
+    use crate::env;
 
-//     #[test]
-//     fn test_raw_url() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let owner = "ddbj".to_string();
-//         let name = "yevis-cli".to_string();
-//         let branch = "main".to_string();
-//         let commit = "f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9".to_string();
-//         let file_path = PathBuf::from("path/to/workflow.yml");
+    #[test]
+    fn test_gh_url() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let owner = "ddbj".to_string();
+        let name = "yevis-cli".to_string();
+        let branch = "main".to_string();
+        let commit = "f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9".to_string();
+        let file_path = PathBuf::from("path/to/workflow.yml");
 
-//         let url_1 = Url::parse(&format!(
-//             "https://github.com/{}/{}/blob/{}/{}",
-//             &owner,
-//             &name,
-//             &branch,
-//             &file_path.to_string_lossy()
-//         ))?;
-//         let url_2 = Url::parse(&format!(
-//             "https://github.com/{}/{}/blob/{}/{}",
-//             &owner,
-//             &name,
-//             &commit,
-//             &file_path.to_string_lossy()
-//         ))?;
-//         let url_3 = Url::parse(&format!(
-//             "https://raw.githubusercontent.com/{}/{}/{}/{}",
-//             &owner,
-//             &name,
-//             &branch,
-//             &file_path.to_string_lossy()
-//         ))?;
-//         let url_4 = Url::parse(&format!(
-//             "https://raw.githubusercontent.com/{}/{}/{}/{}",
-//             &owner,
-//             &name,
-//             &commit,
-//             &file_path.to_string_lossy()
-//         ))?;
+        let url_1 = Url::parse(&format!(
+            "https://github.com/{}/{}/blob/{}/{}",
+            &owner,
+            &name,
+            &branch,
+            &file_path.to_string_lossy()
+        ))?;
+        let url_2 = Url::parse(&format!(
+            "https://github.com/{}/{}/blob/{}/{}",
+            &owner,
+            &name,
+            &commit,
+            &file_path.to_string_lossy()
+        ))?;
+        let url_3 = Url::parse(&format!(
+            "https://raw.githubusercontent.com/{}/{}/{}/{}",
+            &owner,
+            &name,
+            &branch,
+            &file_path.to_string_lossy()
+        ))?;
+        let url_4 = Url::parse(&format!(
+            "https://raw.githubusercontent.com/{}/{}/{}/{}",
+            &owner,
+            &name,
+            &commit,
+            &file_path.to_string_lossy()
+        ))?;
 
-//         let raw_url_1 = RawUrl::new(&gh_token, &url_1, None, None)?;
-//         let raw_url_2 = RawUrl::new(&gh_token, &url_2, None, None)?;
-//         let raw_url_3 = RawUrl::new(&gh_token, &url_3, None, None)?;
-//         let raw_url_4 = RawUrl::new(&gh_token, &url_4, None, None)?;
+        let raw_url_1 = GitHubUrl::new(&url_1, &gh_token, None, None)?;
+        let raw_url_2 = GitHubUrl::new(&url_2, &gh_token, None, None)?;
+        let raw_url_3 = GitHubUrl::new(&url_3, &gh_token, None, None)?;
+        let raw_url_4 = GitHubUrl::new(&url_4, &gh_token, None, None)?;
 
-//         let expect = RawUrl {
-//             owner,
-//             name,
-//             branch,
-//             commit,
-//             file_path,
-//         };
+        let expect_branch = GitHubUrl {
+            owner,
+            name,
+            branch,
+            commit,
+            file_path,
+            ori_url_type: UrlType::Branch,
+        };
+        let mut expect_commit = expect_branch.clone();
+        expect_commit.ori_url_type = UrlType::Commit;
 
-//         assert_eq!(raw_url_1.owner, expect.owner);
-//         assert_eq!(raw_url_1.name, expect.name);
-//         assert_eq!(raw_url_1.branch, expect.branch);
-//         assert_eq!(raw_url_1.file_path, expect.file_path);
+        assert_eq!(raw_url_1.owner, expect_branch.owner);
+        assert_eq!(raw_url_1.name, expect_branch.name);
+        assert_eq!(raw_url_1.branch, expect_branch.branch);
+        assert_eq!(raw_url_1.file_path, expect_branch.file_path);
+        assert_eq!(raw_url_1.ori_url_type, expect_branch.ori_url_type);
+        assert_eq!(raw_url_2, expect_commit);
+        assert_eq!(raw_url_3.owner, expect_branch.owner);
+        assert_eq!(raw_url_3.name, expect_branch.name);
+        assert_eq!(raw_url_3.branch, expect_branch.branch);
+        assert_eq!(raw_url_3.file_path, expect_branch.file_path);
+        assert_eq!(raw_url_3.ori_url_type, expect_branch.ori_url_type);
+        assert_eq!(raw_url_4, expect_commit);
 
-//         assert_eq!(raw_url_2, expect);
+        Ok(())
+    }
 
-//         assert_eq!(raw_url_3.owner, expect.owner);
-//         assert_eq!(raw_url_3.name, expect.name);
-//         assert_eq!(raw_url_3.branch, expect.branch);
-//         assert_eq!(raw_url_3.file_path, expect.file_path);
+    #[test]
+    fn test_gh_url_invalid_url() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let url = Url::parse("https://example.com/path/to/file")?;
+        let err = GitHubUrl::new(&url, &gh_token, None, None).unwrap_err();
+        assert_eq!(err.to_string(), "Host example.com is not supported");
+        Ok(())
+    }
 
-//         assert_eq!(raw_url_4, expect);
+    #[test]
+    fn test_gh_url_invalid_host() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let url = Url::parse("https://example.com/path/to/file")?;
+        let err = GitHubUrl::new(&url, &gh_token, None, None).unwrap_err();
+        assert_eq!(err.to_string(), "Host example.com is not supported");
+        Ok(())
+    }
 
-//         Ok(())
-//     }
+    #[test]
+    fn test_gh_url_invalid_path() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let url =
+            Url::parse("https://github.com/ddbj/yevis-cli/blob/invalid_branch/path/to/workflow")?;
+        assert!(GitHubUrl::new(&url, &gh_token, None, None).is_err());
+        Ok(())
+    }
 
-//     #[test]
-//     fn test_raw_url_invalid_url() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let url = Url::parse("https://example.com/path/to/file")?;
-//         let err = RawUrl::new(&gh_token, &url, None, None).unwrap_err();
-//         assert_eq!(
-//             err.to_string(),
-//             "Only GitHub URLs are supported, your input URL: https://example.com/path/to/file"
-//         );
-//         Ok(())
-//     }
+    #[test]
+    fn test_is_commit_hash() -> Result<()> {
+        let commit = "f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9";
+        is_commit_hash(commit)?;
+        Ok(())
+    }
 
-//     #[test]
-//     fn test_raw_url_invalid_host() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let url = Url::parse("https://example.com/path/to/file")?;
-//         let err = RawUrl::new(&gh_token, &url, None, None).unwrap_err();
-//         assert_eq!(
-//             err.to_string(),
-//             "Only GitHub URLs are supported, your input URL: https://example.com/path/to/file"
-//         );
-//         Ok(())
-//     }
-
-//     #[test]
-//     fn test_raw_url_invalid_path() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let url =
-//             Url::parse("https://github.com/ddbj/yevis-cli/blob/invalid_branch/path/to/workflow")?;
-//         assert!(RawUrl::new(&gh_token, &url, None, None).is_err());
-//         Ok(())
-//     }
-
-//     #[test]
-//     fn test_is_commit_hash() -> Result<()> {
-//         let commit = "f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9";
-//         is_commit_hash(commit)?;
-//         Ok(())
-//     }
-
-//     #[test]
-//     fn test_base_dir() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let owner = "ddbj".to_string();
-//         let name = "yevis-cli".to_string();
-//         let commit = "f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9".to_string();
-//         let file_path = PathBuf::from("path/to/workflow.yml");
-//         let url = Url::parse(&format!(
-//             "https://github.com/{}/{}/blob/{}/{}",
-//             &owner,
-//             &name,
-//             &commit,
-//             &file_path.to_string_lossy()
-//         ))?;
-//         let raw_url = RawUrl::new(&gh_token, &url, None, None)?;
-//         let base_dir = raw_url.base_dir()?;
-//         assert_eq!(base_dir, PathBuf::from("path/to"));
-//         Ok(())
-//     }
-
-//     #[test]
-//     fn test_to_url() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let owner = "ddbj".to_string();
-//         let name = "yevis-cli".to_string();
-//         let commit = "f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9".to_string();
-//         let file_path = PathBuf::from("path/to/workflow.yml");
-//         let url = Url::parse(&format!(
-//             "https://github.com/{}/{}/blob/{}/{}",
-//             &owner,
-//             &name,
-//             &commit,
-//             &file_path.to_string_lossy()
-//         ))?;
-//         let raw_url = RawUrl::new(&gh_token, &url, None, None)?;
-//         let to_url = raw_url.to_url(&UrlType::Commit)?;
-//         assert_eq!(
-//             to_url,
-//             Url::parse(&format!(
-//                 "https://raw.githubusercontent.com/{}/{}/{}/{}",
-//                 &owner,
-//                 &name,
-//                 &commit,
-//                 &file_path.to_string_lossy()
-//             ))?
-//         );
-//         Ok(())
-//     }
-
-//     #[test]
-//     fn test_to_base_url() -> Result<()> {
-//         let gh_token = env::github_token(&None::<String>)?;
-//         let owner = "ddbj".to_string();
-//         let name = "yevis-cli".to_string();
-//         let commit = "f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9".to_string();
-//         let file_path = PathBuf::from("path/to/workflow.yml");
-//         let url = Url::parse(&format!(
-//             "https://github.com/{}/{}/blob/{}/{}",
-//             &owner,
-//             &name,
-//             &commit,
-//             &file_path.to_string_lossy()
-//         ))?;
-//         let raw_url = RawUrl::new(&gh_token, &url, None, None)?;
-//         let to_url = raw_url.to_base_url(&UrlType::Commit)?;
-//         assert_eq!(
-//             to_url,
-//             Url::parse(&format!(
-//                 "https://raw.githubusercontent.com/{}/{}/{}/path/to/",
-//                 &owner, &name, &commit,
-//             ))?
-//         );
-//         Ok(())
-//     }
-// }
+    #[test]
+    fn test_to_url() -> Result<()> {
+        let gh_token = env::github_token(&None::<String>)?;
+        let owner = "ddbj".to_string();
+        let name = "yevis-cli".to_string();
+        let commit = "f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9".to_string();
+        let file_path = PathBuf::from("path/to/workflow.yml");
+        let url = Url::parse(&format!(
+            "https://github.com/{}/{}/blob/{}/{}",
+            &owner,
+            &name,
+            &commit,
+            &file_path.to_string_lossy()
+        ))?;
+        let raw_url = GitHubUrl::new(&url, &gh_token, None, None)?;
+        let to_url = raw_url.to_url()?;
+        assert_eq!(
+            to_url,
+            Url::parse(&format!(
+                "https://raw.githubusercontent.com/{}/{}/{}/{}",
+                &owner,
+                &name,
+                &commit,
+                &file_path.to_string_lossy()
+            ))?
+        );
+        Ok(())
+    }
+}
