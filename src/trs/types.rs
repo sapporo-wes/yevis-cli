@@ -99,16 +99,20 @@ impl ServiceInfo {
     ) -> Result<Self> {
         let mut new = Self::new(owner, name)?;
         if let Some(prev) = prev {
-            new.id = prev.id;
-            new.name = prev.name;
-            new.r#type = prev.r#type;
-            new.description = prev.description;
-            new.organization = prev.organization;
-            new.contact_url = prev.contact_url;
-            new.documentation_url = prev.documentation_url;
-            new.created_at = prev.created_at;
-            new.environment = prev.environment;
-        }
+            if prev.name == "Yevis workflow registry ddbj/yevis-workflow-registry-template" {
+                // do nothing
+            } else {
+                new.id = prev.id;
+                new.name = prev.name;
+                new.r#type = prev.r#type;
+                new.description = prev.description;
+                new.organization = prev.organization;
+                new.contact_url = prev.contact_url;
+                new.documentation_url = prev.documentation_url;
+                new.created_at = prev.created_at;
+                new.environment = prev.environment;
+            }
+        };
         Ok(new)
     }
 }
