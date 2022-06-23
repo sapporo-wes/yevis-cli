@@ -109,6 +109,7 @@ pub fn test(meta_vec: &Vec<metadata::types::Metadata>, wes_loc: &Option<Url>, do
             }
         };
     }
+    wes::instance::stop_wes_no_result(docker_host);
 }
 
 pub fn pull_request(
