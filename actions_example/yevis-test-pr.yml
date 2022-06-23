@@ -41,7 +41,6 @@ jobs:
           SAPPORO_RUN_DIR=${GITHUB_WORKSPACE}/test-results \
             ./yevis test \
               --verbose \
-              --repository ${{ github.repository }} \
               --from-pr ${{github.event.pull_request._links.html.href }} \
               2>&1 | tee ./test-logs/yevis-log.txt
           exit ${PIPESTATUS[0]}
