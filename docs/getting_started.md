@@ -101,11 +101,11 @@ $ docker compose up -d
  ⠿ Container yevis-cli     Started                                                                   0.2s
 $ docker ps
 CONTAINER ID   IMAGE                          COMMAND            CREATED          STATUS          PORTS     NAMES
-929d689b61f2   ghcr.io/ddbj/yevis-cli:0.1.7   "sleep infinity"   34 seconds ago   Up 33 seconds             yevis-cli
+929d689b61f2   ghcr.io/ddbj/yevis-cli:0.4.0   "sleep infinity"   34 seconds ago   Up 33 seconds             yevis-cli
 $ docker compose exec app bash
 
 root@929d689b61f2:/app# yevis --help
-yevis 0.1.8
+yevis 0.4.0
 DDBJ(DNA Data Bank of Japan)
 ...
 ```
@@ -141,7 +141,6 @@ As an example of a workflow, use [`https://github.com/pitagora-network/pitagora-
 
 Note that:
 
-- **Workflow must be hosted on GitHub**.
 - **Relative paths from a workflow should be avoided**.
   - At WES runtime, the `target` field can be used to place files in relative paths, such as `tools/tool.cwl`.
   - However, Zenodo hosts the file as a flattened URL, such as `https://<zenodo_base>/tools_tool.cwl`.
@@ -195,7 +194,7 @@ workflow:
 Validate `yevis-metadata.yml` with `yevis validate` as follows:
 
 ```bash=
-$ yevis validate -r suecharo/yevis-getting-started ./yevis-metadata.yml
+$ yevis validate ./yevis-metadata.yml
 Start yevis
 Running validate
 Validating ./yevis-metadata.yml
@@ -210,7 +209,7 @@ If `--wes-location` is not specified, `yevis-cli` will launch Sapporo using Dock
 Therefore, the `docker` command and Docker Socket must be available.
 
 ```bash=
-$ yevis test -r suecharo/yevis-getting-started ./yevis-metadata.yml
+$ yevis test ./yevis-metadata.yml
 Start yevis
 Running validate
 Validating ./yevis-metadata.yml
@@ -239,7 +238,7 @@ CONTAINER ID   IMAGE                                         COMMAND            
 ff447ea21f90   ghcr.io/inutano/download-sra:177141a          "download-sra -r ddb…"   3 seconds ago    Up 3 seconds               focused_rhodes
 bc58bac48e3c   quay.io/commonwl/cwltool:3.1.20211107152837   "/cwltool-in-docker.…"   49 seconds ago   Up 48 seconds              sweet_saha
 51841ce5da7f   ghcr.io/sapporo-wes/sapporo-service:1.1.2     "tini -- sapporo --r…"   56 seconds ago   Up 56 seconds   1122/tcp   yevis-sapporo-service
-33d426de77c7   yevis-cli:0.1.8                               "sleep infinity"         3 hours ago      Up 2 minutes               yevis-cli
+33d426de77c7   yevis-cli:0.4.0                               "sleep infinity"         3 hours ago      Up 2 minutes               yevis-cli
 ```
 
 #### 3.1.4. Create Pull Request
