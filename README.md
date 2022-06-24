@@ -33,12 +33,12 @@ $ chmod +x ./yevis
 $ ./yevis --help
 ```
 
-Or, use the Docker environment (also `docker-compose`):
+Or, use the Docker environment:
 
 ```bash
 $ curl -O https://raw.githubusercontent.com/ddbj/yevis-cli/main/docker-compose.yml
-$ docker-compose up -d
-$ docker-compose exec app yevis --help
+$ docker compose up -d
+$ docker compose exec app yevis --help
 ```
 
 ## Usage
@@ -49,9 +49,9 @@ This section describes some subcommands.
 
 ```bash
 $ yevis --help
-yevis 0.2.0
+yevis 0.4.0
 DDBJ(Bioinformatics and DDBJ Center)
-CLI tool to support building and maintaining Yevis workflow registry
+CLI tool that supports building a Yevis workflow registry with automated quality control
 
 USAGE:
     yevis <SUBCOMMAND>
@@ -62,7 +62,7 @@ FLAGS:
 
 SUBCOMMANDS:
     help             Prints this message or the help of the given subcommand(s)
-    make-template    Make a template for the Yevis metadata file
+    make-template    Generate a template file for the Yevis metadata file
     publish          Generate TRS responses and host them on GitHub Pages. (Basically used in the CI environment
                      (`CI=true`))
     pull-request     Create a pull request based on the Yevis metadata files (after validation and testing)
@@ -76,17 +76,14 @@ Generate a workflow metadata file template from a primary workflow file URL.
 
 ```bash
 $ yevis make-template --help
-yevis-make-template 0.2.0
-Make a template for the Yevis metadata file
+yevis-make-template 0.4.0
+Generate a template file for the Yevis metadata file
 
 USAGE:
     yevis make-template [FLAGS] [OPTIONS] <workflow-location>
 
 FLAGS:
     -h, --help              Prints help information
-    -u, --update            Make a template from an existing workflow. When using this option, specify a TRS ToolVersion
-                            URL (e.g., `https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>`) as
-                            `workflow_location`
         --use-commit-url    Use `<commit_hash>` instead of `<branch_name>` in generated GitHub raw contents URLs
     -V, --version           Prints version information
     -v, --verbose           Verbose mode
@@ -96,17 +93,13 @@ OPTIONS:
     -o, --output <output>            Path to the output file [default: yevis-metadata.yml]
 
 ARGS:
-    <workflow-location>    Location of a primary workflow document (only hosted on GitHub or Gist)
+    <workflow-location>    Remote location of a primary workflow document
 ```
 
-Only URL hosted on GitHub or Gist is accepted as `workflow-location`.
-This URL is a URL like `https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl`, which will later be converted to a raw URL like `https://raw.githubusercontent.com/ddbj/yevis-cli/main/tests/CWL/wf/trimming_and_qc.cwl`.
+Workflow location is a URL like `https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl`, which will later be converted to a raw URL like `https://raw.githubusercontent.com/ddbj/yevis-cli/main/tests/CWL/wf/trimming_and_qc.cwl`.
 
 `yevis-cli` collects various information and generates a template for the workflow metadata file.
-In particular, `workflow.files` is generated as a recursive list of files from primary workflow location.
-
-Use the `--update` option to update an already published workflow.
-Specifically, `--update https://<trs-endpoint>/tools/<wf_id>/versions/<wf_version>` will generate a template with the same ID.
+In particular, `workflow.files` is generated as a recursive list of files from the primary workflow location.
 
 ### validate
 
@@ -114,11 +107,11 @@ Validate schema and contents of the workflow metadata file.
 
 ```bash
 $ yevis validate --help
-yevis-validate 0.2.0
+yevis-validate 0.4.0
 Validate schema and contents of the Yevis metadata file
 
 USAGE:
-    yevis validate [FLAGS] [OPTIONS] --repository <repository> [metadata-locations]...
+    yevis validate [FLAGS] [OPTIONS] [metadata-locations]...
 
 FLAGS:
     -h, --help       Prints help information
@@ -127,8 +120,6 @@ FLAGS:
 
 OPTIONS:
         --gh-token <github-token>    GitHub Personal Access Token
-    -r, --repository <repository>    GitHub repository that published TRS responses (format: <owner>/<repo>, this option
-                                     is used for version validation)
 
 ARGS:
     <metadata-locations>...    Location of the Yevis metadata files (local file path or remote URL) [default:
@@ -136,24 +127,7 @@ ARGS:
 ```
 
 Explanation of validation rules for some fields:
-
-| Field                       | Description                                                                                                                                                                    |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `id`                        | Workflow ID generated by `make-template` command. This value should not be changed.                                                                                            |
-| `version`                   | Workflow version in the form of `x.y.z`.                                                                                                                                       |
-| `license`                   | Workflow License. An example of a license should be a distributable license such as `CC0-1.0`, `MIT`, and `Apache-2.0`, because `yevis-cli` will later upload files to Zenodo. |
-| `authors`                   | Workflow authors.                                                                                                                                                              |
-| `authors.[].github_account` | GitHub account of the author.                                                                                                                                                  |
-| `authors.[].name`           | Name of the author in the format `Family name, Given names` (e.g., `Doe, John`).                                                                                               |
-| `authors.[].affiliation`    | Affiliation of the author (optional).                                                                                                                                          |
-| `authors.[].orcid`          | ORCID of the author (optional).                                                                                                                                                |
-| `workflow.name`             | Workflow name. Allowed characters are `a-z`, `A-Z`, `0-9`, `~!@#$%^&\*()\_+-={}[]\|:;,.<>?`, and space.                                                                        |
-| `workflow.readme`           | Workflow readme.                                                                                                                                                               |
-| `workflow.language`         | Choose from `CWL`, `WDL`, `NFL`, and `SMK`.                                                                                                                                    |
-| `workflow.files`            | A list of files. At workflow runtime, files specified as `type: secondary` will be placed in the execution directory with `target` as a path.                                  |
-| `workflow.testing`          | A list of tests. See `test` for how to write tests.                                                                                                                            |
-
-Several example are provided as follows:
+Several examples are provided as follows:
 
 - [`test-metadata-CWL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test-metadata-CWL.yml)
 - [`test-metadata-WDL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test-metadata-WDL.yml)
@@ -166,11 +140,11 @@ Test workflow using [GA4GH WES](https://www.ga4gh.org/news/ga4gh-wes-api-enables
 
 ```bash
 $ yevis test --help
-yevis-test 0.2.0
+yevis-test 0.4.0
 Test workflow based on the Yevis metadata files
 
 USAGE:
-    yevis test [FLAGS] [OPTIONS] --repository <repository> [metadata-locations]...
+    yevis test [FLAGS] [OPTIONS] [metadata-locations]...
 
 FLAGS:
         --from-pr    Get modified files from a GitHub Pull Request. This option is used for pull request events in the
@@ -183,8 +157,6 @@ FLAGS:
 OPTIONS:
     -d, --docker-host <docker-host>      Location of the Docker host [default: unix:///var/run/docker.sock]
         --gh-token <github-token>        GitHub Personal Access Token
-    -r, --repository <repository>        GitHub repository to which the pull request will be sent (format:
-                                         <owner>/<repo>)
     -w, --wes-location <wes-location>    WES location where the test will be run. If not specified, `sapporo-service`
                                          will be started
 
@@ -222,7 +194,7 @@ There are three types of files:
 | `other`            | Other files. (e.g., data files, etc.)                       |
 
 At WES runtime, the files specified as `wf_params` and `wf_engine_params` are placed as WES execution parameters.
-In addition, the `other` files are placed in the execution directory with `target` as a path.
+In addition, the `other` files are placed in the execution directory with a `target` as a path.
 
 The `id` field can be freely specified.
 
@@ -235,7 +207,7 @@ Create a pull request after validation and testing.
 
 ```bash
 $ yevis pull-request --help
-yevis-pull-request 0.2.0
+yevis-pull-request 0.4.0
 Create a pull request based on the Yevis metadata files (after validation and testing)
 
 USAGE:
@@ -268,11 +240,11 @@ A pull request is created from the forked repository as follows:
 
 ### publish
 
-Upload files to Zenodo, generate TRS responses, and deploy them on GitHub Pages.
+Upload files to Zenodo, generate TRS responses and deploy them on GitHub Pages.
 
 ```bash
 $ yevis publish --help
-yevis-publish 0.2.0
+yevis-publish 0.4.0
 Generate TRS responses and host them on GitHub Pages. (Basically used in the CI environment (`CI=true`))
 
 USAGE:
@@ -282,9 +254,6 @@ FLAGS:
         --from-pr          Get modified files from GitHub Pull Request. This option is used for pull request events in
                            the CI environment. When using this option, specify GitHub Pull Request URL (e.g., `${{
                            github.event.pull_request._links.html.href }}`) as `metadata_locations`
-        --from-trs         Recursively get the Yevis metadata files from the TRS endpoint and publish them. This option
-                           is used in the CI environment. When using this option, specify the TRS endpoint (e.g.,
-                           https://ddbj.github.io/yevis-workflows/) as `metadata_locations`
     -h, --help             Prints help information
         --upload-zenodo    Upload dataset to Zenodo
     -V, --version          Prints version information
@@ -307,10 +276,9 @@ ARGS:
 
 This command is used within GitHub Actions.
 
-Note that following four options:
+Note that the following four options:
 
 - `--from-pr`: Publish from a pull request ID
-- `--from-trs`: Publish all workflows contained in the TRS endpoint
 - `--upload-zenodo`: Upload workflow and dataset to Zenodo
 - `--with-test`: Test before publishing
 
@@ -332,7 +300,6 @@ Examples of `yevis-cli` commands executed within each action are as follows:
 # yevis-test-pr.yml
 $ yevis test \
     --verbose \
-    --repository ${{ github.repository }} \
     --from-pr ${{github.event.pull_request._links.html.href }}
 
 # yevis-publish-pr.yml
@@ -346,19 +313,19 @@ $ yevis publish \
 
 ## Development
 
-Launch a development environment using `docker-compose`:
+Launch a development environment using `docker compose`:
 
 ```bash
-$ docker-compose -f docker-compose.dev.yml up -d --build
-$ docker-compose -f docker-compose.dev.yml exec app bash
+$ docker compose -f docker-compose.dev.yml up -d --build
+$ docker compose -f docker-compose.dev.yml exec app bash
 # cargo run -- --help
-yevis 0.2.0
+yevis 0.4.0
 ...
 ```
 
 ### Build binary
 
-**Recommendation**, build binary using `musl`:
+Recommendation, build the binary using `musl``:
 
 ```bash
 $ docker run --rm -it -v $PWD:/home/rust/src ekidd/rust-musl-builder cargo build --release
