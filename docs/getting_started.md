@@ -47,9 +47,7 @@ Then, in `[Settings] - [Secrets] - [Actions]` of the created repository, registe
 
 Deploy [`sapporo-wes/yevis-web`](https://github.com/sapporo-wes/yevis-web), a web application to browse a workflow registry.
 
-First, click on this [Link](https://github.com/sapporo-wes/yevis-web/generate) to start the creation of the GitHub repository.
-
-**Do not need to check the `Include all branched` option.**
+First, click on this [Link](https://github.com/sapporo-wes/yevis-web/fork) to start the creation of the GitHub repository.
 
 ![create-new-web-repository.png](./img/create-new-web-repository.png)
 

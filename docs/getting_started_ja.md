@@ -47,9 +47,7 @@
 
 ワークフローをブラウズするための Web Application、[`sapporo-wes/yevis-web`](https://github.com/sapporo-wes/yevis-web) をデプロイします。
 
-この [Link](https://github.com/sapporo-wes/yevis-web/generate) をクリックすると、GitHub Repository の作成が開始されます。
-
-**`Include all branched` オプションにチェック入れる必要はありません。**
+この [Link](https://github.com/sapporo-wes/yevis-web/fork) をクリックすると、GitHub Repository の作成が開始されます。
 
 ![create-new-web-repository.png](./img/create-new-web-repository.png)
 
