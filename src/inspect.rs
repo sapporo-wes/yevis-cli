@@ -146,7 +146,7 @@ mod tests {
 
     #[test]
     fn test_inspect_wf_type_version_cwl() -> Result<()> {
-        let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/main/tests/CWL/wf/trimming_and_qc.cwl")?;
+        let url = Url::parse("https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/tests/CWL/wf/trimming_and_qc.cwl")?;
         let wf_type_version = inspect_wf_type_version(&url)?;
         assert_eq!(wf_type_version.r#type, LanguageType::Cwl);
         assert_eq!(wf_type_version.version, "v1.0".to_string());
@@ -155,7 +155,7 @@ mod tests {
 
     #[test]
     fn test_inspect_wf_type_version_wdl() -> Result<()> {
-        let url = Url::parse("https://raw.githubusercontent.com/ddbj/yevis-cli/main/tests/WDL/wf/dockstore-tool-bamstats.wdl")?;
+        let url = Url::parse("https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/tests/WDL/wf/dockstore-tool-bamstats.wdl")?;
         let wf_type_version = inspect_wf_type_version(&url)?;
         assert_eq!(wf_type_version.r#type, LanguageType::Wdl);
         assert_eq!(wf_type_version.version, "1.0".to_string());
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn test_inspect_wf_type_version_nfl() -> Result<()> {
         let url = Url::parse(
-            "https://raw.githubusercontent.com/ddbj/yevis-cli/main/tests/NFL/wf/file_input.nf",
+            "https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/tests/NFL/wf/file_input.nf",
         )?;
         let wf_type_version = inspect_wf_type_version(&url)?;
         assert_eq!(wf_type_version.r#type, LanguageType::Nfl);
@@ -176,7 +176,7 @@ mod tests {
     #[test]
     fn test_inspect_wf_type_version_smk() -> Result<()> {
         let url = Url::parse(
-            "https://raw.githubusercontent.com/ddbj/yevis-cli/main/tests/SMK/wf/Snakefile",
+            "https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/tests/SMK/wf/Snakefile",
         )?;
         let wf_type_version = inspect_wf_type_version(&url)?;
         assert_eq!(wf_type_version.r#type, LanguageType::Smk);

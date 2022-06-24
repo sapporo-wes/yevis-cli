@@ -192,7 +192,7 @@ mod tests {
             r#"
 [
   {
-    "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/wf/fastqc.cwl",
+    "path": "https://raw.githubusercontent.com/sapporo-wes/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/wf/fastqc.cwl",
     "file_type": "SECONDARY_DESCRIPTOR",
     "checksum": {
       "checksum": "1bd771a51336a782b695db8334872e00f305cd7c49c4978e7e58786ea4714437",
@@ -200,7 +200,7 @@ mod tests {
     }
   },
   {
-    "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/wf/trimming_and_qc.cwl",
+    "path": "https://raw.githubusercontent.com/sapporo-wes/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/wf/trimming_and_qc.cwl",
     "file_type": "PRIMARY_DESCRIPTOR",
     "checksum": {
       "checksum": "33ef70b2d5ee38cb394c5ca6354243f44a85118271026eb9fc61365a703e730b",
@@ -208,7 +208,7 @@ mod tests {
     }
   },
   {
-    "path": "https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/wf/trimmomatic_pe.cwl",
+    "path": "https://raw.githubusercontent.com/sapporo-wes/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/wf/trimmomatic_pe.cwl",
     "file_type": "SECONDARY_DESCRIPTOR",
     "checksum": {
       "checksum": "531d0a38116347cade971c211056334f7cae48e1293e2bb0e334894e55636f8e",
@@ -222,6 +222,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn test_generate_tests() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml", &gh_token)?;
@@ -230,7 +231,7 @@ mod tests {
             r#"
 [
   {
-    "content": "{\"id\":\"test_1\",\"files\":[{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/test/wf_params.json\",\"target\":\"wf_params.json\",\"type\":\"wf_params\"},{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/test/ERR034597_1.small.fq.gz\",\"target\":\"ERR034597_1.small.fq.gz\",\"type\":\"other\"},{\"url\":\"https://raw.githubusercontent.com/ddbj/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/test/ERR034597_2.small.fq.gz\",\"target\":\"ERR034597_2.small.fq.gz\",\"type\":\"other\"}]}",
+    "content": "{\"id\":\"test_1\",\"files\":[{\"url\":\"https://raw.githubusercontent.com/sapporo-wes/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/test/wf_params.json\",\"target\":\"wf_params.json\",\"type\":\"wf_params\"},{\"url\":\"https://raw.githubusercontent.com/sapporo-wes/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/test/ERR034597_1.small.fq.gz\",\"target\":\"ERR034597_1.small.fq.gz\",\"type\":\"other\"},{\"url\":\"https://raw.githubusercontent.com/sapporo-wes/yevis-cli/d81e0e38143c63ead17d475b85c9b639958b1b47/tests/CWL/test/ERR034597_2.small.fq.gz\",\"target\":\"ERR034597_2.small.fq.gz\",\"type\":\"other\"}]}",
     "checksum": [
       {
         "checksum": "243f87fe67d5abb9555069ca658e5f9709c3554001845d5dca3b73011237e4ec",

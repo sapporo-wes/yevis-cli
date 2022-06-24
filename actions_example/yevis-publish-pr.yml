@@ -22,8 +22,8 @@ jobs:
       - name: "Download yevis binary from artifact"
         id: download-binary-artifact
         run: |
-          RUN_ID=`gh run --repo ddbj/yevis-cli list --workflow build_binary --json databaseId --jq .[0].databaseId`
-          gh run --repo ddbj/yevis-cli download ${RUN_ID} -n yevis
+          RUN_ID=`gh run --repo sapporo-wes/yevis-cli list --workflow build_binary --json databaseId --jq .[0].databaseId`
+          gh run --repo sapporo-wes/yevis-cli download ${RUN_ID} -n yevis
           chmod +x yevis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -32,7 +32,7 @@ jobs:
       - name: "Download yevis binary from release"
         if: ${{ steps.download-binary-artifact.outcome != 'success' }}
         run: |
-          curl -fsSL -O https://github.com/ddbj/yevis-cli/releases/latest/download/yevis
+          curl -fsSL -O https://github.com/sapporo-wes/yevis-cli/releases/latest/download/yevis
           chmod +x ./yevis
 
       - name: "Run publish"

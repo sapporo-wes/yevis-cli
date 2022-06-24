@@ -8,9 +8,9 @@ This document describes how to build and maintain the Yevis workflow registry.
 
 Prepare a GitHub Repository for distributing workflow metadata and [GA4GH Tool Registry Service (TRS) API](https://www.ga4gh.org/news/tool-registry-service-api-enabling-an-interoperable-library-of-genomics-analysis-tools/).
 
-Use [GitHub - ddbj/yevis-workflow-registry-template](https://github.com/ddbj/yevis-workflow-registry-template) as a template.
+Use [GitHub - sapporo-wes/yevis-workflow-registry-template](https://github.com/sapporo-wes/yevis-workflow-registry-template) as a template.
 
-Click on this [Link](https://github.com/ddbj/yevis-workflow-registry-template/generate) to start the creation of the GitHub repository.
+Click on this [Link](https://github.com/sapporo-wes/yevis-workflow-registry-template/generate) to start the creation of the GitHub repository.
 
 **Don't forget to check the `Include all branched` option.**
 
@@ -45,9 +45,9 @@ Then, in `[Settings] - [Secrets] - [Actions]` of the created repository, registe
 
 ## 2. Preparation of `yevis-web`
 
-Deploy [`ddbj/yevis-web`](https://github.com/ddbj/yevis-web), a web application to browse a workflow registry.
+Deploy [`sapporo-wes/yevis-web`](https://github.com/sapporo-wes/yevis-web), a web application to browse a workflow registry.
 
-First, click on this [Link](https://github.com/ddbj/yevis-web/generate) to start the creation of the GitHub repository.
+First, click on this [Link](https://github.com/sapporo-wes/yevis-web/generate) to start the creation of the GitHub repository.
 
 **Do not need to check the `Include all branched` option.**
 
@@ -89,24 +89,24 @@ Workflow registration is divided into three processes:
 
 ### 3.1. Workflow Submission Process
 
-Install [`yevis-cli`](https://github.com/ddbj/yevis-cli), see [`yevis-cli` - Installation](https://github.com/ddbj/yevis-cli#installation).
+Install [`yevis-cli`](https://github.com/sapporo-wes/yevis-cli), see [`yevis-cli` - Installation](https://github.com/sapporo-wes/yevis-cli#installation).
 
 In this document, uses a Docker environment since using M1 Mac (the binary is only built for Linux).
 
 ```bash=
-$ curl -fsSL -O https://raw.githubusercontent.com/ddbj/yevis-cli/main/docker-compose.yml
+$ curl -fsSL -O https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/docker-compose.yml
 $ docker compose up -d
 [+] Running 2/2
  ⠿ Network yevis-network  Created                                                                   0.0s
  ⠿ Container yevis-cli     Started                                                                   0.2s
 $ docker ps
 CONTAINER ID   IMAGE                          COMMAND            CREATED          STATUS          PORTS     NAMES
-929d689b61f2   ghcr.io/ddbj/yevis-cli:0.4.0   "sleep infinity"   34 seconds ago   Up 33 seconds             yevis-cli
+929d689b61f2   ghcr.io/sapporo-wes/yevis-cli:0.4.0   "sleep infinity"   34 seconds ago   Up 33 seconds             yevis-cli
 $ docker compose exec app bash
 
 root@929d689b61f2:/app# yevis --help
 yevis 0.4.0
-DDBJ(DNA Data Bank of Japan)
+DDBJ(Bioinformatics and DDBJ Center)
 ...
 ```
 
@@ -278,7 +278,7 @@ Success pull-request
 
 ### 3.2. Workflow Review Process
 
-A workflow submitted as a pull request is automatically validated and tested by [GitHub Action - `yevis-publish-pr.yml`](https://github.com/ddbj/yevis-cli/blob/main/actions_exmaple/yevis-publish-pr.yml).
+A workflow submitted as a pull request is automatically validated and tested by [GitHub Action - `yevis-publish-pr.yml`](https://github.com/sapporo-wes/yevis-cli/blob/main/actions_exmaple/yevis-publish-pr.yml).
 
 ![review-test.png](./img/review-test.png)
 
@@ -286,7 +286,7 @@ Then, merge a pull request.
 
 ### 3.3. Workflow Publication Process
 
-After merging the pull request, it will be published automatically by [GitHub Action - `yevis-publish-pr.yml`](https://github.com/ddbj/yevis-cli/blob/main/actions_exmaple/yevis-publish-pr.yml).
+After merging the pull request, it will be published automatically by [GitHub Action - `yevis-publish-pr.yml`](https://github.com/sapporo-wes/yevis-cli/blob/main/actions_exmaple/yevis-publish-pr.yml).
 
 Publication workflow is running:
 

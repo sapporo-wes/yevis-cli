@@ -8,9 +8,9 @@
 
 ワークフローのメタデータと [GA4GH Tool Registry Service (TRS) API](https://www.ga4gh.org/news/tool-registry-service-api-enabling-an-interoperable-library-of-genomics-analysis-tools/) を配布するための GitHub Repository を準備します。
 
-テンプレートとして、[GitHub - ddbj/yevis-workflow-registry-template](https://github.com/ddbj/yevis-workflow-registry-template) を使用します。
+テンプレートとして、[GitHub - sapporo-wes/yevis-workflow-registry-template](https://github.com/sapporo-wes/yevis-workflow-registry-template) を使用します。
 
-この [Link](https://github.com/ddbj/yevis-workflow-registry-template/generate) をクリックすると、GitHub Repository の作成が開始されます。
+この [Link](https://github.com/sapporo-wes/yevis-workflow-registry-template/generate) をクリックすると、GitHub Repository の作成が開始されます。
 
 **`Include all branched` オプションにチェック入れることを忘れずに。**
 
@@ -45,9 +45,9 @@
 
 ## 2. `yevis-web` の用意
 
-ワークフローをブラウズするための Web Application、[`ddbj/yevis-web`](https://github.com/ddbj/yevis-web) をデプロイします。
+ワークフローをブラウズするための Web Application、[`sapporo-wes/yevis-web`](https://github.com/sapporo-wes/yevis-web) をデプロイします。
 
-この [Link](https://github.com/ddbj/yevis-web/generate) をクリックすると、GitHub Repository の作成が開始されます。
+この [Link](https://github.com/sapporo-wes/yevis-web/generate) をクリックすると、GitHub Repository の作成が開始されます。
 
 **`Include all branched` オプションにチェック入れる必要はありません。**
 
@@ -89,26 +89,26 @@ GitHub Pages の deploy アクションが完了すると、`yevis-web` が GitH
 
 ### 3.1. Workflow Submission Process
 
-[`yevis-cli`](https://github.com/ddbj/yevis-cli) をインストールします。
+[`yevis-cli`](https://github.com/sapporo-wes/yevis-cli) をインストールします。
 
-[`yevis-cli` - Installation](https://github.com/ddbj/yevis-cli#installation) を参照してください。
+[`yevis-cli` - Installation](https://github.com/sapporo-wes/yevis-cli#installation) を参照してください。
 
 このドキュメントでは、M1 Mac を使用しているため、Docker 環境を使用します （binary は Linux 用にのみビルドされています）。
 
 ```bash=
-$ curl -fsSL -O https://raw.githubusercontent.com/ddbj/yevis-cli/main/docker-compose.yml
+$ curl -fsSL -O https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/docker-compose.yml
 $ docker compose up -d
 [+] Running 2/2
  ⠿ Network yevis-network  Created                                                                   0.0s
  ⠿ Container yevis-cli     Started                                                                   0.2s
 $ docker ps
 CONTAINER ID   IMAGE                          COMMAND            CREATED          STATUS          PORTS     NAMES
-929d689b61f2   ghcr.io/ddbj/yevis-cli:0.4.0   "sleep infinity"   34 seconds ago   Up 33 seconds             yevis-cli
+929d689b61f2   ghcr.io/sapporo-wes/yevis-cli:0.4.0   "sleep infinity"   34 seconds ago   Up 33 seconds             yevis-cli
 $ docker compose exec app bash
 
 root@929d689b61f2:/app# yevis --help
 yevis 0.4.0
-DDBJ(DNA Data Bank of Japan)
+DDBJ(Bioinformatics and DDBJ Center)
 ...
 ```
 
@@ -280,7 +280,7 @@ Success pull-request
 
 ### 3.2. Workflow Review Process
 
-Pull Request として submit されたワークフローは、[GitHub Action - `yevis-test-pr.yml`](https://github.com/ddbj/yevis-cli/blob/main/actions_exmaple/yevis-test-pr.yml) によって自動的に Validation and Test されます。
+Pull Request として submit されたワークフローは、[GitHub Action - `yevis-test-pr.yml`](https://github.com/sapporo-wes/yevis-cli/blob/main/actions_exmaple/yevis-test-pr.yml) によって自動的に Validation and Test されます。
 
 ![review-test.png](./img/review-test.png)
 
@@ -288,7 +288,7 @@ Pull Request として submit されたワークフローは、[GitHub Action - 
 
 ### 3.3. Workflow Publication Process
 
-Pull Request をマージした後、[GitHub Action - `yevis-publish-pr.yml`](https://github.com/ddbj/yevis-cli/blob/main/actions_exmaple/yevis-publish-pr.yml) によって自動的に publication されます。
+Pull Request をマージした後、[GitHub Action - `yevis-publish-pr.yml`](https://github.com/sapporo-wes/yevis-cli/blob/main/actions_exmaple/yevis-publish-pr.yml) によって自動的に publication されます。
 
 Publication workflow が実行中:
 

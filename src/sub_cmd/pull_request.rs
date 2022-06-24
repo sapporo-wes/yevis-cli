@@ -144,7 +144,7 @@ fn create_pull_request(
         owner.as_ref(),
         name.as_ref()
     );
-    // https://api.github.com/repos/ddbj/yevis-cli/pulls/1
+    // https://api.github.com/repos/sapporo-wes/yevis-cli/pulls/1
     let pull_request_apt_url =
         gh::api::post_pulls(&gh_token, &owner, &name, &title, &head, &branch)?;
     // https://github.com/suecharo/yevis-getting-started/pull/1

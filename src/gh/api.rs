@@ -350,7 +350,7 @@ pub fn create_empty_branch(
 
 Please see:
 
-- [GitHub - ddbj/yevis-cli](https://github.com/ddbj/yevis-cli)
+- [GitHub - sapporo-wes/yevis-cli](https://github.com/sapporo-wes/yevis-cli)
 - [GA4GH - Tool Registry Service API](https://www.ga4gh.org/news/tool-registry-service-api-enabling-an-interoperable-library-of-genomics-analysis-tools/)
 - [GitHub - ga4gh/tool-registry-service-schemas](https://github.com/ga4gh/tool-registry-service-schemas)
 "#.to_string();
@@ -703,7 +703,7 @@ mod tests {
     #[test]
     fn test_get_default_branch() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
-        let branch = get_default_branch(&gh_token, "ddbj", "yevis-cli", None)?;
+        let branch = get_default_branch(&gh_token, "sapporo-wes", "yevis-cli", None)?;
         assert_eq!(branch, "main");
         Ok(())
     }
@@ -712,15 +712,15 @@ mod tests {
     fn test_get_default_branch_with_memo() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
         let mut memo = HashMap::new();
-        get_default_branch(&gh_token, "ddbj", "yevis-cli", Some(&mut memo))?;
-        get_default_branch(&gh_token, "ddbj", "yevis-cli", Some(&mut memo))?;
+        get_default_branch(&gh_token, "sapporo-wes", "yevis-cli", Some(&mut memo))?;
+        get_default_branch(&gh_token, "sapporo-wes", "yevis-cli", Some(&mut memo))?;
         Ok(())
     }
 
     #[test]
     fn test_get_latest_commit_sha() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
-        get_latest_commit_sha(&gh_token, "ddbj", "yevis-cli", "main", None)?;
+        get_latest_commit_sha(&gh_token, "sapporo-wes", "yevis-cli", "main", None)?;
         Ok(())
     }
 
@@ -728,8 +728,20 @@ mod tests {
     fn test_get_latest_commit_sha_with_memo() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
         let mut memo = HashMap::new();
-        get_latest_commit_sha(&gh_token, "ddbj", "yevis-cli", "main", Some(&mut memo))?;
-        get_latest_commit_sha(&gh_token, "ddbj", "yevis-cli", "main", Some(&mut memo))?;
+        get_latest_commit_sha(
+            &gh_token,
+            "sapporo-wes",
+            "yevis-cli",
+            "main",
+            Some(&mut memo),
+        )?;
+        get_latest_commit_sha(
+            &gh_token,
+            "sapporo-wes",
+            "yevis-cli",
+            "main",
+            Some(&mut memo),
+        )?;
         Ok(())
     }
 
@@ -744,10 +756,10 @@ mod tests {
     #[test]
     fn test_get_readme_url() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
-        let readme_url = get_readme_url(&gh_token, "ddbj", "yevis-cli")?;
+        let readme_url = get_readme_url(&gh_token, "sapporo-wes", "yevis-cli")?;
         assert_eq!(
             readme_url.to_string().as_str(),
-            "https://github.com/ddbj/yevis-cli/blob/main/README.md"
+            "https://github.com/sapporo-wes/yevis-cli/blob/main/README.md"
         );
         Ok(())
     }
@@ -755,7 +767,8 @@ mod tests {
     #[test]
     fn test_get_file_list_recursive() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
-        let file_list = get_file_list_recursive(&gh_token, "ddbj", "yevis-cli", ".", "main")?;
+        let file_list =
+            get_file_list_recursive(&gh_token, "sapporo-wes", "yevis-cli", ".", "main")?;
         assert!(file_list.contains(&PathBuf::from("README.md")));
         assert!(file_list.contains(&PathBuf::from("LICENSE")));
         assert!(file_list.contains(&PathBuf::from("src/main.rs")));
@@ -765,7 +778,8 @@ mod tests {
     #[test]
     fn test_get_file_list_recursive_with_dir() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
-        let file_list = get_file_list_recursive(&gh_token, "ddbj", "yevis-cli", "src", "main")?;
+        let file_list =
+            get_file_list_recursive(&gh_token, "sapporo-wes", "yevis-cli", "src", "main")?;
         assert!(file_list.contains(&PathBuf::from("src/main.rs")));
         Ok(())
     }

@@ -197,7 +197,7 @@ mod tests {
     #[test]
     fn test_get_gh_pages_branch_no_branch() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
-        let branch = get_gh_pages_branch(&gh_token, "ddbj", "yevis-cli")?;
+        let branch = get_gh_pages_branch(&gh_token, "sapporo-wes", "yevis-cli")?;
         assert_eq!(branch, "main");
         Ok(())
     }

@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn test_gh_url() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
-        let owner = "ddbj".to_string();
+        let owner = "sapporo-wes".to_string();
         let name = "yevis-cli".to_string();
         let branch = "main".to_string();
         let commit = "f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9".to_string();
@@ -271,8 +271,9 @@ mod tests {
     #[test]
     fn test_gh_url_invalid_path() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
-        let url =
-            Url::parse("https://github.com/ddbj/yevis-cli/blob/invalid_branch/path/to/workflow")?;
+        let url = Url::parse(
+            "https://github.com/sapporo-wes/yevis-cli/blob/invalid_branch/path/to/workflow",
+        )?;
         assert!(GitHubUrl::new(&url, &gh_token, None, None).is_err());
         Ok(())
     }
@@ -287,7 +288,7 @@ mod tests {
     #[test]
     fn test_to_url() -> Result<()> {
         let gh_token = env::github_token(&None::<String>)?;
-        let owner = "ddbj".to_string();
+        let owner = "sapporo-wes".to_string();
         let name = "yevis-cli".to_string();
         let commit = "f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9".to_string();
         let file_path = PathBuf::from("path/to/workflow.yml");

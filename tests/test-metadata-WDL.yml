@@ -9,20 +9,20 @@ authors:
     orcid: 0000-0003-2765-0049
 workflow:
   name: WDL_dockstore-tool-bamstats
-  readme: "https://raw.githubusercontent.com/ddbj/yevis-cli/main/README.md"
+  readme: "https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/README.md"
   language:
     type: WDL
     version: "1.0"
   files:
-    - url: "https://raw.githubusercontent.com/ddbj/yevis-cli/main/tests/WDL/wf/dockstore-tool-bamstats.wdl"
+    - url: "https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/tests/WDL/wf/dockstore-tool-bamstats.wdl"
       target: dockstore-tool-bamstats.wdl
       type: primary
   testing:
     - id: test_1
       files:
-        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/WDL/test/wf_params.json"
+        - url: "https://github.com/sapporo-wes/yevis-cli/blob/main/tests/WDL/test/wf_params.json"
           target: wf_params.json
           type: wf_params
-        - url: "https://github.com/ddbj/yevis-cli/blob/main/tests/WDL/test/tiny.bam"
+        - url: "https://github.com/sapporo-wes/yevis-cli/blob/main/tests/WDL/test/tiny.bam"
           target: tiny.bam
           type: other

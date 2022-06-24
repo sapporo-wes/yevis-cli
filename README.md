@@ -17,9 +17,9 @@ Features include:
 In addition, see the below links:
 
 - [`ddbj/workflow-registry`](https://github.com/ddbj/workflow-registry): a workflow registry built and maintained by [DDBJ](https://www.ddbj.nig.ac.jp/) using `yevis-cli`
-- [`ddbj/yevis-web`](https://github.com/ddbj/yevis-web): a web application to browse published workflows
-- [`Yevis Getting Started`](https://ddbj.github.io/yevis-cli/getting_started): the document for Yevis system installation and usage
-- [`Yevis Getting Started Ja`](https://ddbj.github.io/yevis-cli/getting_started_ja): 日本語での Yevis system の使い方
+- [`sapporo-wes/yevis-web`](https://github.com/sapporo-wes/yevis-web): a web application to browse published workflows
+- [`Yevis Getting Started`](https://sapporo-wes.github.io/yevis-cli/getting_started): the document for Yevis system installation and usage
+- [`Yevis Getting Started Ja`](https://sapporo-wes.github.io/yevis-cli/getting_started_ja): 日本語での Yevis system の使い方
 
 ## Installation
 
@@ -28,7 +28,7 @@ In addition, see the below links:
 Use a single binary that is built without any dependencies (supports Linux only):
 
 ```bash
-$ curl -fsSL -O https://github.com/ddbj/yevis-cli/releases/latest/download/yevis
+$ curl -fsSL -O https://github.com/sapporo-wes/yevis-cli/releases/latest/download/yevis
 $ chmod +x ./yevis
 $ ./yevis --help
 ```
@@ -36,14 +36,14 @@ $ ./yevis --help
 Or, use the Docker environment:
 
 ```bash
-$ curl -O https://raw.githubusercontent.com/ddbj/yevis-cli/main/docker-compose.yml
+$ curl -O https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/docker-compose.yml
 $ docker compose up -d
 $ docker compose exec app yevis --help
 ```
 
 ## Usage
 
-See [Getting Started - 3. Workflow Registration](https://ddbj.github.io/yevis-cli/getting_started#3-workflow-registration) for a series of usages.
+See [Getting Started - 3. Workflow Registration](https://sapporo-wes.github.io/yevis-cli/getting_started#3-workflow-registration) for a series of usages.
 
 This section describes some subcommands.
 
@@ -96,7 +96,7 @@ ARGS:
     <workflow-location>    Remote location of a primary workflow document
 ```
 
-Workflow location is a URL like `https://github.com/ddbj/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl`, which will later be converted to a raw URL like `https://raw.githubusercontent.com/ddbj/yevis-cli/main/tests/CWL/wf/trimming_and_qc.cwl`.
+Workflow location is a URL like `https://github.com/sapporo-wes/yevis-cli/blob/main/tests/CWL/wf/trimming_and_qc.cwl`, which will later be converted to a raw URL like `https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/tests/CWL/wf/trimming_and_qc.cwl`.
 
 `yevis-cli` collects various information and generates a template for the workflow metadata file.
 In particular, `workflow.files` is generated as a recursive list of files from the primary workflow location.
@@ -129,10 +129,10 @@ ARGS:
 Explanation of validation rules for some fields:
 Several examples are provided as follows:
 
-- [`test-metadata-CWL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test-metadata-CWL.yml)
-- [`test-metadata-WDL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test-metadata-WDL.yml)
-- [`test-metadata-NFL.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test-metadata-NFL.yml)
-- [`test-metadata-SMK.yml`](https://github.com/ddbj/yevis-cli/blob/main/tests/test-metadata-SMK.yml)
+- [`test-metadata-CWL.yml`](https://github.com/sapporo-wes/yevis-cli/blob/main/tests/test-metadata-CWL.yml)
+- [`test-metadata-WDL.yml`](https://github.com/sapporo-wes/yevis-cli/blob/main/tests/test-metadata-WDL.yml)
+- [`test-metadata-NFL.yml`](https://github.com/sapporo-wes/yevis-cli/blob/main/tests/test-metadata-NFL.yml)
+- [`test-metadata-SMK.yml`](https://github.com/sapporo-wes/yevis-cli/blob/main/tests/test-metadata-SMK.yml)
 
 ### test
 
@@ -290,8 +290,8 @@ See the GitHub Actions section for more details.
 
 Two actions are provided as examples:
 
-- [`yevis-test-pr.yml`](https://github.com/ddbj/yevis-cli/blob/main/actions_example/yevis-test-pr.yml): Action to automatically validate and test a pull request
-- [`yevis-publish-pr.yml`](https://github.com/ddbj/yevis-cli/blob/main/actions_example/yevis-publish-pr.yml): Action to upload files to Zenodo and generate TRS responses when pull requests are merged
+- [`yevis-test-pr.yml`](https://github.com/sapporo-wes/yevis-cli/blob/main/actions_example/yevis-test-pr.yml): Action to automatically validate and test a pull request
+- [`yevis-publish-pr.yml`](https://github.com/sapporo-wes/yevis-cli/blob/main/actions_example/yevis-publish-pr.yml): Action to upload files to Zenodo and generate TRS responses when pull requests are merged
   - `ZENODO_TOKEN` must be set as GitHub Secrets.
 
 Examples of `yevis-cli` commands executed within each action are as follows:
@@ -363,17 +363,17 @@ $ cargo test -- --test-threads=1 --nocapture
 ```
 
 Several test workflows are prepared.
-See [tests/README.md](https://github.com/ddbj/yevis-cli/blob/main/tests/README.md).
+See [tests/README.md](https://github.com/sapporo-wes/yevis-cli/blob/main/tests/README.md).
 
 ### Download artifacts from building GitHub Actions
 
 ```bash
-$ gh run --repo ddbj/yevis-cli list --workflow build_binary --json databaseId --jq .[0].databaseId | xargs -I {} gh run --repo ddbj/yevis-cli download {} -n yevis
+$ gh run --repo sapporo-wes/yevis-cli list --workflow build_binary --json databaseId --jq .[0].databaseId | xargs -I {} gh run --repo sapporo-wes/yevis-cli download {} -n yevis
 ```
 
 ### Release
 
-Use [`release.sh`](https://github.com/ddbj/yevis-cli/blob/main/release.sh) as follows:
+Use [`release.sh`](https://github.com/sapporo-wes/yevis-cli/blob/main/release.sh) as follows:
 
 ```bash
 $ bash release.sh <new_version>
@@ -382,4 +382,4 @@ $ bash release.sh <new_version>
 ## License
 
 [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0).
-See the [LICENSE](https://github.com/ddbj/yevis-cli/blob/main/LICENSE).
+See the [LICENSE](https://github.com/sapporo-wes/yevis-cli/blob/main/LICENSE).
