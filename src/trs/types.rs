@@ -293,7 +293,7 @@ pub struct ToolVersion {
     pub author: Option<Vec<String>>,
     pub name: Option<String>,
     pub url: Url,
-    pub id: Uuid,
+    pub id: String, // Version
     pub is_production: Option<bool>,
     pub images: Option<Vec<ImageData>>,
     pub descriptor_type: Option<Vec<DescriptorType>>,
@@ -340,7 +340,7 @@ impl ToolVersion {
                 meta.id,
                 &meta.version
             ))?,
-            id: meta.id,
+            id: meta.version.clone(),
             is_production: None,
             images: None,
             descriptor_type: Some(vec![DescriptorType::new(&meta.workflow.language.r#type)]),
@@ -393,7 +393,7 @@ impl ToolVersion {
             meta.id,
             &meta.version
         ))?;
-        self.id = meta.id;
+        self.id = meta.version.clone();
         self.descriptor_type = Some(vec![DescriptorType::new(&meta.workflow.language.r#type)]);
         self.verified = match merged_verified_source {
             Some(_) => Some(true),
@@ -593,7 +593,7 @@ mod tests {
       ],
       "name": "CWL_trimming_and_qc",
       "url": "https://test_owner.github.io/test_name/tools/c13b6e27-a4ee-426f-8bdb-8cf5c4310bad/versions/1.0.0",
-      "id": "c13b6e27-a4ee-426f-8bdb-8cf5c4310bad",
+      "id": "1.0.0",
       "descriptor_type": [
         "CWL"
       ],
@@ -620,7 +620,7 @@ mod tests {
   ],
   "name": "CWL_trimming_and_qc",
   "url": "https://test_owner.github.io/test_name/tools/c13b6e27-a4ee-426f-8bdb-8cf5c4310bad/versions/1.0.0",
-  "id": "c13b6e27-a4ee-426f-8bdb-8cf5c4310bad",
+  "id": "1.0.0",
   "descriptor_type": [
     "CWL"
   ],
