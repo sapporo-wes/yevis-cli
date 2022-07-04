@@ -212,7 +212,7 @@ pub struct Tool {
     pub aliases: Option<Vec<String>>,
     pub organization: String,
     pub name: Option<String>,
-    pub tool_class: ToolClass,
+    pub toolclass: ToolClass,
     pub description: Option<Url>,
     pub meta_version: Option<String>,
     pub has_checker: Option<bool>,
@@ -243,7 +243,7 @@ impl Tool {
             aliases: None,
             organization,
             name: Some(meta.workflow.name.clone()),
-            tool_class: ToolClass::default(),
+            toolclass: ToolClass::default(),
             description: Some(meta.workflow.readme.clone()),
             meta_version: None,
             has_checker: Some(true),
@@ -545,7 +545,7 @@ mod tests {
   "id": "c13b6e27-a4ee-426f-8bdb-8cf5c4310bad",
   "organization": "@suecharo",
   "name": "CWL_trimming_and_qc",
-  "tool_class": {
+  "toolclass": {
     "id": "workflow",
     "name": "Workflow",
     "description": "A computational workflow"
@@ -578,7 +578,7 @@ mod tests {
   "id": "c13b6e27-a4ee-426f-8bdb-8cf5c4310bad",
   "organization": "@suecharo",
   "name": "CWL_trimming_and_qc",
-  "tool_class": {
+  "toolclass": {
     "id": "workflow",
     "name": "Workflow",
     "description": "A computational workflow"
