@@ -16,6 +16,7 @@ Features include:
 
 In addition, see the below links:
 
+- **[Paper Link](https://www.biorxiv.org/content/10.1101/2022.07.08.499265v1)**
 - [`ddbj/workflow-registry`](https://github.com/ddbj/workflow-registry): a workflow registry built and maintained by [DDBJ](https://www.ddbj.nig.ac.jp/) using `yevis-cli`
 - [`sapporo-wes/yevis-web`](https://github.com/sapporo-wes/yevis-web): a web application to browse published workflows
 - [`Yevis Getting Started`](https://sapporo-wes.github.io/yevis-cli/getting_started): the document for Yevis system installation and usage
