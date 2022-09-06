@@ -11,7 +11,7 @@ use std::thread;
 use std::time;
 use url::Url;
 
-pub const SAPPORO_SERVICE_IMAGE: &str = "ghcr.io/sapporo-wes/sapporo-service:1.2.4";
+pub const SAPPORO_SERVICE_IMAGE: &str = "ghcr.io/sapporo-wes/sapporo-service:latest";
 pub const SAPPORO_SERVICE_NAME: &str = "yevis-sapporo-service";
 
 pub fn inside_docker_container() -> bool {

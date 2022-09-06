@@ -16,7 +16,7 @@ pub fn test(meta: &metadata::types::Metadata, wes_loc: &Url, write_log: bool) ->
     for test_case in &meta.workflow.testing {
         info!("Testing test case: {}", test_case.id);
 
-        let form = wes::api::test_case_to_form(&meta.workflow, test_case)?;
+        let form = wes::api::test_case_to_form(meta, test_case)?;
         debug!("Form:\n{:#?}", &form);
         let run_id = wes::api::post_run(wes_loc, form)?;
         info!("WES run_id: {}", run_id);

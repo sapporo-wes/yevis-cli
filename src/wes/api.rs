@@ -54,16 +54,22 @@ pub fn get_supported_wes_versions(wes_loc: &Url) -> Result<Vec<String>> {
 }
 
 pub fn test_case_to_form(
-    wf: &metadata::types::Workflow,
+    meta: &metadata::types::Metadata,
     test_case: &metadata::types::Testing,
 ) -> Result<multipart::Form> {
+    let mut meta_cloned = meta.clone();
+    meta_cloned.workflow.testing = vec![test_case.clone()];
+
     let form = multipart::Form::new()
-        .text("workflow_type", wf.language.r#type.to_string())
-        .text("workflow_type_version", wf.language.version.clone())
-        .text("workflow_url", wf_url(wf)?)
+        .text("workflow_type", meta.workflow.language.r#type.to_string())
+        .text(
+            "workflow_type_version",
+            meta.workflow.language.version.clone(),
+        )
+        .text("workflow_url", wf_url(&meta.workflow)?)
         .text(
             "workflow_engine_name",
-            match wf.language.r#type {
+            match meta.workflow.language.r#type {
                 metadata::types::LanguageType::Cwl => "cwltool",
                 metadata::types::LanguageType::Wdl => "cromwell",
                 metadata::types::LanguageType::Nfl => "nextflow",
@@ -73,7 +79,11 @@ pub fn test_case_to_form(
         )
         .text("workflow_params", test_case.wf_params()?)
         .text("workflow_engine_parameters", test_case.wf_engine_params()?)
-        .text("workflow_attachment", wf_attachment(wf, test_case)?);
+        .text(
+            "workflow_attachment",
+            wf_attachment(&meta.workflow, test_case)?,
+        )
+        .text("yevis_metadata", serde_json::to_string(&meta_cloned)?);
     Ok(form)
 }
 
@@ -278,7 +288,7 @@ mod tests {
         let wes_loc = wes::instance::default_wes_location();
         let gh_token = env::github_token(&None::<String>)?;
         let meta = metadata::io::read("./tests/test-metadata-CWL-validated.yml", &gh_token)?;
-        let form = test_case_to_form(&meta.workflow, &meta.workflow.testing[0])?;
+        let form = test_case_to_form(&meta, &meta.workflow.testing[0])?;
         let run_id = post_run(&wes_loc, form)?;
         assert!(!run_id.is_empty());
         wes::instance::stop_wes(&docker_host)?;
