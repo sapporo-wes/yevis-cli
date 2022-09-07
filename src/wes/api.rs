@@ -263,6 +263,26 @@ pub fn get_run_log(wes_loc: &Url, run_id: impl AsRef<str>) -> Result<Value> {
     Ok(res_body)
 }
 
+pub fn fetch_ro_crate(wes_loc: &Url, run_id: impl AsRef<str>) -> Result<Value> {
+    let url = Url::parse(&format!(
+        "{}/runs/{}/data/ro-crate-metadata.json",
+        wes_loc.as_str().trim().trim_end_matches('/'),
+        run_id.as_ref()
+    ))?;
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .get(url.as_str())
+        .send()?;
+    ensure!(
+        response.status().is_success(),
+        "Failed to fetch RO-Crate with status: {} from {}",
+        response.status(),
+        url.as_str()
+    );
+    let res_body = response.json::<Value>()?;
+    Ok(res_body)
+}
+
 #[cfg(test)]
 #[cfg(not(tarpaulin_include))]
 mod tests {

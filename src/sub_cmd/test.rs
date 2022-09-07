@@ -11,7 +11,12 @@ use std::time;
 use url::Url;
 use uuid::Uuid;
 
-pub fn test(meta: &metadata::types::Metadata, wes_loc: &Url, write_log: bool) -> Result<()> {
+pub fn test(
+    meta: &metadata::types::Metadata,
+    wes_loc: &Url,
+    write_log: bool,
+    fetch_ro_crate: bool,
+) -> Result<()> {
     let mut test_results = vec![];
     for test_case in &meta.workflow.testing {
         info!("Testing test case: {}", test_case.id);
@@ -49,6 +54,27 @@ pub fn test(meta: &metadata::types::Metadata, wes_loc: &Url, write_log: bool) ->
                 unreachable!("WES run status: {:?}", status);
             }
         }
+
+        match wes::api::fetch_ro_crate(wes_loc, &run_id) {
+            Ok(ro_crate) => {
+                if fetch_ro_crate || write_log {
+                    let ro_crate_dir = current_dir()?.join("ro-crate");
+                    fs::create_dir_all(&ro_crate_dir)?;
+                    let ro_crate_path = ro_crate_dir.join(format!(
+                        "ro-crate-metadata-{}_{}_{}.json",
+                        &meta.id, &meta.version, &test_case.id
+                    ));
+                    let mut file = BufWriter::new(fs::File::create(&ro_crate_path)?);
+                    file.write_all(serde_json::to_string_pretty(&ro_crate)?.as_bytes())?;
+                }
+            }
+            Err(e) => {
+                if fetch_ro_crate {
+                    bail!("Failed to fetch RO-Crate with error: {}", e)
+                }
+            }
+        };
+
         test_results.push(TestResult {
             id: test_case.id.clone(),
             status,

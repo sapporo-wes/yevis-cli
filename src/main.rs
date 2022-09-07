@@ -44,6 +44,7 @@ fn main() -> Result<()> {
             wes_location,
             docker_host,
             from_pr,
+            fetch_ro_crate,
             ..
         } => {
             let meta_locs = if from_pr {
@@ -70,7 +71,7 @@ fn main() -> Result<()> {
             };
 
             let meta_vec = sub_cmd::validate(meta_locs, &gh_token);
-            sub_cmd::test(&meta_vec, &wes_location, &docker_host);
+            sub_cmd::test(&meta_vec, &wes_location, &docker_host, fetch_ro_crate);
         }
         args::Args::PullRequest {
             metadata_locations,
@@ -80,7 +81,7 @@ fn main() -> Result<()> {
             ..
         } => {
             let meta_vec = sub_cmd::validate(metadata_locations, &gh_token);
-            sub_cmd::test(&meta_vec, &wes_location, &docker_host);
+            sub_cmd::test(&meta_vec, &wes_location, &docker_host, false);
             sub_cmd::pull_request(&meta_vec, &gh_token, &repository);
         }
         args::Args::Publish {
@@ -141,7 +142,7 @@ fn main() -> Result<()> {
             }
 
             if with_test {
-                sub_cmd::test(&meta_vec, &wes_location, &docker_host);
+                sub_cmd::test(&meta_vec, &wes_location, &docker_host, false);
             };
 
             sub_cmd::publish(&meta_vec, &gh_token, &repository, with_test);

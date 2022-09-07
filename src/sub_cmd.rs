@@ -57,7 +57,12 @@ pub fn validate(
     meta_vec
 }
 
-pub fn test(meta_vec: &Vec<metadata::types::Metadata>, wes_loc: &Option<Url>, docker_host: &Url) {
+pub fn test(
+    meta_vec: &Vec<metadata::types::Metadata>,
+    wes_loc: &Option<Url>,
+    docker_host: &Url,
+    fetch_ro_crate: bool,
+) {
     info!("{} test", "Running".green());
     let wes_loc = match wes_loc {
         Some(wes_loc) => wes_loc.clone(),
@@ -98,7 +103,7 @@ pub fn test(meta_vec: &Vec<metadata::types::Metadata>, wes_loc: &Option<Url>, do
     let write_log = env::in_ci();
     for meta in meta_vec {
         info!("Test workflow_id: {}, version: {}", meta.id, meta.version);
-        match test_process(meta, &wes_loc, write_log) {
+        match test_process(meta, &wes_loc, write_log, fetch_ro_crate) {
             Ok(()) => {
                 info!("{} test", "Success".green());
             }

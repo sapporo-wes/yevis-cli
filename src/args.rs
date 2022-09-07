@@ -76,6 +76,10 @@ pub enum Args {
         #[structopt(long)]
         from_pr: bool,
 
+        /// Fetch the execution results of the test run as RO-Crate. (Supported by Sapporo-service>=1.4.0, generated at ./ro-crate)
+        #[structopt(short, long)]
+        fetch_ro_crate: bool,
+
         /// Verbose mode.
         #[structopt(short, long)]
         verbose: bool,
