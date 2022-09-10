@@ -37,6 +37,7 @@ pub fn start_wes(docker_host: &Url) -> Result<()> {
         "Starting sapporo-service using docker_host: {}",
         docker_host.as_str()
     );
+    pull_latest_image(docker_host)?;
     let sapporo_run_dir = &env::sapporo_run_dir()?;
     let arg_socket_val = &format!("{}:/var/run/docker.sock", docker_host.path());
     let arg_tmp_val = &format!(
@@ -170,6 +171,26 @@ pub fn check_wes_running(docker_host: &Url) -> Result<bool> {
             String::from_utf8_lossy(&output.stderr)
         );
     }
+}
+
+pub fn pull_latest_image(docker_host: &Url) -> Result<()> {
+    let process = Command::new("docker")
+        .args(&["-H", docker_host.as_str(), "pull", SAPPORO_SERVICE_IMAGE])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("Please make sure that the docker command is present in your PATH")?;
+    let output = process.wait_with_output()?;
+    ensure!(
+        output.status.success(),
+        "Failed to pull the latest sapporo-service image:\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    info!(
+        "Stdout from docker:\n{}",
+        String::from_utf8_lossy(&output.stdout).trim()
+    );
+    Ok(())
 }
 
 #[cfg(test)]

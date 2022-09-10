@@ -1,6 +1,7 @@
 use crate::metadata;
 
 use anyhow::{anyhow, bail, ensure, Result};
+use log::info;
 use reqwest::blocking::multipart;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -270,17 +271,19 @@ pub fn fetch_ro_crate(wes_loc: &Url, run_id: impl AsRef<str>) -> Result<Value> {
         run_id.as_ref()
     ))?;
     let client = reqwest::blocking::Client::new();
-    let response = client
-        .get(url.as_str())
-        .send()?;
-    ensure!(
-        response.status().is_success(),
-        "Failed to fetch RO-Crate with status: {} from {}",
-        response.status(),
-        url.as_str()
-    );
-    let res_body = response.json::<Value>()?;
-    Ok(res_body)
+    let mut retry = 0;
+    while retry < 12 {
+        let response = client.get(url.as_str()).send()?;
+        if response.status().is_success() {
+            let res_body = response.json::<Value>()?;
+            return Ok(res_body);
+        } else {
+            retry += 1;
+            info!("Waiting for the RO-Crate to be ready");
+            thread::sleep(time::Duration::from_secs(20));
+        }
+    }
+    bail!("Failed to fetch the RO-Crate");
 }
 
 #[cfg(test)]
