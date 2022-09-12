@@ -58,7 +58,7 @@ pub fn test(
         match wes::api::fetch_ro_crate(wes_loc, &run_id) {
             Ok(ro_crate) => {
                 if fetch_ro_crate || write_log {
-                    let ro_crate_dir = current_dir()?.join("ro-crate");
+                    let ro_crate_dir = current_dir()?.join("test-logs");
                     fs::create_dir_all(&ro_crate_dir)?;
                     let ro_crate_path = ro_crate_dir.join(format!(
                         "ro-crate-metadata-{}_{}_{}.json",

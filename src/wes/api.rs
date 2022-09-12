@@ -271,8 +271,9 @@ pub fn fetch_ro_crate(wes_loc: &Url, run_id: impl AsRef<str>) -> Result<Value> {
         run_id.as_ref()
     ))?;
     let client = reqwest::blocking::Client::new();
+    // Often takes 10 minutes to generate RO-Crate
     let mut retry = 0;
-    while retry < 12 {
+    while retry < 45 {
         let response = client.get(url.as_str()).send()?;
         if response.status().is_success() {
             let res_body = response.json::<Value>()?;
