@@ -1,7 +1,7 @@
 version: "3.5"
 services:
   app:
-    image: ghcr.io/sapporo-wes/yevis-cli:0.5.2
+    image: ghcr.io/sapporo-wes/yevis-cli:0.5.3
     container_name: yevis-cli
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
