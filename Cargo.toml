@@ -5,7 +5,7 @@ license = "Apache-2.0"
 name = "yevis"
 readme = "https://github.com/sapporo-wes/yevis-cli/README.md"
 repository = "https://github.com/sapporo-wes/yevis-cli"
-version = "0.5.3"
+version = "0.5.4"
 
 [dependencies]
 anyhow = {version = "1.0.58", features = ["backtrace"]}
