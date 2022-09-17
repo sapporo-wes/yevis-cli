@@ -114,7 +114,7 @@ fn generate_trs_contents(trs_res: trs::response::TrsResponse) -> Result<HashMap<
         PathBuf::from("tools/index.json"),
         serde_json::to_string(&trs_res.tools)?,
     );
-    for ((id, version), meta) in trs_res.gh_trs_meta.iter() {
+    for ((id, version), meta) in trs_res.yevis_meta.iter() {
         let tools_id = trs_res.tools.iter().find(|t| &t.id == id).unwrap();
         let tools_id_versions = tools_id.versions.clone();
         let tools_id_versions_version = tools_id_versions

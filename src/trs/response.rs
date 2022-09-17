@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct TrsResponse {
-    pub gh_trs_meta: HashMap<(Uuid, String), metadata::types::Metadata>,
+    pub yevis_meta: HashMap<(Uuid, String), metadata::types::Metadata>,
     pub service_info: trs::types::ServiceInfo,
     pub tool_classes: Vec<trs::types::ToolClass>,
     pub tools: Vec<trs::types::Tool>,
@@ -34,7 +34,7 @@ impl TrsResponse {
         };
 
         Ok(Self {
-            gh_trs_meta: HashMap::new(),
+            yevis_meta: HashMap::new(),
             service_info,
             tool_classes,
             tools,
@@ -71,7 +71,7 @@ impl TrsResponse {
         self.tools_tests
             .insert((meta.id, meta.version.clone()), generate_tests(meta)?);
 
-        self.gh_trs_meta
+        self.yevis_meta
             .insert((meta.id, meta.version.clone()), meta.clone());
 
         Ok(())
