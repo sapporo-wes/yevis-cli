@@ -4,7 +4,7 @@ use crate::metadata;
 use crate::trs;
 
 use anyhow::{anyhow, bail, Result};
-use log::info;
+use log::{debug, info};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use url::Url;
@@ -177,6 +177,27 @@ fn generate_trs_contents(trs_res: trs::response::TrsResponse) -> Result<HashMap<
             )),
             serde_json::to_string(&Vec::<trs::types::FileWrapper>::new())?,
         );
+
+        // Test is executed and RO-Crate is fetched to test-logs/ro-crate-metadata_{id}_{version}_{test_id}.json
+        meta.workflow.testing.iter().for_each(|test| {
+            let ro_crate_path = PathBuf::from(format!(
+                "test-logs/ro-crate-metadata_{}_{}_{}.json",
+                id, version, test.id
+            ));
+            if ro_crate_path.exists() {
+                debug!("Found RO-Crate: {:?}", ro_crate_path);
+                let ro_crate = std::fs::read_to_string(ro_crate_path).unwrap();
+                map.insert(
+                    PathBuf::from(format!(
+                        "tools/{}/versions/{}/ro-crate-metadata_{}.json",
+                        id, version, test.id
+                    )),
+                    ro_crate,
+                );
+            } else {
+                debug!("RO-Crate not found: {:?}", ro_crate_path);
+            }
+        });
     }
     Ok(map)
 }

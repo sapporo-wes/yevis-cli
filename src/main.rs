@@ -81,7 +81,7 @@ fn main() -> Result<()> {
             ..
         } => {
             let meta_vec = sub_cmd::validate(metadata_locations, &gh_token);
-            sub_cmd::test(&meta_vec, &wes_location, &docker_host, false);
+            sub_cmd::test(&meta_vec, &wes_location, &docker_host, true);
             sub_cmd::pull_request(&meta_vec, &gh_token, &repository);
         }
         args::Args::Publish {
@@ -142,7 +142,7 @@ fn main() -> Result<()> {
             }
 
             if with_test {
-                sub_cmd::test(&meta_vec, &wes_location, &docker_host, false);
+                sub_cmd::test(&meta_vec, &wes_location, &docker_host, true);
             };
 
             sub_cmd::publish(&meta_vec, &gh_token, &repository, with_test);
