@@ -18,6 +18,7 @@ In addition, see the below links:
 
 - **[Paper Link](https://www.biorxiv.org/content/10.1101/2022.07.08.499265v1)**
 - [`ddbj/workflow-registry`](https://github.com/ddbj/workflow-registry): a workflow registry built and maintained by [DDBJ](https://www.ddbj.nig.ac.jp/) using `yevis-cli`
+- [`pitagora-network/yevis-DAT2-cwl`](https://github.com/pitagora-network/yevis-DAT2-cwl): a workflow registry for [DAT2-cwl](https://github.com/pitagora-network/DAT2-cwl) using `yevis-cli`
 - [`sapporo-wes/yevis-web`](https://github.com/sapporo-wes/yevis-web): a web application to browse published workflows
 - [`Yevis Getting Started`](https://sapporo-wes.github.io/yevis-cli/getting_started): the document for Yevis system installation and usage
 - [`Yevis Getting Started Ja`](https://sapporo-wes.github.io/yevis-cli/getting_started_ja): 日本語での Yevis system の使い方
@@ -334,6 +335,12 @@ $ yevis publish \
     --from-pr ${{github.event.pull_request._links.html.href }} \
     --upload-zenodo
 ```
+
+## Update workflow
+
+Edit the Yevis metadata for existing workflows and follow the standard procedure using `yevis-cli`.
+If the `workflow_id` in the metadata is the same, they are treated as the same workflow.
+And the namespace is separated by the `version` as the TRS endpoint.
 
 ## Development
 
