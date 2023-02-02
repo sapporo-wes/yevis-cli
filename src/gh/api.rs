@@ -1,6 +1,7 @@
 use crate::gh;
 
 use anyhow::{anyhow, bail, Result};
+use base64::{engine::general_purpose, Engine as _};
 use serde_json::json;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -588,7 +589,7 @@ pub fn create_or_update_file(
     content: impl AsRef<str>,
     branch: impl AsRef<str>,
 ) -> Result<()> {
-    let encoded_content = base64::encode(content.as_ref());
+    let encoded_content = general_purpose::STANDARD.encode(content.as_ref());
     let body = match get_contents_blob_sha(&gh_token, &owner, &name, &path, &branch) {
         Ok(blob) => {
             // If the file already exists, update it
