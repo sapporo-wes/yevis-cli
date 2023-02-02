@@ -34,6 +34,8 @@ sed -i "s/version = \"$PREV_VERSION\"/version = \"$NEW_VERSION\"/g" Cargo.toml
 echo "Update dependencies listed in Cargo.lock."
 cargo update
 
+sleep 3
+
 echo "Commit and push."
 git add Dockerfile docker-compose.yml Cargo.toml Cargo.lock
 git commit -m "Update version to $NEW_VERSION"
