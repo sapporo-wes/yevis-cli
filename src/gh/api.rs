@@ -128,7 +128,7 @@ pub fn get_user(gh_token: impl AsRef<str>) -> Result<Value> {
 }
 
 /// Return: (owner, name, affiliation)
-pub fn get_author_info(gh_token: impl AsRef<str>) -> Result<(String, String, String)> {
+pub fn get_author_info(gh_token: impl AsRef<str>) -> Result<(String, String, Option<String>)> {
     let res = get_user(gh_token)?;
     let err_message = "Failed to parse the response to get the author";
     let gh_account = res
@@ -143,12 +143,10 @@ pub fn get_author_info(gh_token: impl AsRef<str>) -> Result<(String, String, Str
         .as_str()
         .ok_or_else(|| anyhow!(err_message))?
         .to_string();
-    let affiliation = res
+    let affiliation: Option<String> = res
         .get("company")
-        .ok_or_else(|| anyhow!(err_message))?
-        .as_str()
-        .ok_or_else(|| anyhow!(err_message))?
-        .to_string();
+        .and_then(|v| v.as_str())
+        .map(|v| v.to_string());
     Ok((gh_account, name, affiliation))
 }
 

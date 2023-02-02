@@ -56,7 +56,7 @@ impl Deposition {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Creator {
     pub name: String,
-    pub affiliation: String,
+    pub affiliation: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub orcid: Option<String>,
 }

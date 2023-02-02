@@ -50,7 +50,7 @@ impl Metadata {
 pub struct Author {
     pub github_account: String,
     pub name: String,
-    pub affiliation: String,
+    pub affiliation: Option<String>,
     pub orcid: Option<String>,
 }
 
