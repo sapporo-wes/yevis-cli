@@ -16,7 +16,7 @@ Features include:
 
 In addition, see the below links:
 
-- **[Paper Link](https://www.biorxiv.org/content/10.1101/2022.07.08.499265v1)**
+- **[Publication on GigaScience](https://doi.org/10.1093/gigascience/giad006)**
 - [`ddbj/workflow-registry`](https://github.com/ddbj/workflow-registry): a workflow registry built and maintained by [DDBJ](https://www.ddbj.nig.ac.jp/) using `yevis-cli`
 - [`pitagora-network/yevis-DAT2-cwl`](https://github.com/pitagora-network/yevis-DAT2-cwl): a workflow registry for [DAT2-cwl](https://github.com/pitagora-network/DAT2-cwl) using `yevis-cli`
 - [`sapporo-wes/yevis-web`](https://github.com/sapporo-wes/yevis-web): a web application to browse published workflows
