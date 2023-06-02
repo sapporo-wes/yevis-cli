@@ -32,7 +32,7 @@ sed -i "s/yevis-cli:$PREV_VERSION/yevis-cli:$NEW_VERSION/g" docker-compose.yml
 sed -i "s/version = \"$PREV_VERSION\"/version = \"$NEW_VERSION\"/g" Cargo.toml
 
 echo "Update dependencies listed in Cargo.lock."
-cargo update
+cargo update -p yevis
 
 sleep 3
 
