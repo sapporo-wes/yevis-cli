@@ -1,4 +1,4 @@
-FROM debian:stretch-slim
+FROM debian:bullseye-slim
 
 LABEL org.opencontainers.image.authors="DDBJ(Bioinformatics and DDBJ Center) <t.ohta@nig.ac.jp>"
 LABEL org.opencontainers.image.url="https://github.com/sapporo-wes/yevis-cli"
