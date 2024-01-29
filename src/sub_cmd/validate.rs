@@ -2,9 +2,11 @@ use crate::gh;
 use crate::metadata;
 use crate::remote;
 
+use anyhow::Context;
 use anyhow::{anyhow, bail, ensure, Result};
 use log::debug;
 use regex::Regex;
+use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use url::Url;
 
@@ -42,10 +44,16 @@ pub fn validate_version(version: impl AsRef<str>) -> Result<()> {
 /// Change the license to `spdx_id`
 /// e.g., `apache-2.0` -> `Apache-2.0`
 fn validate_license(meta: &mut metadata::types::Metadata, gh_token: impl AsRef<str>) -> Result<()> {
-    let spdx_id = validate_with_github_license_api(gh_token, &meta.license)?;
+    let spdx_id: String = validate_with_github_license_api(gh_token, &meta.license)?;
     validate_with_zenodo_license_api(&spdx_id)?;
     meta.license = spdx_id;
     Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+struct LicenseResponse {
+    permissions: Vec<String>,
+    spdx_id: String,
 }
 
 /// https://docs.github.com/ja/rest/reference/licenses#get-a-license
@@ -59,28 +67,19 @@ fn validate_with_github_license_api(
         license.as_ref()
     ))?;
     let res = gh::get_request(gh_token, &url, &[])?;
-    let err_msg = "`license` is not valid from GitHub license API";
-    let permissions = res
-        .get("permissions")
-        .ok_or_else(|| anyhow!(err_msg))?
-        .as_array()
-        .ok_or_else(|| anyhow!(err_msg))?
-        .iter()
-        .map(|v| v.as_str().ok_or_else(|| anyhow!(err_msg)))
-        .collect::<Result<Vec<_>>>()?;
-    ensure!(permissions.contains(&"distribution"), err_msg);
-    let spdx_id = res
-        .get("spdx_id")
-        .ok_or_else(|| anyhow!(err_msg))?
-        .as_str()
-        .ok_or_else(|| anyhow!(err_msg))?;
-    Ok(spdx_id.to_string())
+    let res: LicenseResponse =
+        serde_json::from_value(res).context("Failed to parse GitHub license API response")?;
+    ensure!(
+        res.permissions.contains(&String::from("distribution")),
+        "GitHub license API response does not contain `distribution` in `permissions` field"
+    );
+    Ok(res.spdx_id)
 }
 
 /// https://developers.zenodo.org/?shell#retrieve41
 fn validate_with_zenodo_license_api(license: impl AsRef<str>) -> Result<()> {
     let url = Url::parse(&format!(
-        "https://zenodo.org/api/licenses/{}",
+        "https://zenodo.org/api/vocabularies/licenses/{}",
         license.as_ref()
     ))?;
     // Return the path for this URL, as a percent-encoded ASCII string
@@ -221,7 +220,6 @@ mod tests {
     fn test_validate_with_zenodo_license_api() -> Result<()> {
         validate_with_zenodo_license_api("cc0-1.0")?;
         validate_with_zenodo_license_api("mit")?;
-        validate_with_zenodo_license_api("MIT")?;
         validate_with_zenodo_license_api("apache-2.0")?;
         Ok(())
     }

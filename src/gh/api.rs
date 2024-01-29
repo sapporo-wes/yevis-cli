@@ -1,6 +1,7 @@
 use crate::gh;
 
 use anyhow::{anyhow, bail, Result};
+use base64::{engine::general_purpose, Engine as _};
 use serde_json::json;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -27,35 +28,35 @@ pub fn get_default_branch(
     name: impl AsRef<str>,
     memo: Option<&mut HashMap<String, String>>,
 ) -> Result<String> {
-    let err_message = "Failed to parse the response to get the default branch";
-    match memo {
-        Some(memo) => {
-            let key = format!("{}/{}", owner.as_ref(), name.as_ref());
-            match memo.get(&key) {
-                Some(default_branch) => Ok(default_branch.to_string()),
-                None => {
-                    let res = get_repos(gh_token, owner, name)?;
-                    let default_branch = res
-                        .get("default_branch")
-                        .ok_or_else(|| anyhow!(err_message))?
-                        .as_str()
-                        .ok_or_else(|| anyhow!(err_message))?
-                        .to_string();
-                    memo.insert(key, default_branch.clone());
-                    Ok(default_branch)
-                }
-            }
-        }
-        None => {
-            let res = get_repos(gh_token, owner, name)?;
-            Ok(res
-                .get("default_branch")
-                .ok_or_else(|| anyhow!(err_message))?
-                .as_str()
-                .ok_or_else(|| anyhow!(err_message))?
-                .to_string())
+    let key = format!("{}/{}", owner.as_ref(), name.as_ref());
+
+    if let Some(ref memo) = memo {
+        if let Some(default_branch) = memo.get(&key) {
+            return Ok(default_branch.to_string());
         }
     }
+
+    let default_branch = get_default_branch_from_repo(&gh_token, &owner, &name)?;
+    if let Some(memo) = memo {
+        memo.insert(key, default_branch.clone());
+    }
+
+    Ok(default_branch)
+}
+
+fn get_default_branch_from_repo(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+) -> Result<String> {
+    let res = get_repos(gh_token, owner, name)?;
+    let err_message = "Failed to parse the response to get the default branch";
+    Ok(res
+        .get("default_branch")
+        .ok_or_else(|| anyhow!(err_message))?
+        .as_str()
+        .ok_or_else(|| anyhow!(err_message))?
+        .to_string())
 }
 
 /// https://docs.github.com/ja/rest/reference/branches#get-a-branch
@@ -81,44 +82,45 @@ pub fn get_latest_commit_sha(
     branch_name: impl AsRef<str>,
     memo: Option<&mut HashMap<String, String>>,
 ) -> Result<String> {
-    let err_message = "Failed to parse the response to get a latest commit sha";
-    match memo {
-        Some(memo) => {
-            let key = format!(
-                "{}/{}/{}",
-                owner.as_ref(),
-                name.as_ref(),
-                branch_name.as_ref()
-            );
-            match memo.get(&key) {
-                Some(latest_commit_hash) => Ok(latest_commit_hash.to_string()),
-                None => {
-                    let res = get_branches(gh_token, owner, name, branch_name)?;
-                    let latest_commit_hash = res
-                        .get("commit")
-                        .ok_or_else(|| anyhow!(err_message))?
-                        .get("sha")
-                        .ok_or_else(|| anyhow!(err_message))?
-                        .as_str()
-                        .ok_or_else(|| anyhow!(err_message))?
-                        .to_string();
-                    memo.insert(key, latest_commit_hash.clone());
-                    Ok(latest_commit_hash)
-                }
-            }
-        }
-        None => {
-            let res = get_branches(gh_token, owner, name, branch_name)?;
-            Ok(res
-                .get("commit")
-                .ok_or_else(|| anyhow!(err_message))?
-                .get("sha")
-                .ok_or_else(|| anyhow!(err_message))?
-                .as_str()
-                .ok_or_else(|| anyhow!(err_message))?
-                .to_string())
+    let key = format!(
+        "{}/{}/{}",
+        owner.as_ref(),
+        name.as_ref(),
+        branch_name.as_ref()
+    );
+
+    if let Some(ref memo) = memo {
+        if let Some(latest_commit_hash) = memo.get(&key) {
+            return Ok(latest_commit_hash.to_string());
         }
     }
+
+    let latest_commit_hash = get_latest_commit_sha_from_branch(gh_token, owner, name, branch_name)?;
+    if let Some(memo) = memo {
+        memo.insert(key, latest_commit_hash.clone());
+    }
+
+    Ok(latest_commit_hash)
+}
+
+fn get_latest_commit_sha_from_branch(
+    gh_token: impl AsRef<str>,
+    owner: impl AsRef<str>,
+    name: impl AsRef<str>,
+    branch_name: impl AsRef<str>,
+) -> Result<String> {
+    let err_message = "Failed to parse the response to get a latest commit sha";
+    let res = get_branches(gh_token, owner, name, branch_name)?;
+    let latest_commit_hash = res
+        .get("commit")
+        .ok_or_else(|| anyhow!(err_message))?
+        .get("sha")
+        .ok_or_else(|| anyhow!(err_message))?
+        .as_str()
+        .ok_or_else(|| anyhow!(err_message))?
+        .to_string();
+
+    Ok(latest_commit_hash)
 }
 
 /// https://docs.github.com/ja/rest/reference/users#get-a-user
@@ -588,7 +590,7 @@ pub fn create_or_update_file(
     content: impl AsRef<str>,
     branch: impl AsRef<str>,
 ) -> Result<()> {
-    let encoded_content = base64::encode(content.as_ref());
+    let encoded_content = general_purpose::STANDARD.encode(content.as_ref());
     let body = match get_contents_blob_sha(&gh_token, &owner, &name, &path, &branch) {
         Ok(blob) => {
             // If the file already exists, update it
