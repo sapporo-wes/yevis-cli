@@ -92,7 +92,7 @@ Install [`yevis-cli`](https://github.com/sapporo-wes/yevis-cli), see [`yevis-cli
 In this document, uses a Docker environment since using M1 Mac (the binary is only built for Linux).
 
 ```bash=
-$ curl -fsSL -O https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/docker-compose.yml
+$ curl -fsSL -O https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/compose.yml
 $ docker compose up -d
 [+] Running 2/2
  ⠿ Network yevis-network  Created                                                                   0.0s
@@ -128,7 +128,7 @@ The generated `GitHub Personal Access Token` can be passed to `yevis-cli` in one
 This time, use environment variables:
 
 ```bash=
-$ export GITHUB_TOKEN=<PASTE_YOUR_TOKEN>
+export GITHUB_TOKEN=<PASTE_YOUR_TOKEN>
 ```
 
 #### 3.1.1. Describe metadata

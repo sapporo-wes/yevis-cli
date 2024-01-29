@@ -14,7 +14,7 @@ RUN apt update && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL -o /tmp/docker.tgz https://download.docker.com/linux/static/stable/$(uname -m)/docker-20.10.9.tgz && \
+RUN curl -fsSL -o /tmp/docker.tgz https://download.docker.com/linux/static/stable/$(uname -m)/docker-24.0.7.tgz && \
     tar -C /tmp -xf /tmp/docker.tgz && \
     mv /tmp/docker/* /usr/bin/ && \
     rm -rf /tmp/docker /tmp/docker.tgz

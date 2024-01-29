@@ -94,7 +94,7 @@ GitHub Pages の deploy アクションが完了すると、`yevis-web` が GitH
 このドキュメントでは、M1 Mac を使用しているため、Docker 環境を使用します （binary は Linux 用にのみビルドされています）。
 
 ```bash=
-$ curl -fsSL -O https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/docker-compose.yml
+$ curl -fsSL -O https://raw.githubusercontent.com/sapporo-wes/yevis-cli/main/compose.yml
 $ docker compose up -d
 [+] Running 2/2
  ⠿ Network yevis-network  Created                                                                   0.0s
@@ -130,7 +130,7 @@ DDBJ(Bioinformatics and DDBJ Center)
 今回は、環境変数を使用します。
 
 ```bash=
-$ export GITHUB_TOKEN=<PASTE_YOUR_TOKEN>
+export GITHUB_TOKEN=<PASTE_YOUR_TOKEN>
 ```
 
 #### 3.1.1. Describe metadata
