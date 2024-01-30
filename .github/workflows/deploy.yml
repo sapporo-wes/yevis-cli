@@ -13,47 +13,45 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 1
-      - name: "Cache builder image"
-        id: cache-builder-image
-        uses: actions/cache@v3
-        with:
-          path: musl-builder-image
-          key: musl-builder-image
-      - name: "Pull and save builder image"
-        if: steps.cache-builder-image.outputs.cache-hit != 'true'
-        run: |
-          docker pull ekidd/rust-musl-builder:stable
-          docker save ekidd/rust-musl-builder:stable -o musl-builder-image
-      - name: "Load builder image"
-        run: docker load -i musl-builder-image
-      - name: "Cache Rust"
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: "Build binary"
-        run: docker run --rm -u root -v `pwd`:/home/rust/src ekidd/rust-musl-builder:stable cargo build --release
-      - name: "Upload binary"
+
+      - name: "Build yevis binary (x86_64)"
+        run: docker run --rm -it -v "$(pwd)":/home/rust/src messense/rust-musl-cross:x86_64-musl cargo build --release --target x86_64-unknown-linux-musl
+
+      - name: "Build yevis binary (arm64)"
+        run: docker run --rm -it -v "$(pwd)":/home/rust/src messense/rust-musl-cross:aarch64-musl cargo build --release --target aarch64-unknown-linux-musl
+
+      - name: "Upload yevis binary (x86_64)"
         uses: actions/upload-artifact@v3
         with:
-          name: yevis
+          name: yevis_x86_64
           path: target/x86_64-unknown-linux-musl/release/yevis
+
+      - name: "Upload yevis binary (arm64)"
+        uses: actions/upload-artifact@v3
+        with:
+          name: yevis_arm64
+          path: target/aarch64-unknown-linux-musl/release/yevis
 
   create_release:
     needs: [build_binary]
     runs-on: ubuntu-latest
     steps:
-      - name: "Download yevis binary"
+      - name: "Download yevis binary (x86_64)"
         uses: actions/download-artifact@v3
         with:
-          name: yevis
+          name: yevis_x86_64
+      - name: "Download yevis binary (arm64)"
+        uses: actions/download-artifact@v3
+        with:
+          name: yevis_arm64
       - name: "Release"
-        run: gh release --repo ${{ github.repository }} create ${{ github.ref_name }} --title ${{ github.ref_name }} --generate-notes yevis
+        run: gh release \
+          --repo ${{ github.repository }} \
+          create ${{ github.ref_name }} \
+          --title ${{ github.ref_name }} \
+          --generate-notes \
+          yevis_x86_64 \
+          yevis_arm64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

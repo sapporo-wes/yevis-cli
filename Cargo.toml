@@ -27,3 +27,4 @@ structopt = "0.3.26"
 tempfile = "3.9.0"
 url = {version = "2.5.0", features = ["serde"]}
 uuid = {version = "1.7.0", features = ["serde", "v4"]}
+openssl = { version = "0.10.63", features = ["vendored"] }

@@ -30,7 +30,7 @@ In addition, see the below links:
 Use a single binary that is built without any dependencies (supports Linux only):
 
 ```bash
-curl -fsSL -O https://github.com/sapporo-wes/yevis-cli/releases/latest/download/yevis
+curl -fsSL -o ./yevis https://github.com/sapporo-wes/yevis-cli/releases/latest/download/yevis_$(uname -m)
 chmod +x ./yevis
 ./yevis --help
 ```
@@ -431,30 +431,11 @@ yevis 0.4.0
 Recommendation, build the binary using `musl`:
 
 ```bash
-$ docker run --rm -it -v $PWD:/home/rust/src ekidd/rust-musl-builder cargo build --release
+$ docker run --rm -it -v "$(pwd)":/home/rust/src messense/rust-musl-cross:aarch64-musl cargo build --release
 
 # No dependencies
 $ ldd target/x86_64-unknown-linux-musl/release/yevis
-not a dynamic executable
-```
-
-Build binary using native builder:
-
-```bash
-$ cargo build --release
-
-# There are several packages and dependencies.
-$ ldd ./target/release/yevis
-linux-vdso.so.1 (0x00007ffea49d3000)
-libssl.so.1.1 => /usr/lib/x86_64-linux-gnu/libssl.so.1.1 (0x00007f317cbc0000)
-libcrypto.so.1.1 => /usr/lib/x86_64-linux-gnu/libcrypto.so.1.1 (0x00007f317c6f5000)
-libgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f317c4dd000)
-librt.so.1 => /lib/x86_64-linux-gnu/librt.so.1 (0x00007f317c2d5000)
-libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007f317c0b6000)
-libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007f317bd18000)
-libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007f317bb14000)
-libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f317b723000)
-/lib64/ld-linux-x86-64.so.2 (0x00007f317d64a000)
+statically linked
 ```
 
 ### Run test
