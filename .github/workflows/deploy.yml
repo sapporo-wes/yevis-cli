@@ -45,7 +45,8 @@ jobs:
         with:
           name: yevis_arm64
       - name: "Release"
-        run: gh release \
+        run: |
+          gh release \
           --repo ${{ github.repository }} \
           create ${{ github.ref_name }} \
           --title ${{ github.ref_name }} \
