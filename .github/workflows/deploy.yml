@@ -15,10 +15,10 @@ jobs:
           fetch-depth: 1
 
       - name: "Build yevis binary (x86_64)"
-        run: docker run --rm -it -v "$(pwd)":/home/rust/src messense/rust-musl-cross:x86_64-musl cargo build --release --target x86_64-unknown-linux-musl
+        run: docker run --rm -v "$(pwd)":/home/rust/src messense/rust-musl-cross:x86_64-musl cargo build --release --target x86_64-unknown-linux-musl
 
       - name: "Build yevis binary (arm64)"
-        run: docker run --rm -it -v "$(pwd)":/home/rust/src messense/rust-musl-cross:aarch64-musl cargo build --release --target aarch64-unknown-linux-musl
+        run: docker run --rm -v "$(pwd)":/home/rust/src messense/rust-musl-cross:aarch64-musl cargo build --release --target aarch64-unknown-linux-musl
 
       - name: "Upload yevis binary (x86_64)"
         uses: actions/upload-artifact@v3
