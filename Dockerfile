@@ -19,8 +19,8 @@ RUN curl -fsSL -o /tmp/docker.tgz https://download.docker.com/linux/static/stabl
     mv /tmp/docker/* /usr/bin/ && \
     rm -rf /tmp/docker /tmp/docker.tgz
 
-RUN curl -fsSL -o /usr/bin/yevis https://github.com/sapporo-wes/yevis-cli/releases/latest/download/yevis_$(uname -m) && \
-    chmod +x /usr/bin/yevis
+ADD https://github.com/sapporo-wes/yevis-cli/releases/latest/download/yevis_x86_64 /usr/bin/yevis
+RUN chmod +x /usr/bin/yevis
 
 WORKDIR /app
 
