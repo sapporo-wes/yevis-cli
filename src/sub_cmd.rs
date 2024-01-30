@@ -4,6 +4,8 @@ pub mod pull_request;
 pub mod test;
 pub mod validate;
 
+use crate::zenodo;
+use anyhow::bail;
 use make_template::make_template as make_template_process;
 use publish::publish as publish_process;
 use pull_request::pull_request as pull_request_process;
@@ -146,4 +148,43 @@ pub fn publish(
             exit(1);
         }
     };
+}
+
+pub fn upload_zenodo(
+    meta: &mut metadata::types::Metadata,
+    output: impl AsRef<Path>,
+    zenodo_token: &Option<impl AsRef<str>>,
+    zenodo_host: &Option<impl AsRef<str>>,
+    zenodo_community: &Option<impl AsRef<str>>,
+    repository: impl AsRef<str>,
+) -> Result<(), anyhow::Error> {
+    info!("{} upload-zenodo", "Running".green());
+    let token = match zenodo_token {
+        Some(zenodo_token) => zenodo_token.as_ref().to_string(),
+        None => match env::zenodo_token() {
+            Ok(token) => token,
+            Err(e) => {
+                bail!("{} to get Zenodo token with error: {}", "Failed".red(), e);
+            }
+        },
+    };
+    let host = match zenodo_host {
+        Some(zenodo_host) => zenodo_host.as_ref().to_string(),
+        None => env::zenodo_host(),
+    };
+    info!(
+        "Uploading wf_id: {}, version: {} to Zenodo",
+        meta.id, meta.version
+    );
+    zenodo::upload_zenodo(&host, &token, meta, repository, zenodo_community)?;
+    info!("Updating workflow metadata to Zenodo URL");
+    zenodo::update_metadata(&host, &token, meta)?;
+
+    info!("Writing uploaded metadata to {}", output.as_ref().display());
+    let file_ext = metadata::io::parse_file_ext(&output)?;
+    metadata::io::write_local(meta, &output, &file_ext)?;
+
+    info!("{} upload-zenodo", "Success".green());
+
+    Ok(())
 }

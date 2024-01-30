@@ -51,7 +51,7 @@ This section describes some subcommands.
 
 ```bash
 $ yevis --help
-yevis 0.4.0
+yevis 0.5.8
 DDBJ(Bioinformatics and DDBJ Center)
 CLI tool that supports building a Yevis workflow registry with automated quality control
 
@@ -69,6 +69,7 @@ SUBCOMMANDS:
                      (`CI=true`))
     pull-request     Create a pull request based on the Yevis metadata files (after validation and testing)
     test             Test workflow based on the Yevis metadata files
+    upload-zenodo    Upload dataset to Zenodo
     validate         Validate schema and contents of the Yevis metadata file
 ```
 
@@ -78,7 +79,7 @@ Generate a workflow metadata file template from a primary workflow file URL.
 
 ```bash
 $ yevis make-template --help
-yevis-make-template 0.4.0
+yevis-make-template 0.5.8
 Generate a template file for the Yevis metadata file
 
 USAGE:
@@ -109,7 +110,7 @@ Validate schema and contents of the workflow metadata file.
 
 ```bash
 $ yevis validate --help
-yevis-validate 0.4.0
+yevis-validate 0.5.8
 Validate schema and contents of the Yevis metadata file
 
 USAGE:
@@ -159,7 +160,7 @@ Test workflow using [GA4GH WES](https://www.ga4gh.org/news/ga4gh-wes-api-enables
 
 ```bash
 $ yevis test --help
-yevis-test 0.4.0
+yevis-test 0.5.8
 Test workflow based on the Yevis metadata files
 
 USAGE:
@@ -232,7 +233,7 @@ Create a pull request after validation and testing.
 
 ```bash
 $ yevis pull-request --help
-yevis-pull-request 0.4.0
+yevis-pull-request 0.5.8
 Create a pull request based on the Yevis metadata files (after validation and testing)
 
 USAGE:
@@ -269,7 +270,7 @@ Upload files to Zenodo, generate TRS responses and deploy them on GitHub Pages.
 
 ```bash
 $ yevis publish --help
-yevis-publish 0.4.0
+yevis-publish 0.5.8
 Generate TRS responses and host them on GitHub Pages. (Basically used in the CI environment (`CI=true`))
 
 USAGE:
@@ -308,6 +309,40 @@ Note that the following four options:
 - `--with-test`: Test before publishing
 
 See the GitHub Actions section for more details.
+
+### upload-zenodo
+
+Upload files in the Yevis metadata to Zenodo and replace the metadata file with the Zenodo URL.
+
+```bash
+$ yevis upload-zenodo --help
+yevis-upload-zenodo 0.5.8
+Upload dataset to Zenodo
+
+USAGE:
+    yevis upload-zenodo [FLAGS] [OPTIONS] --repository <repository> [metadata-location]
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+    -v, --verbose    Verbose mode
+
+OPTIONS:
+        --gh-token <github-token>                GitHub Personal Access Token
+    -o, --output <output>                        Path to the output file [default: yevis-metadata-uploaded.yml]
+    -r, --repository <repository>                GitHub repository that publishes TRS responses (format: <owner>/<repo>)
+        --zenodo-community <zenodo-community>    Community set in Zenodo deposition
+        --zenodo-host <zenodo-host>
+            Zenodo host. Uses zenodo.org by default and sandbox.zenodo.org for dev-mode
+
+        --zenodo-token <zenodo-token>
+            Zenodo Personal Access Token. You can generate it at
+            https://zenodo.org/account/settings/applications/tokens/new/
+
+ARGS:
+    <metadata-location>    Location of the Yevis metadata file (local file path or remote URL) [default: yevis-
+                           metadata.yml]
+```
 
 #### Generated TRS Responses
 
@@ -393,7 +428,7 @@ yevis 0.4.0
 
 ### Build binary
 
-Recommendation, build the binary using `musl``:
+Recommendation, build the binary using `musl`:
 
 ```bash
 $ docker run --rm -it -v $PWD:/home/rust/src ekidd/rust-musl-builder cargo build --release

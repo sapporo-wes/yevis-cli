@@ -147,6 +147,29 @@ fn main() -> Result<()> {
 
             sub_cmd::publish(&meta_vec, &gh_token, &repository, with_test);
         }
+        args::Args::UploadZenodo {
+            metadata_location,
+            repository,
+            output,
+            zenodo_token,
+            zenodo_host,
+            zenodo_community,
+            ..
+        } => {
+            let meta_vec = sub_cmd::validate(vec![metadata_location], &gh_token);
+            let mut meta_loc = meta_vec
+                .into_iter()
+                .next()
+                .expect("Expected at least one metadata");
+            sub_cmd::upload_zenodo(
+                &mut meta_loc,
+                &output,
+                &zenodo_token,
+                &zenodo_host,
+                &zenodo_community,
+                &repository,
+            )?;
+        }
     };
     Ok(())
 }

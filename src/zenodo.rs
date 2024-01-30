@@ -52,7 +52,7 @@ pub fn upload_zenodo_and_commit_gh(
     Ok(())
 }
 
-fn upload_zenodo(
+pub fn upload_zenodo(
     host: impl AsRef<str>,
     token: impl AsRef<str>,
     meta: &mut metadata::types::Metadata,
@@ -222,7 +222,7 @@ fn update_deposition_files(
     Ok(())
 }
 
-fn update_metadata(
+pub fn update_metadata(
     host: impl AsRef<str>,
     token: impl AsRef<str>,
     meta: &mut metadata::types::Metadata,

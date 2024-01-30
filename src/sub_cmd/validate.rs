@@ -44,24 +44,24 @@ pub fn validate_version(version: impl AsRef<str>) -> Result<()> {
 /// Change the license to `spdx_id`
 /// e.g., `apache-2.0` -> `Apache-2.0`
 fn validate_license(meta: &mut metadata::types::Metadata, gh_token: impl AsRef<str>) -> Result<()> {
-    let spdx_id: String = validate_with_github_license_api(gh_token, &meta.license)?;
-    validate_with_zenodo_license_api(&spdx_id)?;
+    let (key, spdx_id) = validate_with_github_license_api(gh_token, &meta.license)?;
+    validate_with_zenodo_license_api(&key)?;
     meta.license = spdx_id;
     Ok(())
 }
 
 #[derive(Debug, Deserialize)]
 struct LicenseResponse {
-    permissions: Vec<String>,
+    key: String,
     spdx_id: String,
 }
 
 /// https://docs.github.com/ja/rest/reference/licenses#get-a-license
-/// Ensure that `distribution` is included in `permissions` field.
+/// res: (key, spdx_id), e.g., ("mit", "MIT")
 fn validate_with_github_license_api(
     gh_token: impl AsRef<str>,
     license: impl AsRef<str>,
-) -> Result<String> {
+) -> Result<(String, String)> {
     let url = Url::parse(&format!(
         "https://api.github.com/licenses/{}",
         license.as_ref()
@@ -69,11 +69,7 @@ fn validate_with_github_license_api(
     let res = gh::get_request(gh_token, &url, &[])?;
     let res: LicenseResponse =
         serde_json::from_value(res).context("Failed to parse GitHub license API response")?;
-    ensure!(
-        res.permissions.contains(&String::from("distribution")),
-        "GitHub license API response does not contain `distribution` in `permissions` field"
-    );
-    Ok(res.spdx_id)
+    Ok((res.key, res.spdx_id))
 }
 
 /// https://developers.zenodo.org/?shell#retrieve41

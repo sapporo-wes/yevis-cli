@@ -160,6 +160,47 @@ pub enum Args {
         #[structopt(short, long)]
         verbose: bool,
     },
+
+    #[structopt(setting(clap::AppSettings::ColoredHelp))]
+    /// Upload dataset to Zenodo.
+    UploadZenodo {
+        /// Location of the Yevis metadata file (local file path or remote URL).
+        #[structopt(default_value = "yevis-metadata.yml")]
+        metadata_location: String,
+
+        /// GitHub Personal Access Token.
+        #[structopt(long = "gh-token")]
+        github_token: Option<String>,
+
+        /// GitHub repository that publishes TRS responses (format: <owner>/<repo>).
+        #[structopt(short, long)]
+        repository: String,
+
+        /// Zenodo Personal Access Token. You can generate it at https://zenodo.org/account/settings/applications/tokens/new/.
+        #[structopt(long = "zenodo-token")]
+        zenodo_token: Option<String>,
+
+        /// Zenodo host. Uses zenodo.org by default and sandbox.zenodo.org for dev-mode.
+        #[structopt(long = "zenodo-host")]
+        zenodo_host: Option<String>,
+
+        /// Community set in Zenodo deposition.
+        #[structopt(long)]
+        zenodo_community: Option<String>,
+
+        /// Path to the output file.
+        #[structopt(
+            short,
+            long,
+            parse(from_os_str),
+            default_value = "yevis-metadata-uploaded.yml"
+        )]
+        output: PathBuf,
+
+        /// Verbose mode.
+        #[structopt(short, long)]
+        verbose: bool,
+    },
 }
 
 impl Args {
@@ -170,6 +211,7 @@ impl Args {
             Args::Test { verbose, .. } => *verbose,
             Args::PullRequest { verbose, .. } => *verbose,
             Args::Publish { verbose, .. } => *verbose,
+            Args::UploadZenodo { verbose, .. } => *verbose,
         }
     }
 
@@ -180,6 +222,7 @@ impl Args {
             Args::Test { github_token, .. } => github_token.clone(),
             Args::PullRequest { github_token, .. } => github_token.clone(),
             Args::Publish { github_token, .. } => github_token.clone(),
+            Args::UploadZenodo { github_token, .. } => github_token.clone(),
         }
     }
 }
