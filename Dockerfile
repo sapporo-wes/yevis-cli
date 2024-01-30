@@ -3,7 +3,7 @@ FROM debian:bullseye-slim
 LABEL org.opencontainers.image.authors="DDBJ(Bioinformatics and DDBJ Center) <t.ohta@nig.ac.jp>"
 LABEL org.opencontainers.image.url="https://github.com/sapporo-wes/yevis-cli"
 LABEL org.opencontainers.image.source="https://github.com/sapporo-wes/yevis-cli/blob/main/Dockerfile"
-LABEL org.opencontainers.image.version="0.5.8"
+LABEL org.opencontainers.image.version="0.5.9"
 LABEL org.opencontainers.image.description="CLI tool to support building and maintaining Yevis workflow registry"
 LABEL org.opencontainers.image.licenses="Apache2.0"
 
