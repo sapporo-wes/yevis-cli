@@ -40,12 +40,16 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: yevis_x86_64
-          path: ./yevis_x86_64
+          path: ./x86_64
       - name: "Download yevis binary (arm64)"
         uses: actions/download-artifact@v3
         with:
           name: yevis_arm64
-          path: ./yevis_arm64
+          path: ./arm64
+      - name: "Rename binaries"
+        run: |
+          mv ./x86_64/yevis ./yevis_x86_64
+          mv ./arm64/yevis ./yevis_arm64
       - name: "Release"
         run: |
           gh release \
